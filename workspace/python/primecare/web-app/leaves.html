@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% block title %}PrimeCare+ — Doctor Leaves{% endblock %}
+
+{% block body %}
+<div class="page-head">
+  <div class="page-head-text">
+    <h1>Doctor Leaves</h1>
+    <p>Mark dates when doctors are unavailable — blocked from new bookings</p>
+  </div>
+  <button class="btn btn-primary" onclick="openLeaveModal()">+ Mark Leave</button>
+</div>
+
+<div class="container">
+  <div class="filter-section">
+    <input type="text" id="filterInput" class="filter-input" placeholder="Filter by doctor, date, or reason..." onkeyup="filterTable()">
+    <button class="btn btn-ghost btn-sm" onclick="clearFilter()">Clear</button>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Doctor</th>
+          <th>Leave Date</th>
+          <th>Day</th>
+          <th>Reason</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody">
+        {% for lv in leaves %}
+        <tr class="table-row">
+          <td style="color:var(--muted);font-size:.75rem">{{ lv.id }}</td>
+          <td style="font-weight:600">Dr. {{ lv.doctor_name }}</td>
+          <td style="font-weight:500;font-variant-numeric:tabular-nums">{{ lv.leave_date }}</td>
+          <td style="color:var(--muted);font-size:.875rem">{{ lv.day_name }}</td>
+          <td style="color:var(--muted);font-size:.875rem">{{ lv.reason or '—' }}</td>
+          <td>
+            <button class="btn btn-danger btn-sm" onclick="deleteLeave({{ lv.id }})">Delete</button>
+          </td>
+        </tr>
+        {% endfor %}
+        {% if not leaves %}
+        <tr>
+          <td colspan="6" style="text-align:center;padding:2rem;color:var(--muted)">No leave entries found. Use the button above to mark a doctor as unavailable on a specific date.</td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Leave Modal -->
+<div class="modal-overlay" id="leaveOverlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="leaveModalTitle">
+    <div class="modal-header">
+      <h2 id="leaveModalTitle">Mark Doctor Leave</h2>
+      <button class="modal-close" onclick="closeModal('leaveOverlay')" aria-label="Close">&times;</button>
+    </div>
+    <form id="leaveForm" onsubmit="saveLeave(event)">
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="lv_doctor">Doctor</label>
+          <select id="lv_doctor" name="doctor_id" required>
+            {% for d in doctors %}
+            <option value="{{ d.id }}">Dr. {{ d.first_name }} {{ d.last_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="lv_date">Leave Date</label>
+          <input type="date" id="lv_date" name="leave_date" required>
+        </div>
+        <div class="form-group">
+          <label for="lv_reason">Reason (optional)</label>
+          <textarea id="lv_reason" name="reason" placeholder="e.g. Personal leave, Conference, Medical…"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('leaveOverlay')">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="leaveSaveBtn">Mark Leave</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const LEAVES = {{ leaves | tojson }};
+
+  function filterTable() {
+    const filter = document.getElementById('filterInput').value.toLowerCase();
+    const rows   = document.querySelectorAll('#tableBody .table-row');
+    let visible  = 0;
+    rows.forEach(function(row) {
+      const match = row.textContent.toLowerCase().includes(filter);
+      row.style.display = match ? '' : 'none';
+      if (match) visible++;
+    });
+    let noResults = document.getElementById('noResults');
+    if (visible === 0) {
+      if (!noResults) {
+        noResults = document.createElement('tr');
+        noResults.id = 'noResults';
+        noResults.innerHTML = '<td colspan="6" style="text-align:center;padding:2rem;color:var(--muted)">No leaves found matching your filter.</td>';
+        document.getElementById('tableBody').appendChild(noResults);
+      }
+    } else {
+      if (noResults) noResults.remove();
+    }
+  }
+
+  function clearFilter() {
+    document.getElementById('filterInput').value = '';
+    filterTable();
+  }
+
+  function openLeaveModal() {
+    document.getElementById('leaveForm').reset();
+    openModal('leaveOverlay');
+  }
+
+  async function saveLeave(e) {
+    e.preventDefault();
+    const form = e.target;
+    const btn  = document.getElementById('leaveSaveBtn');
+    btn.disabled = true;
+
+    const payload = {
+      doctor_id:  parseInt(form.doctor_id.value) || null,
+      leave_date: form.leave_date.value          || null,
+      reason:     form.reason.value.trim()        || null,
+    };
+
+    try {
+      await api('POST', 'http://localhost:5000/leaves', payload);
+      toast('Leave marked successfully', 'success');
+      closeModal('leaveOverlay');
+      setTimeout(function() { location.reload(); }, 1000);
+    } catch (err) {
+      toast(err.message || 'Something went wrong', 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function deleteLeave(id) {
+    const lv    = LEAVES.find(function(x) { return x.id === id; });
+    const label = lv ? 'leave on ' + lv.leave_date : 'this leave';
+    if (!confirm('Delete ' + label + '? This cannot be undone.')) return;
+    try {
+      await api('DELETE', 'http://localhost:5000/leaves/' + id);
+      toast('Leave deleted', 'success');
+      setTimeout(function() { location.reload(); }, 1000);
+    } catch (err) {
+      toast(err.message || 'Delete failed', 'error');
+    }
+  }
+</script>
+{% endblock %}

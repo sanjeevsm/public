@@ -1,0 +1,278 @@
+{% extends "base.html" %}
+{% block title %}ClinicCare — Appointments{% endblock %}
+
+{% block body %}
+<div class="page-head">
+  <div class="page-head-text">
+    <h1>Appointments</h1>
+    <p>All scheduled and past appointments</p>
+  </div>
+  <button class="btn btn-primary" onclick="openApptModal(null)">+ Book Appointment</button>
+</div>
+
+<div class="container">
+  <!-- Filter Section -->
+  <div class="filter-section">
+    <input type="text" id="filterInput" class="filter-input" placeholder="Filter by doctor, patient, speciality, or status..." onkeyup="filterTable()">
+    <button class="btn btn-ghost btn-sm" onclick="clearFilter()">Clear</button>
+  </div>
+
+  <div class="stats">
+    <div class="stat-card">
+      <div class="label">Total</div>
+      <div class="value" style="color:#6366f1">{{ stats.total }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Confirmed</div>
+      <div class="value" style="color:#1d4ed8">{{ stats.confirmed }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Completed</div>
+      <div class="value" style="color:#15803d">{{ stats.completed }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Cancelled</div>
+      <div class="value" style="color:#b91c1c">{{ stats.cancelled }}</div>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Date &amp; Time</th>
+          <th>Doctor</th>
+          <th>Patient</th>
+          <th>Speciality</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody">
+        {% for a in appointments %}
+        <tr class="table-row">
+          <td style="color:var(--muted);font-size:.75rem">{{ a.id }}</td>
+          <td>
+            <div style="font-weight:600;font-size:.875rem">{{ a.appointment_date }}</div>
+            <div style="color:var(--muted);font-size:.75rem">
+              {{ a.start_time[:5] }} – {{ a.end_time[:5] }}
+            </div>
+          </td>
+          <td style="font-weight:500">Dr. {{ a.doctor_name }}</td>
+          <td>{{ a.patient_name }}</td>
+          <td>
+            <span style="font-size:.78rem;color:var(--muted)">{{ a.speciality_name }}</span>
+          </td>
+          <td>
+            <span class="badge-status s-{{ a.status }}">
+              {{ a.status | replace('_', ' ') | title }}
+            </span>
+          </td>
+          <td>
+            <div style="display:flex;gap:.4rem">
+              <button class="btn btn-ghost btn-sm" onclick="openApptModal({{ a.id }})">Edit</button>
+              <button class="btn btn-danger btn-sm" onclick="deleteAppt({{ a.id }})">Delete</button>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Appointment Modal -->
+<div class="modal-overlay" id="apptOverlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="apptModalTitle">
+    <div class="modal-header">
+      <h2 id="apptModalTitle">Book Appointment</h2>
+      <button class="modal-close" onclick="closeModal('apptOverlay')" aria-label="Close">&times;</button>
+    </div>
+    <form id="apptForm" onsubmit="saveAppt(event)">
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="a_doctor">Doctor</label>
+          <select id="a_doctor" name="doctor_id" required>
+            <option value="">Loading…</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="a_patient">Patient</label>
+          <select id="a_patient" name="patient_id" required>
+            <option value="">Loading…</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="a_date">Appointment Date</label>
+          <input type="date" id="a_date" name="appointment_date" required>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="a_start">Start Time</label>
+            <input type="time" id="a_start" name="start_time" required>
+          </div>
+          <div class="form-group">
+            <label for="a_end">End Time</label>
+            <input type="time" id="a_end" name="end_time" required>
+          </div>
+        </div>
+        <div class="form-group" id="a_status_group">
+          <label for="a_status">Status</label>
+          <select id="a_status" name="status">
+            <option value="confirmed">Confirmed</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+            <option value="no_show">No Show</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('apptOverlay')">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="apptSaveBtn">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const APPOINTMENTS = {{ appointments | tojson }};
+
+  // Filter functionality
+  function filterTable() {
+    const input = document.getElementById('filterInput');
+    const filter = input.value.toLowerCase();
+    const rows = document.querySelectorAll('#tableBody .table-row');
+
+    let visibleCount = 0;
+    rows.forEach(row => {
+      const text = row.textContent.toLowerCase();
+      if (text.includes(filter)) {
+        row.style.display = '';
+        visibleCount++;
+      } else {
+        row.style.display = 'none';
+      }
+    });
+
+    // Show message if no results
+    let noResults = document.getElementById('noResults');
+    if (visibleCount === 0) {
+      if (!noResults) {
+        noResults = document.createElement('tr');
+        noResults.id = 'noResults';
+        noResults.innerHTML = '<td colspan="7" style="text-align:center;padding:2rem;color:var(--muted)">No appointments found matching your filter.</td>';
+        document.getElementById('tableBody').appendChild(noResults);
+      }
+    } else {
+      if (noResults) noResults.remove();
+    }
+  }
+
+  function clearFilter() {
+    document.getElementById('filterInput').value = '';
+    filterTable();
+  }
+
+  let currentApptId = null;
+
+  async function openApptModal(id) {
+    currentApptId = id;
+    const form = document.getElementById('apptForm');
+    form.reset();
+
+    document.getElementById('apptModalTitle').textContent = id ? 'Edit Appointment' : 'Book Appointment';
+    document.getElementById('apptSaveBtn').textContent    = id ? 'Update' : 'Save';
+    document.getElementById('a_status_group').style.display = id ? '' : 'none';
+
+    // Load doctors and patients in parallel
+    const doctorSel  = document.getElementById('a_doctor');
+    const patientSel = document.getElementById('a_patient');
+    doctorSel.innerHTML  = '<option value="">Loading…</option>';
+    patientSel.innerHTML = '<option value="">Loading…</option>';
+
+    try {
+      const [doctors, patients] = await Promise.all([
+        fetch('http://localhost:5000/doctors').then(r => r.json()),
+        fetch('http://localhost:5000/patients').then(r => r.json()),
+      ]);
+
+      doctorSel.innerHTML = doctors.map(d =>
+        `<option value="${d.id}">Dr. ${d.first_name} ${d.last_name}</option>`
+      ).join('');
+
+      patientSel.innerHTML = patients.map(p =>
+        `<option value="${p.id}">${p.first_name} ${p.last_name}</option>`
+      ).join('');
+    } catch (err) {
+      doctorSel.innerHTML  = '<option value="">Failed to load</option>';
+      patientSel.innerHTML = '<option value="">Failed to load</option>';
+    }
+
+    if (id) {
+      const a = APPOINTMENTS.find(x => x.id === id);
+      if (a) {
+        doctorSel.value  = String(a.doctor_id  || '');
+        patientSel.value = String(a.patient_id || '');
+        document.getElementById('a_date').value   = a.appointment_date || '';
+        document.getElementById('a_start').value  = (a.start_time || '').slice(0, 5);
+        document.getElementById('a_end').value    = (a.end_time   || '').slice(0, 5);
+        document.getElementById('a_status').value = a.status      || 'confirmed';
+      }
+    }
+
+    openModal('apptOverlay');
+  }
+
+  async function saveAppt(e) {
+    e.preventDefault();
+    const form = e.target;
+    const btn  = document.getElementById('apptSaveBtn');
+    btn.disabled = true;
+
+    try {
+      if (currentApptId) {
+        const payload = {
+          doctor_id:        parseInt(form.doctor_id.value)  || null,
+          patient_id:       parseInt(form.patient_id.value) || null,
+          appointment_date: form.appointment_date.value     || null,
+          start_time:       form.start_time.value           || null,
+          end_time:         form.end_time.value             || null,
+          status:           form.status.value,
+        };
+        await api('PUT', `http://localhost:5000/appointments/${currentApptId}`, payload);
+        toast('Appointment updated successfully', 'success');
+      } else {
+        const payload = {
+          doctor_id:        parseInt(form.doctor_id.value)  || null,
+          patient_id:       parseInt(form.patient_id.value) || null,
+          appointment_date: form.appointment_date.value     || null,
+          start_time:       form.start_time.value           || null,
+          end_time:         form.end_time.value             || null,
+        };
+        await api('POST', 'http://localhost:5000/appointments/book', payload);
+        toast('Appointment booked successfully', 'success');
+      }
+      closeModal('apptOverlay');
+      setTimeout(() => location.reload(), 1000);
+    } catch (err) {
+      toast(err.message || 'Something went wrong', 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function deleteAppt(id) {
+    if (!confirm('Delete this appointment? This cannot be undone.')) return;
+    try {
+      await api('DELETE', `http://localhost:5000/appointments/${id}`);
+      toast('Appointment deleted', 'success');
+      setTimeout(() => location.reload(), 1000);
+    } catch (err) {
+      toast(err.message || 'Delete failed', 'error');
+    }
+  }
+</script>
+{% endblock %}
