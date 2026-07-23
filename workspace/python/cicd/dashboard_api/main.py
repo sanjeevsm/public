@@ -10,7 +10,7 @@ from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 
 from config import get_settings
 from metrics import PrometheusMiddleware
-from routers import overview, pipelines, jobs, mergerequests, deployments, export, ws, branches, murex
+from routers import overview, pipelines, jobs, mergerequests, deployments, export, ws, branches
 
 settings = get_settings()
 logging.basicConfig(
@@ -52,7 +52,6 @@ app.include_router(mergerequests.router, prefix="/api")
 app.include_router(deployments.router, prefix="/api")
 app.include_router(export.router, prefix="/api")
 app.include_router(branches.router, prefix="/api")
-app.include_router(murex.router, prefix="/api")
 app.include_router(ws.router)
 
 

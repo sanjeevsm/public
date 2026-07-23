@@ -34,9 +34,9 @@ $GRAF_PORT   = if ($env:GRAFANA_PORT)           { $env:GRAFANA_PORT }           
 $LOG_LEVEL   = if ($env:LOG_LEVEL)              { $env:LOG_LEVEL }              else { "info" }
 $PROM_RETAIN = if ($env:PROMETHEUS_RETENTION)   { $env:PROMETHEUS_RETENTION }   else { "30d" }
 
-$PROMETHEUS_EXE = "C:\Users\SanjeevMenon\tools\prometheus-3.12.0\prometheus.exe"
-$GRAFANA_EXE    = "C:\Users\SanjeevMenon\tools\grafana-13.0.2\bin\grafana.exe"
-$GRAFANA_ROOT   = "C:\Users\SanjeevMenon\tools\grafana-13.0.2"
+$PROMETHEUS_EXE = if ($env:PROMETHEUS_EXE) { $env:PROMETHEUS_EXE } else { Write-Err "Set PROMETHEUS_EXE in .env to the path of prometheus.exe" }
+$GRAFANA_EXE    = if ($env:GRAFANA_EXE)    { $env:GRAFANA_EXE }    else { Write-Err "Set GRAFANA_EXE in .env to the path of grafana.exe" }
+$GRAFANA_ROOT   = if ($env:GRAFANA_ROOT)   { $env:GRAFANA_ROOT }   else { Write-Err "Set GRAFANA_ROOT in .env to the Grafana installation directory" }
 
 # -- Prerequisite checks -------------------------------------------------------
 if (-not (Test-Path $PROMETHEUS_EXE)) {
