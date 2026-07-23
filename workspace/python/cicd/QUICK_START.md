@@ -15,7 +15,7 @@ The dashboard backend services (FastAPI, Prometheus, Grafana) are not running.
 Open PowerShell and run:
 
 ```powershell
-cd C:\Users\SanjeevMenon\workspace\python\cicd
+cd <path-to-project>
 .\scripts\start.ps1
 ```
 
@@ -63,16 +63,16 @@ If this is your first time running the dashboard:
    # Check Python installation
    python --version    # Should be 3.8 or higher
    
-   # Check if Prometheus exists
-   Test-Path "C:\Users\SanjeevMenon\tools\prometheus-3.12.0\prometheus.exe"
+   # Check if Prometheus exists (path set in PROMETHEUS_EXE in .env)
+   Test-Path $env:PROMETHEUS_EXE
    
-   # Check if Grafana exists
-   Test-Path "C:\Users\SanjeevMenon\tools\grafana-13.0.2\bin\grafana.exe"
+   # Check if Grafana exists (path set in GRAFANA_EXE in .env)
+   Test-Path $env:GRAFANA_EXE
    ```
 
 2. **Run Setup (if needed):**
    ```powershell
-   cd C:\Users\SanjeevMenon\workspace\python\cicd
+   cd <path-to-project>
    .\scripts\setup.ps1
    ```
 
@@ -97,7 +97,7 @@ If this is your first time running the dashboard:
 When you're done, stop all services:
 
 ```powershell
-cd C:\Users\SanjeevMenon\workspace\python\cicd
+cd <path-to-project>
 .\scripts\stop.ps1
 ```
 
@@ -195,15 +195,6 @@ GITLAB_URL=https://gitlab.com
 GITLAB_TOKEN=glpat-xxxxxxxxxxxxx
 ```
 
-### Accessing Murex CTT Functionality
-
-Once the dashboard is running:
-
-1. Open http://localhost:8090
-2. Click on **"Murex CTT"** tab in the navigation
-3. Upload a CTT zip file or create one from a folder
-4. See [MUREX_CTT_GUIDE.md](MUREX_CTT_GUIDE.md) for detailed instructions
-
 ### Log Files
 
 If something goes wrong, check these log files:
@@ -253,7 +244,7 @@ PROMETHEUS_RETENTION=30d
 
 ```powershell
 # Navigate to project
-cd C:\Users\SanjeevMenon\workspace\python\cicd
+cd <path-to-project>
 
 # Start dashboard
 .\scripts\start.ps1
@@ -281,14 +272,13 @@ Invoke-WebRequest http://localhost:8090/health
 
 1. ✅ Start the dashboard: `.\scripts\start.ps1`
 2. ✅ Access UI: http://localhost:8090
-3. ✅ Explore features: Overview, Pipelines, Jobs, Murex CTT
-4. ✅ Read guides: MUREX_CTT_GUIDE.md, README.md
+3. ✅ Explore features: Overview, Pipelines, Jobs
+4. ✅ Read guide: README.md
 5. ✅ Configure GitLab integration
-6. ✅ Test Murex CTT functionality
 
 ### Support
 
-- **Documentation:** See README.md and MUREX_CTT_GUIDE.md
+- **Documentation:** See README.md
 - **API Docs:** http://localhost:8090/api/docs (when running)
 - **Logs:** `data/` directory
 - **Issues:** Check GitHub/GitLab repository

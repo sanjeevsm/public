@@ -51,7 +51,6 @@
   <button class="nav-btn active" data-section="overview">Overview</button>
   <button class="nav-btn" data-section="pipelines">Pipelines</button>
   <button class="nav-btn" data-section="jobs">Jobs</button>
-  <button class="nav-btn" data-section="murex">Murex CTT</button>
 </nav>
 
 <div class="content">
@@ -250,107 +249,6 @@
     </div>
   </section>
 
-  <!-- ── Murex CTT ────────────────────────────────────────── -->
-  <section class="section" id="section-murex">
-    <div class="murex-header">
-      <h2 class="murex-title">Murex Configuration Transfer Tool (CTT)</h2>
-      <p class="murex-desc">Extract and create Murex CTT files with automatic handling of nested zip structures</p>
-    </div>
-
-    <div class="murex-actions">
-      <div class="murex-action-card">
-        <div class="murex-action-header">
-          <div class="murex-icon extract">📦</div>
-          <h3>Extract CTT</h3>
-        </div>
-        <p class="murex-action-desc">Upload a Murex CTT zip file to extract it into folder structure. Nested zips will be automatically extracted.</p>
-        <div class="murex-upload-zone" id="upload-zone">
-          <input type="file" id="file-input" accept=".zip" style="display:none" />
-          <div class="upload-content">
-            <div class="upload-icon">📁</div>
-            <p class="upload-text">Click to select or drag & drop a .zip file</p>
-            <p class="upload-hint">Maximum file size: 500MB</p>
-          </div>
-        </div>
-        <div class="murex-path-row">
-          <label class="murex-path-label">Extract to (optional):</label>
-          <div class="murex-path-input-group">
-            <input type="text" id="extract-to-input" class="murex-path-input" placeholder="Default: workspace directory" />
-            <button class="btn btn-icon" id="browse-extract-btn" title="Browse folders">📂</button>
-          </div>
-        </div>
-        <button class="btn btn-primary" id="extract-btn" disabled>Extract CTT</button>
-        <div class="murex-progress" id="extract-progress" style="display:none">
-          <div class="progress-bar"><div class="progress-fill" id="extract-progress-fill"></div></div>
-          <p class="progress-text" id="extract-progress-text">Processing...</p>
-        </div>
-      </div>
-
-      <div class="murex-action-card">
-        <div class="murex-action-header">
-          <div class="murex-icon create">🗜️</div>
-          <h3>Create CTT</h3>
-        </div>
-        <p class="murex-action-desc">Select a folder to create a Murex CTT zip file. Subdirectories will be converted to nested zips.</p>
-        <div class="murex-path-row">
-          <label class="murex-path-label">Source folder:</label>
-          <div class="murex-path-input-group">
-            <input type="text" id="folder-path-input" class="murex-path-input" placeholder="Enter path or browse..." />
-            <button class="btn btn-icon" id="browse-folder-btn" title="Browse folders">📂</button>
-          </div>
-        </div>
-        <div class="murex-folder-select">
-          <label for="folder-select">Workspace:</label>
-          <select id="folder-select" class="murex-select">
-            <option value="">-- Workspace folders --</option>
-          </select>
-          <button class="btn btn-icon" id="refresh-folders-btn" title="Refresh folders">🔄</button>
-        </div>
-        <button class="btn btn-primary" id="create-btn" disabled>Create CTT</button>
-        <div class="murex-progress" id="create-progress" style="display:none">
-          <div class="progress-bar"><div class="progress-fill" id="create-progress-fill"></div></div>
-          <p class="progress-text" id="create-progress-text">Processing...</p>
-        </div>
-      </div>
-    </div>
-
-    <div class="murex-workspace">
-      <div class="workspace-header">
-        <h3>Workspace</h3>
-        <button class="btn btn-sm" id="refresh-workspace-btn">🔄 Refresh</button>
-      </div>
-      <div class="workspace-content" id="workspace-content">
-        <div class="loading-state">Loading workspace...</div>
-      </div>
-    </div>
-  </section>
-
-
-
-</div>
-
-<!-- Folder Browser Modal -->
-<div id="folder-browser-modal" class="folder-browser-overlay" style="display:none">
-  <div class="folder-browser-dialog">
-    <div class="folder-browser-header">
-      <h4>Browse Folders</h4>
-      <button class="btn btn-icon folder-browser-close" onclick="closeFolderBrowser()">✕</button>
-    </div>
-    <div class="folder-browser-nav">
-      <button class="btn btn-sm" id="folder-browser-up-btn">↑ Up</button>
-      <span class="folder-browser-current" id="folder-browser-current-path">Loading...</span>
-    </div>
-    <div class="folder-browser-list" id="folder-browser-list">
-      <div class="loading-state">Loading...</div>
-    </div>
-    <div class="folder-browser-footer">
-      <span class="folder-browser-selected" id="folder-browser-selected-path"></span>
-      <div class="folder-browser-actions">
-        <button class="btn btn-primary btn-sm" id="folder-browser-select-btn">Select This Folder</button>
-        <button class="btn btn-sm" onclick="closeFolderBrowser()">Cancel</button>
-      </div>
-    </div>
-  </div>
 </div>
 
 <div class="toast" id="toast"></div>

@@ -5,7 +5,7 @@ A real-time GitLab CI/CD metrics dashboard built with Python FastAPI and a singl
 ## Architecture
 
 ```
-GitLab API (eu.git.epam.com)
+GitLab API (your-gitlab-instance.example.com)
         |
         v  httpx (async, TTL-cached)
 CI/CD Dashboard API  :8090  (Python FastAPI)
@@ -18,10 +18,9 @@ Browser SPA  (Chart.js, dark/light theme)
 
 | Section | Content |
 |---|---|
-| **Overview** | 8 KPI cards + pipeline trend chart + status donut |
+| **Overview** | KPI cards + pipeline trend chart + status donut + branch overview + recent MRs + recent deployments |
 | **Pipelines** | Recent pipelines table with status, branch, duration |
 | **Jobs** | Top failing jobs chart + stage breakdown + recent jobs |
-| **MRs & Deployments** | MR activity trend + recent MRs + recent deployments |
 
 ## Prerequisites
 
@@ -37,14 +36,14 @@ Browser SPA  (Chart.js, dark/light theme)
 
 ### Step 1 - Create a GitLab Personal Access Token
 
-Go to: `https://eu.git.epam.com/-/user_settings/personal_access_tokens`
+Go to: `https://<your-gitlab-host>/-/user_settings/personal_access_tokens`
 
 Create a token with scopes: `api`, `read_api`, `read_repository`
 
 ### Step 2 - Setup (first time only)
 
 ```powershell
-cd C:\Users\SanjeevMenon\workspace\python\cicd
+cd <path-to-project>
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\scripts\setup.ps1
 ```
@@ -56,7 +55,7 @@ notepad .env
 ```
 
 ```ini
-GITLAB_URL=https://eu.git.epam.com
+GITLAB_URL=https://your-gitlab-instance.example.com
 GITLAB_TOKEN=your_token_here
 GITLAB_PROJECT_IDS=          # leave empty for all your projects
 GITLAB_PROJECT_LIMIT=20
@@ -93,7 +92,7 @@ The dashboard and API docs open automatically in your browser.
 
 | Variable | Default | Description |
 |---|---|---|
-| `GITLAB_URL` | `https://eu.git.epam.com` | GitLab instance URL |
+| `GITLAB_URL` | *(required)* | GitLab instance URL |
 | `GITLAB_TOKEN` | *(required)* | Personal Access Token |
 | `GITLAB_PROJECT_IDS` | *(empty)* | Comma-separated project IDs; empty = all member projects |
 | `GITLAB_PROJECT_LIMIT` | `20` | Max projects when using auto-discovery |
@@ -140,6 +139,7 @@ python/cicd/
 │   │   ├── jobs.py            GET /api/jobs/*
 │   │   ├── mergerequests.py   GET /api/mrs/*
 │   │   ├── deployments.py     GET /api/deployments/*
+│   │   ├── branches.py        GET /api/branches/*
 │   │   ├── export.py          GET /api/export/*
 │   │   └── ws.py              WS  /ws/metrics
 │   ├── services/
