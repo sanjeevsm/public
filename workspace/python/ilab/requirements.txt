@@ -1,0 +1,5 @@
+customtkinter>=5.2.0
+anthropic>=0.40.0
+openai>=1.50.0
+google-generativeai>=0.8.0
+Pillow>=10.0.0

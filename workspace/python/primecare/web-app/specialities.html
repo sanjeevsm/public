@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% block title %}ClinicCare — Specialities{% endblock %}
+
+{% block body %}
+<div class="page-head">
+  <div class="page-head-text">
+    <h1>Specialities</h1>
+    <p>Manage doctor specialities</p>
+  </div>
+  <button class="btn btn-primary" onclick="openSpecModal(null)">+ Add Speciality</button>
+</div>
+
+<div class="container">
+  <!-- Filter Section -->
+  <div class="filter-section">
+    <input type="text" id="filterInput" class="filter-input" placeholder="Filter by speciality name..." onkeyup="filterTable()">
+    <button class="btn btn-ghost btn-sm" onclick="clearFilter()">Clear</button>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Name</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody">
+        {% for s in specialities %}
+        <tr class="table-row">
+          <td style="color:var(--muted);font-size:.75rem">{{ s.id }}</td>
+          <td style="font-weight:600">{{ s.name }}</td>
+          <td>
+            <div style="display:flex;gap:.4rem">
+              <button class="btn btn-ghost btn-sm" onclick="openSpecModal({{ s.id }})">Edit</button>
+              <button class="btn btn-danger btn-sm" onclick="deleteSpec({{ s.id }})">Delete</button>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Speciality Modal -->
+<div class="modal-overlay" id="specOverlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="specModalTitle">
+    <div class="modal-header">
+      <h2 id="specModalTitle">Add Speciality</h2>
+      <button class="modal-close" onclick="closeModal('specOverlay')" aria-label="Close">&times;</button>
+    </div>
+    <form id="specForm" onsubmit="saveSpec(event)">
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="s_name">Name</label>
+          <input type="text" id="s_name" name="name" required placeholder="e.g. Cardiology">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('specOverlay')">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="specSaveBtn">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const SPECIALITIES = {{ specialities | tojson }};
+
+  // Filter functionality
+  function filterTable() {
+    const input = document.getElementById('filterInput');
+    const filter = input.value.toLowerCase();
+    const rows = document.querySelectorAll('#tableBody .table-row');
+
+    let visibleCount = 0;
+    rows.forEach(row => {
+      const text = row.textContent.toLowerCase();
+      if (text.includes(filter)) {
+        row.style.display = '';
+        visibleCount++;
+      } else {
+        row.style.display = 'none';
+      }
+    });
+
+    // Show message if no results
+    let noResults = document.getElementById('noResults');
+    if (visibleCount === 0) {
+      if (!noResults) {
+        noResults = document.createElement('tr');
+        noResults.id = 'noResults';
+        noResults.innerHTML = '<td colspan="3" style="text-align:center;padding:2rem;color:var(--muted)">No specialities found matching your filter.</td>';
+        document.getElementById('tableBody').appendChild(noResults);
+      }
+    } else {
+      if (noResults) noResults.remove();
+    }
+  }
+
+  function clearFilter() {
+    document.getElementById('filterInput').value = '';
+    filterTable();
+  }
+
+  let currentSpecId = null;
+
+  function openSpecModal(id) {
+    currentSpecId = id;
+    const form = document.getElementById('specForm');
+    form.reset();
+
+    document.getElementById('specModalTitle').textContent = id ? 'Edit Speciality' : 'Add Speciality';
+    document.getElementById('specSaveBtn').textContent    = id ? 'Update' : 'Save';
+
+    if (id) {
+      const s = SPECIALITIES.find(x => x.id === id);
+      if (s) {
+        document.getElementById('s_name').value = s.name || '';
+      }
+    }
+
+    openModal('specOverlay');
+  }
+
+  async function saveSpec(e) {
+    e.preventDefault();
+    const form = e.target;
+    const btn  = document.getElementById('specSaveBtn');
+    btn.disabled = true;
+
+    const payload = {
+      name: form.name.value.trim(),
+    };
+
+    try {
+      if (currentSpecId) {
+        await api('PUT', `http://localhost:5000/specialities/${currentSpecId}`, payload);
+        toast('Speciality updated successfully', 'success');
+      } else {
+        await api('POST', 'http://localhost:5000/specialities', payload);
+        toast('Speciality added successfully', 'success');
+      }
+      closeModal('specOverlay');
+      setTimeout(() => location.reload(), 1000);
+    } catch (err) {
+      toast(err.message || 'Something went wrong', 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function deleteSpec(id) {
+    const s = SPECIALITIES.find(x => x.id === id);
+    const name = s ? `"${s.name}"` : 'this speciality';
+    if (!confirm(`Delete ${name}? This cannot be undone.`)) return;
+    try {
+      await api('DELETE', `http://localhost:5000/specialities/${id}`);
+      toast('Speciality deleted', 'success');
+      setTimeout(() => location.reload(), 1000);
+    } catch (err) {
+      toast(err.message || 'Delete failed', 'error');
+    }
+  }
+</script>
+{% endblock %}

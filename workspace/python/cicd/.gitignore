@@ -1,0 +1,12 @@
+.env
+*.pyc
+__pycache__/
+.pytest_cache/
+exports/
+*.xlsx
+*.pdf
+*.csv
+# Runtime directories
+data/
+.pids/
+dashboard_api/.venv/

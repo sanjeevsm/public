@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+{% block title %}ClinicCare — Patients{% endblock %}
+
+{% block body %}
+<div class="page-head">
+  <div class="page-head-text">
+    <h1>Patients</h1>
+    <p>{{ patients | length }} registered patients</p>
+  </div>
+  <button class="btn btn-primary" onclick="openPatientModal(null)">+ Add Patient</button>
+</div>
+
+<div class="container">
+  <!-- Filter Section -->
+  <div class="filter-section">
+    <input type="text" id="filterInput" class="filter-input" placeholder="Filter by name, gender, email, or phone..." onkeyup="filterTable()">
+    <button class="btn btn-ghost btn-sm" onclick="clearFilter()">Clear</button>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Name</th>
+          <th>Gender</th>
+          <th>Date of Birth</th>
+          <th>Phone</th>
+          <th>Email</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody">
+        {% for p in patients %}
+        <tr class="table-row">
+          <td style="color:var(--muted);font-size:.75rem">{{ p.id }}</td>
+          <td style="font-weight:600">{{ p.first_name }} {{ p.last_name }}</td>
+          <td>
+            {% if p.gender %}
+            <span style="
+              display:inline-block;
+              padding:.2rem .6rem;
+              border-radius:999px;
+              font-size:.72rem;
+              font-weight:600;
+              background:{% if p.gender == 'Male' %}#dbeafe{% elif p.gender == 'Female' %}#fce7f3{% else %}#ede9fe{% endif %};
+              color:{% if p.gender == 'Male' %}#1d4ed8{% elif p.gender == 'Female' %}#be185d{% else %}#6d28d9{% endif %}
+            ">{{ p.gender }}</span>
+            {% else %}—{% endif %}
+          </td>
+          <td style="font-size:.875rem">{{ p.date_of_birth or '—' }}</td>
+          <td style="font-size:.875rem;font-variant-numeric:tabular-nums">{{ p.phone }}</td>
+          <td style="font-size:.8rem;color:var(--muted)">{{ p.email or '—' }}</td>
+          <td>
+            <div style="display:flex;gap:.4rem">
+              <button class="btn btn-ghost btn-sm" onclick="openPatientModal({{ p.id }})">Edit</button>
+              <button class="btn btn-danger btn-sm" onclick="deletePatient({{ p.id }})">Delete</button>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Patient Modal -->
+<div class="modal-overlay" id="patientOverlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="patientModalTitle">
+    <div class="modal-header">
+      <h2 id="patientModalTitle">Add Patient</h2>
+      <button class="modal-close" onclick="closeModal('patientOverlay')" aria-label="Close">&times;</button>
+    </div>
+    <form id="patientForm" onsubmit="savePatient(event)">
+      <div class="modal-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="p_first_name">First Name</label>
+            <input type="text" id="p_first_name" name="first_name" required>
+          </div>
+          <div class="form-group">
+            <label for="p_last_name">Last Name</label>
+            <input type="text" id="p_last_name" name="last_name" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="p_email">Email</label>
+          <input type="email" id="p_email" name="email">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="p_phone">Phone</label>
+            <input type="text" id="p_phone" name="phone">
+          </div>
+          <div class="form-group">
+            <label for="p_dob">Date of Birth</label>
+            <input type="date" id="p_dob" name="date_of_birth">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="p_gender">Gender</label>
+          <select id="p_gender" name="gender">
+            <option value="">— Select —</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('patientOverlay')">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="patientSaveBtn">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const PATIENTS = {{ patients | tojson }};
+
+  // Filter functionality
+  function filterTable() {
+    const input = document.getElementById('filterInput');
+    const filter = input.value.toLowerCase();
+    const rows = document.querySelectorAll('#tableBody .table-row');
+
+    let visibleCount = 0;
+    rows.forEach(row => {
+      const text = row.textContent.toLowerCase();
+      if (text.includes(filter)) {
+        row.style.display = '';
+        visibleCount++;
+      } else {
+        row.style.display = 'none';
+      }
+    });
+
+    // Show message if no results
+    let noResults = document.getElementById('noResults');
+    if (visibleCount === 0) {
+      if (!noResults) {
+        noResults = document.createElement('tr');
+        noResults.id = 'noResults';
+        noResults.innerHTML = '<td colspan="7" style="text-align:center;padding:2rem;color:var(--muted)">No patients found matching your filter.</td>';
+        document.getElementById('tableBody').appendChild(noResults);
+      }
+    } else {
+      if (noResults) noResults.remove();
+    }
+  }
+
+  function clearFilter() {
+    document.getElementById('filterInput').value = '';
+    filterTable();
+  }
+
+  let currentPatientId = null;
+
+  function openPatientModal(id) {
+    currentPatientId = id;
+    const form = document.getElementById('patientForm');
+    form.reset();
+
+    document.getElementById('patientModalTitle').textContent = id ? 'Edit Patient' : 'Add Patient';
+    document.getElementById('patientSaveBtn').textContent    = id ? 'Update' : 'Save';
+
+    if (id) {
+      const p = PATIENTS.find(x => x.id === id);
+      if (p) {
+        document.getElementById('p_first_name').value = p.first_name     || '';
+        document.getElementById('p_last_name').value  = p.last_name      || '';
+        document.getElementById('p_email').value      = p.email          || '';
+        document.getElementById('p_phone').value      = p.phone          || '';
+        document.getElementById('p_dob').value        = p.date_of_birth  || '';
+        document.getElementById('p_gender').value     = p.gender         || '';
+      }
+    }
+
+    openModal('patientOverlay');
+  }
+
+  async function savePatient(e) {
+    e.preventDefault();
+    const form = e.target;
+    const btn  = document.getElementById('patientSaveBtn');
+    btn.disabled = true;
+
+    const payload = {
+      first_name:    form.first_name.value.trim(),
+      last_name:     form.last_name.value.trim(),
+      email:         form.email.value.trim()         || null,
+      phone:         form.phone.value.trim()         || null,
+      date_of_birth: form.date_of_birth.value        || null,
+      gender:        form.gender.value               || null,
+    };
+
+    try {
+      if (currentPatientId) {
+        await api('PUT', `http://localhost:5000/patients/${currentPatientId}`, payload);
+        toast('Patient updated successfully', 'success');
+      } else {
+        await api('POST', 'http://localhost:5000/patients', payload);
+        toast('Patient added successfully', 'success');
+      }
+      closeModal('patientOverlay');
+      setTimeout(() => location.reload(), 1000);
+    } catch (err) {
+      toast(err.message || 'Something went wrong', 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function deletePatient(id) {
+    const p = PATIENTS.find(x => x.id === id);
+    const name = p ? `${p.first_name} ${p.last_name}` : 'this patient';
+    if (!confirm(`Delete ${name}? This cannot be undone.`)) return;
+    try {
+      await api('DELETE', `http://localhost:5000/patients/${id}`);
+      toast('Patient deleted', 'success');
+      setTimeout(() => location.reload(), 1000);
+    } catch (err) {
+      toast(err.message || 'Delete failed', 'error');
+    }
+  }
+</script>
+{% endblock %}
