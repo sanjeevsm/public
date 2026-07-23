@@ -1,4 +1,6 @@
-# PrimeCare+ Diagnostic Script
+#Requires -Version 5.1
+$ROOT = $PSScriptRoot
+
 Write-Host "PrimeCare+ Diagnostic Tool" -ForegroundColor Cyan
 Write-Host "==========================" -ForegroundColor Cyan
 Write-Host ""
@@ -6,16 +8,16 @@ Write-Host ""
 # Check 1: Files exist
 Write-Host "1. Checking files..." -ForegroundColor Yellow
 $files = @(
-    "C:\Users\SanjeevMenon\workspace\python\primecare\api\app.py",
-    "C:\Users\SanjeevMenon\workspace\python\primecare\web-app\client.py",
-    "C:\Users\SanjeevMenon\workspace\python\primecare\web-app\reports.html"
+    (Join-Path $ROOT "api\app.py"),
+    (Join-Path $ROOT "web-app\client.py"),
+    (Join-Path $ROOT "web-app\reports.html")
 )
 
 foreach ($file in $files) {
     if (Test-Path $file) {
-        Write-Host "  ✓ $($file.Split('\')[-1]) exists" -ForegroundColor Green
+        Write-Host "  ✓ $([System.IO.Path]::GetFileName($file)) exists" -ForegroundColor Green
     } else {
-        Write-Host "  ✗ $($file.Split('\')[-1]) missing" -ForegroundColor Red
+        Write-Host "  ✗ $([System.IO.Path]::GetFileName($file)) missing" -ForegroundColor Red
     }
 }
 
@@ -24,15 +26,16 @@ Write-Host ""
 # Check 2: Virtual environments
 Write-Host "2. Checking virtual environments..." -ForegroundColor Yellow
 $venvs = @(
-    "C:\Users\SanjeevMenon\workspace\python\primecare\api\venv\Scripts\python.exe",
-    "C:\Users\SanjeevMenon\workspace\python\primecare\web-app\venv\Scripts\python.exe"
+    (Join-Path $ROOT "api\venv\Scripts\python.exe"),
+    (Join-Path $ROOT "web-app\venv\Scripts\python.exe")
 )
 
 foreach ($venv in $venvs) {
+    $rel = $venv.Replace($ROOT + "\", "")
     if (Test-Path $venv) {
-        Write-Host "  ✓ $($venv.Split('\')[-4..-1] -join '\') exists" -ForegroundColor Green
+        Write-Host "  ✓ $rel exists" -ForegroundColor Green
     } else {
-        Write-Host "  ✗ $($venv.Split('\')[-4..-1] -join '\') missing" -ForegroundColor Red
+        Write-Host "  ✗ $rel missing (run .\setup.sh or create venvs manually)" -ForegroundColor Red
     }
 }
 
@@ -76,7 +79,7 @@ Write-Host ""
 
 # Check 5: API endpoints in app.py
 Write-Host "5. Checking API endpoints in app.py..." -ForegroundColor Yellow
-$appPyPath = "C:\Users\SanjeevMenon\workspace\python\primecare\api\app.py"
+$appPyPath = Join-Path $ROOT "api\app.py"
 if (Test-Path $appPyPath) {
     $content = Get-Content $appPyPath -Raw
     $endpoints = @(
@@ -102,7 +105,7 @@ Write-Host ""
 
 # Check 6: Client route
 Write-Host "6. Checking client route..." -ForegroundColor Yellow
-$clientPyPath = "C:\Users\SanjeevMenon\workspace\python\primecare\web-app\client.py"
+$clientPyPath = Join-Path $ROOT "web-app\client.py"
 if (Test-Path $clientPyPath) {
     $content = Get-Content $clientPyPath -Raw
     if ($content -match "@app\.route\('/reports'\)") {
@@ -126,7 +129,7 @@ Write-Host ""
 Write-Host "Recommendations:" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "If all checks passed:" -ForegroundColor White
-Write-Host "  1. Run 'start_servers.ps1' to start both servers" -ForegroundColor Gray
+Write-Host "  1. Run '.\start_servers.ps1' to start both servers" -ForegroundColor Gray
 Write-Host "  2. Wait 5 seconds for servers to start" -ForegroundColor Gray
 Write-Host "  3. Open http://localhost:5001/reports in browser" -ForegroundColor Gray
 Write-Host ""
