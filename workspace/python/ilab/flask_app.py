@@ -46,6 +46,37 @@ THEMES = [
         "bg":      "#120f07",
         "accent":  "#f59e0b",
     },
+    # ── Light themes ─────────────────────────────────────
+    {
+        "id":      "ocean",
+        "label":   "Ocean",
+        "bg":      "#f0f8ff",
+        "accent":  "#0284c7",
+    },
+    {
+        "id":      "rose",
+        "label":   "Rose",
+        "bg":      "#fff5f5",
+        "accent":  "#e11d48",
+    },
+    {
+        "id":      "sage",
+        "label":   "Sage",
+        "bg":      "#f0faf4",
+        "accent":  "#059669",
+    },
+    {
+        "id":      "sunset",
+        "label":   "Sunset",
+        "bg":      "#fffbf0",
+        "accent":  "#ea580c",
+    },
+    {
+        "id":      "lavender",
+        "label":   "Lavender",
+        "bg":      "#f8f5ff",
+        "accent":  "#7c3aed",
+    },
 ]
 
 # Badge palettes — rgba so they work on all theme backgrounds
