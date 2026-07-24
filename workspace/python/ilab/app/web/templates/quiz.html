@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{{ theme }}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quiz | iLab+</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <!-- Non-blocking font load — prevents render stall while googleapis.com responds -->
+  <link rel="preload" as="style"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"></noscript>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+<!-- Inject data before quiz.js runs -->
+<script>
+  window.QUESTIONS = {{ questions | tojson }};
+  window.QUIZ_ID   = {{ quiz_id | tojson }};
+</script>
+
+<div class="quiz-page">
+
+  <!-- ── Header ── -->
+  <header class="quiz-header">
+    <span class="brand-logo">iLab<span class="brand-plus">+</span></span>
+    <span id="progress-text" class="quiz-progress"></span>
+    <div class="quiz-actions">
+      <button id="filter-bm-btn" class="btn btn-ghost" onclick="toggleBmFilter()">☆ Bookmarks</button>
+      <button class="btn btn-primary" onclick="finishQuiz()">Finish ✓</button>
+      <a href="{{ url_for('main.setup') }}" class="btn btn-ghost btn-danger">Quit</a>
+    </div>
+  </header>
+
+  <!-- ── Body ── -->
+  <div class="quiz-body">
+    <div class="question-card">
+
+      <div class="question-meta">
+        <span id="q-category" class="badge"></span>
+        <span id="q-difficulty" class="badge badge-diff" data-d="medium"></span>
+        <span id="q-number"   class="q-number"></span>
+        <button id="bookmark-btn" class="bookmark-btn" onclick="toggleBookmark()">☆</button>
+      </div>
+
+      <p id="question-text" class="question-text"></p>
+
+      <div id="options-container" class="options-container"></div>
+
+      <div id="explanation" class="explanation" style="display:none;"></div>
+
+    </div>
+  </div>
+
+  <!-- ── Footer ── -->
+  <footer class="quiz-footer">
+    <button id="back-btn"   class="btn btn-secondary" onclick="navBack()">← Back</button>
+    <div    id="nav-rail"   class="nav-rail"></div>
+    <button id="next-btn"   class="btn btn-secondary" onclick="navNext()">Next →</button>
+    <button id="finish-btn" class="btn btn-primary"   onclick="finishQuiz()" style="display:none;">Finish ✓</button>
+  </footer>
+
+</div>
+
+<script src="{{ url_for('static', filename='js/quiz.js') }}"></script>
+</body>
+</html>

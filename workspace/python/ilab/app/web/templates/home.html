@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% block title %}Start Interview{% endblock %}
+
+{% block content %}
+<div class="start-layout">
+
+  <!-- ── Hero ── -->
+  <div class="start-hero">
+    <div class="start-logo">iLab<span>+</span></div>
+    <p class="start-tagline">Generate tailored interview questions from any job description or skill set</p>
+  </div>
+
+  <!-- ── Model Status Banner ── -->
+  <div class="model-status {{ model_status.status }}">
+    <span class="ms-icon">
+      {% if model_status.status == 'ok' %}✅{% elif model_status.status == 'warning' %}⚠️{% else %}❌{% endif %}
+    </span>
+    <div class="ms-body">
+      <div class="ms-title">{{ model_status.title }}</div>
+      {% if model_status.sub %}
+      <div class="ms-sub">
+        {{ model_status.sub }}
+        <a href="{{ url_for('main.settings_page') }}" class="ms-link">Open Settings →</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ── Main Form Card ── -->
+  <div class="card">
+    <form method="POST" action="{{ url_for('main.generate') }}" id="gen-form">
+
+      <!-- hidden fields updated by JS -->
+      <input type="hidden" name="mode"              id="mode-input"  value="jd">
+      <input type="hidden" name="experience_level"  id="exp-hidden"  value="{{ cfg.experience_level }}">
+      <input type="hidden" name="num_questions"     id="num-hidden"  value="{{ cfg.num_questions }}">
+
+      <!-- ── Input Mode Tabs ── -->
+      <div class="tab-group">
+        <button type="button" class="tab-btn active" data-tab="jd"     onclick="switchTab('jd')">📋 Job Description</button>
+        <button type="button" class="tab-btn"        data-tab="skills" onclick="switchTab('skills')">🔧 Skills / Tech Stack</button>
+      </div>
+
+      <div class="tab-pane active" data-tab="jd">
+        <div class="form-group">
+          <textarea name="jd_text" id="jd_text" class="form-textarea" style="min-height:200px;"
+            placeholder="Paste the full job description here — responsibilities, requirements, tech stack, etc.
+
+The AI will generate highly relevant interview questions based on what the role actually demands."></textarea>
+        </div>
+      </div>
+
+      <div class="tab-pane" data-tab="skills">
+        <div class="form-group">
+          <textarea name="skills_text" id="skills_text" class="form-textarea" style="min-height:200px;"
+            placeholder="List the skills and technologies you want to be tested on.
+
+e.g. React, TypeScript, GraphQL, AWS Lambda, PostgreSQL, CI/CD, Docker
+
+One per line or comma-separated."></textarea>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- ── Sliders ── -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px;">
+
+        <!-- Experience Level -->
+        <div class="slider-group">
+          <div class="slider-header">
+            <label class="form-label">Experience Level</label>
+            <span class="slider-badge" id="exp-display">{{ cfg.experience_level | capitalize }}</span>
+          </div>
+          <input type="range" class="slider" id="exp-slider"
+                 min="0" max="4" step="1"
+                 value="{{ ['junior','mid','senior','lead','architect'].index(cfg.experience_level) if cfg.experience_level in ['junior','mid','senior','lead','architect'] else 1 }}"
+                 oninput="updateExp(this.value)">
+          <div class="slider-ticks">
+            <span>Junior</span><span>Mid</span><span>Senior</span><span>Lead</span><span>Architect</span>
+          </div>
+        </div>
+
+        <!-- Number of Questions -->
+        <div class="slider-group">
+          <div class="slider-header">
+            <label class="form-label">Number of Questions</label>
+            <span class="slider-badge" id="num-display">{{ cfg.num_questions }}</span>
+          </div>
+          <input type="range" class="slider" id="num-slider"
+                 min="5" max="50" step="5"
+                 value="{{ cfg.num_questions if cfg.num_questions <= 50 else 50 }}"
+                 oninput="updateNum(this.value)">
+          <div class="slider-ticks">
+            <span>5</span><span>10</span><span>15</span><span>20</span><span>25</span>
+            <span>30</span><span>35</span><span>40</span><span>45</span><span>50</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ── Submit ── -->
+      <div class="mt-16">
+        <button type="submit" class="btn btn-primary btn-lg btn-full"
+                onclick="return prepareSubmit()"
+                {% if model_status.status == 'error' %}disabled{% endif %}>
+          Generate Interview Questions →
+        </button>
+      </div>
+
+    </form>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  /* ── Tab switching ────────────────────────────── */
+  let activeTab = "jd";
+  function switchTab(tab) {
+    activeTab = tab;
+    document.getElementById("mode-input").value = tab;
+    document.querySelectorAll(".tab-btn").forEach(b  => b.classList.toggle("active", b.dataset.tab === tab));
+    document.querySelectorAll(".tab-pane").forEach(p => p.classList.toggle("active", p.dataset.tab === tab));
+  }
+
+  /* ── Slider helpers ──────────────────────────── */
+  const EXP_LEVELS = ["junior","mid","senior","lead","architect"];
+  const EXP_LABELS = ["Junior","Mid","Senior","Lead","Architect"];
+
+  function setSliderFill(el) {
+    const pct = ((el.value - el.min) / (el.max - el.min)) * 100;
+    el.style.background = `linear-gradient(to right, var(--accent) ${pct}%, var(--border) ${pct}%)`;
+  }
+
+  function updateExp(val) {
+    const i = parseInt(val);
+    document.getElementById("exp-display").textContent = EXP_LABELS[i];
+    document.getElementById("exp-hidden").value        = EXP_LEVELS[i];
+    setSliderFill(document.getElementById("exp-slider"));
+  }
+
+  function updateNum(val) {
+    document.getElementById("num-display").textContent = val;
+    document.getElementById("num-hidden").value        = val;
+    setSliderFill(document.getElementById("num-slider"));
+  }
+
+  /* ── Form submit ─────────────────────────────── */
+  function prepareSubmit() {
+    const text = activeTab === "jd"
+      ? document.getElementById("jd_text").value.trim()
+      : document.getElementById("skills_text").value.trim();
+    if (!text) {
+      alert(activeTab === "jd"
+        ? "Please paste a job description first."
+        : "Please list at least one skill or technology.");
+      return false;
+    }
+    const inp  = document.createElement("input");
+    inp.type   = "hidden";
+    inp.name   = "text";
+    inp.value  = text;
+    document.getElementById("gen-form").appendChild(inp);
+    return true;
+  }
+
+  /* ── Init sliders on load ────────────────────── */
+  document.addEventListener("DOMContentLoaded", () => {
+    setSliderFill(document.getElementById("exp-slider"));
+    setSliderFill(document.getElementById("num-slider"));
+  });
+</script>
+{% endblock %}
