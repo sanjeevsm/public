@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}Setup{% endblock %}
+
+{% block nav_actions %}
+  <a href="{{ url_for('main.home') }}" class="btn btn-ghost">← Home</a>
+{% endblock %}
+
+{% block content %}
+<div class="setup-wrap">
+
+  <div class="page-header">
+    <div class="page-titles">
+      <div class="page-title">Interview Setup</div>
+      <div class="page-sub">Describe the role or list the skills you want to be tested on</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <form method="POST" action="{{ url_for('main.generate') }}" id="setup-form">
+
+      <!-- ── Input Mode Tabs ── -->
+      <div class="tab-group">
+        <button type="button" class="tab-btn active" data-tab="jd" onclick="switchTab('jd')">
+          📋 Job Description
+        </button>
+        <button type="button" class="tab-btn" data-tab="skills" onclick="switchTab('skills')">
+          🔧 Skills / Tech Stack
+        </button>
+      </div>
+
+      <!-- hidden field carrying the active mode -->
+      <input type="hidden" name="mode" id="mode-input" value="jd">
+
+      <!-- JD tab -->
+      <div class="tab-pane active" data-tab="jd">
+        <div class="form-group">
+          <label class="form-label">Paste the Job Description</label>
+          <textarea name="jd_text" id="jd_text" class="form-textarea"
+                    placeholder="Paste the full job description here — responsibilities, requirements, tech stack, etc.
+The AI will generate highly relevant interview questions based on what the role actually demands."></textarea>
+        </div>
+      </div>
+
+      <!-- Skills tab -->
+      <div class="tab-pane" data-tab="skills">
+        <div class="form-group">
+          <label class="form-label">Enter Skills &amp; Technologies</label>
+          <textarea name="skills_text" id="skills_text" class="form-textarea"
+                    placeholder="e.g. React, TypeScript, GraphQL, AWS Lambda, PostgreSQL, CI/CD, Docker
+
+One skill per line or comma-separated — the AI will generate questions covering all listed topics."></textarea>
+        </div>
+      </div>
+
+      <!-- ── Config Row ── -->
+      <div class="config-row">
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">Experience Level</label>
+          <select name="experience_level" class="form-select">
+            {% for lvl in experience_levels %}
+            <option value="{{ lvl }}" {% if cfg.experience_level == lvl %}selected{% endif %}>
+              {{ lvl | capitalize }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">Number of Questions</label>
+          <select name="num_questions" class="form-select">
+            {% for n in question_counts %}
+            <option value="{{ n }}" {% if cfg.num_questions == n %}selected{% endif %}>{{ n }} questions</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="mt-24">
+        <button type="submit" class="btn btn-primary btn-lg btn-full" onclick="return prepareSubmit()">
+          Generate Interview Questions →
+        </button>
+      </div>
+
+    </form>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  let activeTab = "jd";
+
+  function switchTab(tab) {
+    activeTab = tab;
+    document.getElementById("mode-input").value = tab;
+    document.querySelectorAll(".tab-btn").forEach(b =>
+      b.classList.toggle("active", b.dataset.tab === tab));
+    document.querySelectorAll(".tab-pane").forEach(p =>
+      p.classList.toggle("active", p.dataset.tab === tab));
+  }
+
+  function prepareSubmit() {
+    const jdEl     = document.getElementById("jd_text");
+    const skillsEl = document.getElementById("skills_text");
+    const jd       = jdEl.value.trim();
+    const skills   = skillsEl.value.trim();
+    const text     = activeTab === "jd" ? jd : skills;
+
+    if (!text) {
+      alert(activeTab === "jd"
+        ? "Please paste a job description before generating questions."
+        : "Please enter at least one skill or technology.");
+      return false;
+    }
+
+    // Copy active textarea value into a unified field the server reads
+    const unified = document.createElement("input");
+    unified.type  = "hidden";
+    unified.name  = "text";
+    unified.value = text;
+    document.getElementById("setup-form").appendChild(unified);
+    return true;
+  }
+</script>
+{% endblock %}
