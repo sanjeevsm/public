@@ -69,6 +69,21 @@ Optional monitoring:
    Grafana    :3001  ◄── Prometheus datasource
 ```
 
+## Technology Stack
+
+| Layer | Technology | Purpose |
+|-------|-----------|---------|
+| API framework | Python 3.11+, FastAPI | Async REST endpoints, WebSocket handler, auto OpenAPI docs |
+| ASGI server | Uvicorn | Production ASGI server for FastAPI |
+| HTTP client | httpx (async) | Async calls to Git provider APIs with per-user TTL caching |
+| Config | pydantic-settings | Typed environment variable parsing from `.env` |
+| Frontend | Vanilla JS, HTML/CSS | Single-page application (SPA); no framework dependency |
+| Charts | Chart.js | Pipeline trend line, status donut, PR/MR activity charts |
+| Real-time | WebSocket (FastAPI) | Live dashboard card refresh every 30 s |
+| Monitoring | Prometheus, Grafana | Infrastructure metrics; pre-built Grafana dashboard included |
+| Export | openpyxl, reportlab, csv | Multi-sheet Excel, PDF, CSV, and JSON export |
+| Scripts | Bash (.sh), PowerShell (.ps1) | Cross-platform setup / start / stop |
+
 ---
 
 ## Prerequisites

@@ -1,9 +1,9 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
     Starts the CI/CD Dashboard (Prometheus + Grafana + FastAPI) as native Windows processes.
     Run setup.ps1 first if this is a fresh install.
-    Provider credentials are entered in the browser Settings panel — not required here.
+    Provider credentials are entered in the browser Settings panel -- not required here.
 #>
 $ErrorActionPreference = "Stop"
 $ROOT = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)

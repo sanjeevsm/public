@@ -1,0 +1,26 @@
+# Virtual environments
+api/venv/
+web-app/venv/
+
+# Runtime
+.pids/
+data/
+
+# Environment
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

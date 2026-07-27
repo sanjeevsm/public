@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
     Stops iLab+ processes started by start.ps1.
@@ -27,7 +27,7 @@ function Stop-PidFile {
         }
         Remove-Item $pidFile -Force
     } else {
-        Write-Host "[iLab+] No PID file for $Label — skipping" -ForegroundColor Yellow
+        Write-Host "[iLab+] No PID file for $Label -- skipping" -ForegroundColor Yellow
     }
 }
 
