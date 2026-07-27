@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
     Starts iLab+ AI Interview Simulator.
@@ -43,7 +43,7 @@ if (Test-Path $pidFile) {
         Write-Warn "Run .\scripts\stop.ps1 -Mode $Mode first, or delete $(Split-Path $pidFile -Leaf) to force a restart."
         exit 0
     } catch {
-        Write-Warn "Stale PID file found ($existing) — cleaning up"
+        Write-Warn "Stale PID file found ($existing) -- cleaning up"
         Remove-Item $pidFile -Force
     }
 }
@@ -90,7 +90,7 @@ if (-not (Test-Path $markerFile)) {
     $reinstall = $true
 } else {
     if ((Get-Item $reqFile).LastWriteTime -gt (Get-Item $markerFile).LastWriteTime) {
-        Write-Info "$(Split-Path $reqFile -Leaf) changed — reinstalling dependencies..."
+        Write-Info "$(Split-Path $reqFile -Leaf) changed -- reinstalling dependencies..."
         $reinstall = $true
     }
 }
@@ -163,7 +163,7 @@ if ($Mode -eq "desktop") {
         }
         Write-Ok "Loaded .env"
     } else {
-        Write-Warn ".env not found — copy .env.example to .env to configure ILAB_SECRET and PORT"
+        Write-Warn ".env not found -- copy .env.example to .env to configure ILAB_SECRET and PORT"
     }
 
     # Resolve port: -Port parameter > .env PORT > default 8000
@@ -181,14 +181,14 @@ if ($Mode -eq "desktop") {
 
     # Warn if session secret is unset
     if (-not [System.Environment]::GetEnvironmentVariable("ILAB_SECRET")) {
-        Write-Warn "ILAB_SECRET is not set — a random secret is generated each restart."
+        Write-Warn "ILAB_SECRET is not set -- a random secret is generated each restart."
         Write-Warn "User sessions are lost on restart. Set ILAB_SECRET in .env to persist them."
     }
 
     # Note: Gunicorn does not support Windows natively.
     # Flask's built-in server (threaded=True, debug=False) is used here.
     # For production on Windows, use WSL + Gunicorn, or deploy to Linux.
-    Write-Warn "Gunicorn is not supported on Windows — using Flask built-in server."
+    Write-Warn "Gunicorn is not supported on Windows -- using Flask built-in server."
     Write-Warn "For production deployments use WSL/Linux with Gunicorn (see wsgi.py)."
 
     Write-Info "Starting iLab+ web server on $BindHost`:$Port ..."
@@ -241,7 +241,7 @@ if ($Mode -eq "desktop") {
     Write-Host "  Logs        -> $logFile" -ForegroundColor Gray
     Write-Host ""
     Write-Host "  Each user opens the URL in their browser and enters" -ForegroundColor Gray
-    Write-Host "  their own API key in Settings — keys never leave their browser." -ForegroundColor Gray
+    Write-Host "  their own API key in Settings -- keys never leave their browser." -ForegroundColor Gray
     Write-Host ""
     Write-Host "  To stop: .\scripts\stop.ps1 -Mode web" -ForegroundColor Gray
     Write-Host ""

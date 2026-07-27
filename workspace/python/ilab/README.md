@@ -118,6 +118,25 @@ A custom **Base URL** field is available for every provider to point to a self-h
 
 ---
 
+## Technology Stack
+
+| Layer | Technology | Purpose |
+|-------|-----------|---------|
+| Web server | Python 3.10+, Flask | HTTP routing, Jinja2 templates, SSE progress streaming |
+| Production server | Gunicorn (Unix/macOS) | Single-worker WSGI production server |
+| Desktop GUI | CustomTkinter | Native OS window for desktop mode |
+| AI client -- Claude | anthropic | Anthropic Claude API integration |
+| AI client -- OpenAI | openai | OpenAI GPT API integration |
+| AI client -- Gemini | google-generativeai | Google Gemini API integration |
+| AI client -- Groq | groq | Groq fast-inference API integration |
+| AI client -- Ollama / xAI | httpx | Local Ollama and xAI Grok API integration |
+| Frontend | Jinja2, vanilla JS/HTML/CSS | Server-side rendered quiz UI; no JS framework |
+| Real-time progress | Server-Sent Events (SSE) | Live generation progress streaming to the browser |
+| Session management | Flask sessions (UUID cookies) | Per-user in-memory job/quiz/result stores |
+| Scripts | Bash (.sh), PowerShell (.ps1) | Cross-platform start / stop |
+
+---
+
 ## Themes
 
 ### Web Mode (11 themes)
