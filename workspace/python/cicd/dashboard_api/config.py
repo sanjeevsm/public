@@ -6,10 +6,6 @@ _HERE = Path(__file__).parent
 
 
 class Settings(BaseSettings):
-    gitlab_url: str = ""
-    gitlab_token: str = ""
-    gitlab_project_ids: str = ""
-    gitlab_project_limit: int = 20
     app_host: str = "0.0.0.0"
     app_port: int = 8090
     log_level: str = "info"

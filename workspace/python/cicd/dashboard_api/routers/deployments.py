@@ -1,33 +1,31 @@
-from fastapi import APIRouter
-from services.gitlab_client import GitLabClient
+from fastapi import APIRouter, Depends
+from services.base_client import BaseProviderClient
+from services.provider_factory import get_client
 
 router = APIRouter(prefix="/deployments", tags=["deployments"])
-_client = GitLabClient()
 
 
 @router.get("/recent")
-async def recent_deployments(limit: int = 20):
-    projects = await _client.get_projects()
+async def recent_deployments(limit: int = 20, client: BaseProviderClient = Depends(get_client)):
+    repos = await client.get_repos()
     all_deps = []
 
-    for project in projects:
+    for repo in repos:
         try:
-            deps = await _client.get_deployments(project["id"], order_by="updated_at", sort="desc")
+            deps = await client.get_deployments(repo["id"], days=30)
             for d in deps[:5]:
-                env = d.get("environment") or {}
-                user = d.get("user") or {}
                 all_deps.append({
-                    "id": d.get("id"),
-                    "project": project.get("name", ""),
-                    "project_path": project.get("path_with_namespace", ""),
-                    "environment": env.get("name", ""),
-                    "status": d.get("status", ""),
-                    "ref": d.get("ref", ""),
-                    "created_at": d.get("created_at"),
-                    "updated_at": d.get("updated_at"),
-                    "web_url": project.get("web_url", "") + f"/-/deployments/{d.get('id')}",
-                    "deployed_by": user.get("name") or user.get("username") or "",
-                    "deployed_by_avatar": user.get("avatar_url") or "",
+                    "id":                 d.get("id"),
+                    "project":            repo.get("name", ""),
+                    "project_path":       repo.get("full_name", ""),
+                    "environment":        d.get("environment", ""),
+                    "status":             d.get("status", ""),
+                    "ref":                d.get("ref", ""),
+                    "created_at":         d.get("created_at"),
+                    "updated_at":         d.get("updated_at"),
+                    "web_url":            d.get("web_url", ""),
+                    "deployed_by":        d.get("deployed_by", ""),
+                    "deployed_by_avatar": d.get("deployed_by_avatar", ""),
                 })
         except Exception:
             pass

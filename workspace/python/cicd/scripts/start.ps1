@@ -1,8 +1,9 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Starts the GitLab CI/CD Dashboard (Prometheus + Grafana + FastAPI) as native Windows processes.
+    Starts the CI/CD Dashboard (Prometheus + Grafana + FastAPI) as native Windows processes.
     Run setup.ps1 first if this is a fresh install.
+    Provider credentials are entered in the browser Settings panel — not required here.
 #>
 $ErrorActionPreference = "Stop"
 $ROOT = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
@@ -44,11 +45,6 @@ if (-not (Test-Path $PROMETHEUS_EXE)) {
 }
 if (-not (Test-Path $GRAFANA_EXE)) {
     Write-Err "Grafana not found at $GRAFANA_EXE"
-}
-
-if (-not $env:GITLAB_TOKEN -or $env:GITLAB_TOKEN -eq "your_personal_access_token_here") {
-    Write-Warn "GITLAB_TOKEN is not set in .env - the dashboard will show empty data"
-    Write-Warn "Edit .env and set a valid Personal Access Token"
 }
 
 # -- Auto-install Python deps if needed ----------------------------------------

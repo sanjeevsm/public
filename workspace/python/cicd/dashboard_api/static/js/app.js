@@ -1,5 +1,9 @@
 'use strict';
 
+// ── Constants ─────────────────────────────────────────────────────────────────
+const CREDS_KEY    = 'cicd_credentials';
+const PROVIDER_KEY = 'cicd_active_provider';
+
 // ── State ────────────────────────────────────────────────────────────────────
 const State = {
   theme: localStorage.getItem('theme') || 'dark',
@@ -18,6 +22,64 @@ function hexToRgba(hex, alpha) {
   const g = parseInt(hex.slice(3,5),16);
   const b = parseInt(hex.slice(5,7),16);
   return `rgba(${r},${g},${b},${alpha})`;
+}
+
+// ── Credential helpers ────────────────────────────────────────────────────────
+function getAllCreds() {
+  try { return JSON.parse(localStorage.getItem(CREDS_KEY) || '{}'); } catch { return {}; }
+}
+
+function getActiveProvider() {
+  return localStorage.getItem(PROVIDER_KEY) || 'gitlab';
+}
+
+function getActiveCreds() {
+  const p = getActiveProvider();
+  return getAllCreds()[p] || {};
+}
+
+function credHeaders() {
+  const p = getActiveProvider();
+  const c = getActiveCreds();
+  return {
+    'X-Provider':             p,
+    'X-Provider-Token':       c.token       || '',
+    'X-Provider-Url':         c.url         || '',
+    'X-Provider-Username':    c.username    || '',
+    'X-Provider-Project-Ids': c.project_ids || '',
+    'X-Provider-Project-Limit': String(c.limit || 20),
+  };
+}
+
+function hasCredentials() {
+  return !!(getActiveCreds().token);
+}
+
+// ── Provider badge & setup banner ─────────────────────────────────────────────
+const PROVIDER_LABELS = {
+  gitlab:    { label: 'GitLab',    cls: 'provider-badge-gitlab'    },
+  github:    { label: 'GitHub',    cls: 'provider-badge-github'    },
+  bitbucket: { label: 'Bitbucket', cls: 'provider-badge-bitbucket' },
+  gitea:     { label: 'Gitea',     cls: 'provider-badge-gitea'     },
+};
+
+function updateProviderBadge() {
+  const badge = document.getElementById('provider-badge');
+  if (!badge) return;
+  const p = getActiveProvider();
+  const info = PROVIDER_LABELS[p] || { label: p, cls: '' };
+  badge.textContent = info.label;
+  badge.className = 'provider-badge ' + info.cls;
+  if (!hasCredentials()) {
+    badge.textContent = 'Not configured';
+    badge.className = 'provider-badge provider-badge-unconfigured';
+  }
+}
+
+function checkSetupBanner() {
+  const banner = document.getElementById('setup-banner');
+  if (!banner) return;
+  banner.style.display = hasCredentials() ? 'none' : 'flex';
 }
 
 // ── Utilities ────────────────────────────────────────────────────────────────
@@ -83,16 +145,13 @@ function setDateFilter(days) {
   State.dateFilter = days;
   localStorage.setItem('dateFilter', days);
 
-  // Update filter button text
   const filterText = document.getElementById('filter-text');
   if (filterText) filterText.textContent = `Last ${days} Days`;
 
-  // Update active state in menu
   document.querySelectorAll('#filter-menu a').forEach(a => {
     a.classList.toggle('active', parseInt(a.dataset.days) === days);
   });
 
-  // Update labels in UI
   const ovLabel = document.getElementById('ov-label-days');
   if (ovLabel) ovLabel.textContent = `(${days}d)`;
 
@@ -102,7 +161,6 @@ function setDateFilter(days) {
   const mrLabel = document.getElementById('chart-mr-label');
   if (mrLabel) mrLabel.textContent = `(${days} days)`;
 
-  // Reload current section with new filter
   if (SECTION_LOADERS[State.section]) SECTION_LOADERS[State.section]();
 }
 
@@ -210,9 +268,20 @@ function setWsStatus(state) {
 }
 
 function connectWS() {
+  if (State.ws) { try { State.ws.close(); } catch (_) {} }
   setWsStatus('connecting');
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-  const ws = new WebSocket(`${proto}://${location.host}/ws/metrics`);
+  const p = getActiveProvider();
+  const c = getActiveCreds();
+  const params = new URLSearchParams({
+    provider:    p,
+    token:       c.token       || '',
+    url:         c.url         || '',
+    username:    c.username    || '',
+    project_ids: c.project_ids || '',
+    limit:       String(c.limit || 20),
+  });
+  const ws = new WebSocket(`${proto}://${location.host}/ws/metrics?${params}`);
   State.ws = ws;
 
   ws.onopen = () => setWsStatus('connected');
@@ -226,6 +295,81 @@ function connectWS() {
 
   ws.onclose = () => { setWsStatus('error'); setTimeout(connectWS, 4000); };
   ws.onerror = () => setWsStatus('error');
+}
+
+// ── Settings modal ─────────────────────────────────────────────────────────────
+function openSettings() {
+  loadSettingsFromStorage();
+  document.getElementById('settings-overlay').classList.add('open');
+}
+
+function closeSettings(e) {
+  if (e && e.target !== document.getElementById('settings-overlay')) return;
+  document.getElementById('settings-overlay').classList.remove('open');
+}
+
+function loadSettingsFromStorage() {
+  const all  = getAllCreds();
+  const active = getActiveProvider();
+
+  // Activate the right tab
+  document.querySelectorAll('.provider-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.provider === active);
+  });
+  document.querySelectorAll('.provider-panel').forEach(panel => {
+    panel.classList.toggle('active', panel.dataset.panel === active);
+  });
+
+  // Populate each provider's fields
+  const providers = ['gitlab', 'github', 'bitbucket', 'gitea'];
+  providers.forEach(p => {
+    const c = all[p] || {};
+    setVal(`${p}_token`,       c.token       || '');
+    setVal(`${p}_url`,         c.url         || '');
+    setVal(`${p}_username`,    c.username    || '');
+    setVal(`${p}_project_ids`, c.project_ids || '');
+    setVal(`${p}_limit`,       c.limit       || '');
+  });
+}
+
+function setVal(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.value = val;
+}
+
+function getVal(id) {
+  const el = document.getElementById(id);
+  return el ? el.value.trim() : '';
+}
+
+function saveSettings() {
+  const activeTab = document.querySelector('.provider-tab.active');
+  const provider  = activeTab ? activeTab.dataset.provider : 'gitlab';
+
+  const all = getAllCreds();
+
+  const providers = ['gitlab', 'github', 'bitbucket', 'gitea'];
+  providers.forEach(p => {
+    all[p] = {
+      token:       getVal(`${p}_token`),
+      url:         getVal(`${p}_url`),
+      username:    getVal(`${p}_username`),
+      project_ids: getVal(`${p}_project_ids`),
+      limit:       parseInt(getVal(`${p}_limit`)) || 20,
+    };
+  });
+
+  localStorage.setItem(CREDS_KEY,    JSON.stringify(all));
+  localStorage.setItem(PROVIDER_KEY, provider);
+
+  document.getElementById('settings-overlay').classList.remove('open');
+
+  updateProviderBadge();
+  checkSetupBanner();
+  connectWS();
+  showToast('Settings saved — reloading data…', 'success');
+
+  if (SECTION_LOADERS[State.section]) SECTION_LOADERS[State.section]();
 }
 
 // ── Shared table renderers ────────────────────────────────────────────────────
@@ -253,7 +397,7 @@ function renderBranchTable(tbodyId, rows) {
 function renderMrsTable(tbodyId, rows) {
   const tbody = document.getElementById(tbodyId);
   if (!tbody) return;
-  if (!rows.length) { tbody.innerHTML = '<tr class="loading-row"><td colspan="5">No merge requests found</td></tr>'; return; }
+  if (!rows.length) { tbody.innerHTML = '<tr class="loading-row"><td colspan="5">No pull/merge requests found</td></tr>'; return; }
   tbody.innerHTML = rows.map(m => `
     <tr>
       <td class="td-main">${esc(m.project)}</td>
@@ -294,6 +438,18 @@ function updateOverviewCards(d) {
   set('ov-mrs', d.open_mrs ?? '-');
   set('ov-mrs-sub', 'awaiting review');
   set('ov-projects', d.total_projects ?? '-');
+
+  // Dynamic labels from provider
+  if (d.pr_label) {
+    const prsLabel = document.getElementById('ov-prs-label');
+    if (prsLabel) prsLabel.textContent = `Open ${d.pr_label}`;
+    const titleRecent = document.getElementById('title-recent-mrs');
+    if (titleRecent) titleRecent.textContent = `Recent ${d.pr_label}`;
+  }
+  if (d.pipeline_label) {
+    const titlePipelines = document.getElementById('title-pipelines');
+    if (titlePipelines) titlePipelines.textContent = `Recent ${d.pipeline_label}`;
+  }
 }
 
 async function loadOverview() {
@@ -305,7 +461,7 @@ async function loadOverview() {
   } catch (e) { showToast('Failed to load overview: ' + e.message, 'error'); }
 
   try {
-    const trendDays = Math.min(days, 30); // Cap trend chart at 30 days for readability
+    const trendDays = Math.min(days, 30);
     const trend = await apiFetch(`/api/pipelines/trend?days=${trendDays}`);
     const trendLabel = document.getElementById('chart-trend-label');
     if (trendLabel) trendLabel.textContent = `(${trendDays} days)`;
@@ -354,14 +510,13 @@ async function loadOverview() {
 
   try {
     const mrTrend = await apiFetch(`/api/mrs/trend?days=${days}`);
-    const canvas = document.getElementById('chart-mr-trend');
+    const canvas  = document.getElementById('chart-mr-trend');
     const emptyMsg = document.getElementById('chart-mr-trend-empty');
 
     if (mrTrend && mrTrend.length > 0) {
       const hasData = mrTrend.some(r => (r.opened || 0) + (r.merged || 0) + (r.closed || 0) > 0);
-
       if (hasData) {
-        if (canvas) canvas.style.display = 'block';
+        if (canvas)   canvas.style.display = 'block';
         if (emptyMsg) emptyMsg.style.display = 'none';
         buildLineChart('chart-mr-trend',
           mrTrend.map(r => r.date.slice(5)),
@@ -372,22 +527,18 @@ async function loadOverview() {
           ]
         );
       } else {
-        if (canvas) canvas.style.display = 'none';
+        if (canvas)   canvas.style.display = 'none';
         if (emptyMsg) emptyMsg.style.display = 'block';
       }
     } else {
-      if (canvas) canvas.style.display = 'none';
+      if (canvas)   canvas.style.display = 'none';
       if (emptyMsg) emptyMsg.style.display = 'block';
     }
   } catch (e) {
-    console.error('Failed to load MR trend chart:', e);
-    const canvas = document.getElementById('chart-mr-trend');
+    const canvas  = document.getElementById('chart-mr-trend');
     const emptyMsg = document.getElementById('chart-mr-trend-empty');
-    if (canvas) canvas.style.display = 'none';
-    if (emptyMsg) {
-      emptyMsg.textContent = 'Error loading merge request data: ' + e.message;
-      emptyMsg.style.display = 'block';
-    }
+    if (canvas)   canvas.style.display = 'none';
+    if (emptyMsg) { emptyMsg.textContent = 'Error loading PR/MR data: ' + e.message; emptyMsg.style.display = 'block'; }
   }
 }
 
@@ -464,9 +615,9 @@ async function loadJobs() {
 
 // ── Navigation ────────────────────────────────────────────────────────────────
 const SECTION_LOADERS = {
-  overview:       loadOverview,
-  pipelines:      loadPipelines,
-  jobs:           loadJobs,
+  overview:  loadOverview,
+  pipelines: loadPipelines,
+  jobs:      loadJobs,
 };
 
 function switchSection(name) {
@@ -476,9 +627,9 @@ function switchSection(name) {
   if (SECTION_LOADERS[name]) SECTION_LOADERS[name]();
 }
 
-// ── API fetch ─────────────────────────────────────────────────────────────────
+// ── API fetch — injects provider credentials as headers ───────────────────────
 async function apiFetch(path) {
-  const r = await fetch(path);
+  const r = await fetch(path, { headers: credHeaders() });
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   return r.json();
 }
@@ -487,7 +638,7 @@ async function apiFetch(path) {
 function doExport(fmt) {
   document.getElementById('export-menu').classList.remove('open');
   showToast('Preparing ' + fmt.toUpperCase() + ' export...', '');
-  fetch('/api/export/' + fmt)
+  fetch('/api/export/' + fmt, { headers: credHeaders() })
     .then(r => {
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return r.blob();
@@ -496,7 +647,7 @@ function doExport(fmt) {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'cicd_export.' + fmt;
+      a.download = 'cicd_export.' + (fmt === 'excel' ? 'xlsx' : fmt);
       a.click();
       URL.revokeObjectURL(url);
       showToast('Export downloaded', 'success');
@@ -515,6 +666,8 @@ function startRefresh() {
 // ── Init ──────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   applyTheme();
+  updateProviderBadge();
+  checkSetupBanner();
   connectWS();
 
   document.querySelectorAll('.nav-btn').forEach(btn => {
@@ -523,38 +676,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('theme-btn').addEventListener('click', toggleTheme);
 
-  const exportBtn = document.getElementById('export-btn');
-  const exportMenu = document.getElementById('export-menu');
-  exportBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    exportMenu.classList.toggle('open');
-  });
-  document.addEventListener('click', () => exportMenu.classList.remove('open'));
+  // Settings button
+  document.getElementById('settings-btn').addEventListener('click', openSettings);
 
-  // Date filter menu
-  const filterBtn = document.getElementById('filter-btn');
-  const filterMenu = document.getElementById('filter-menu');
-  filterBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    filterMenu.classList.toggle('open');
-  });
-
-  // Date filter options
-  document.querySelectorAll('#filter-menu a').forEach(a => {
-    a.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const days = parseInt(a.dataset.days);
-      setDateFilter(days);
-      filterMenu.classList.remove('open');
+  // Provider tab switching inside settings modal
+  document.querySelectorAll('.provider-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.provider-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.provider-panel').forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      document.querySelector(`.provider-panel[data-panel="${tab.dataset.provider}"]`).classList.add('active');
     });
   });
 
-  // Close filter menu when clicking outside
+  const exportBtn  = document.getElementById('export-btn');
+  const exportMenu = document.getElementById('export-menu');
+  exportBtn.addEventListener('click', (e) => { e.stopPropagation(); exportMenu.classList.toggle('open'); });
+  document.addEventListener('click', () => exportMenu.classList.remove('open'));
+
+  const filterBtn  = document.getElementById('filter-btn');
+  const filterMenu = document.getElementById('filter-menu');
+  filterBtn.addEventListener('click', (e) => { e.stopPropagation(); filterMenu.classList.toggle('open'); });
+  document.querySelectorAll('#filter-menu a').forEach(a => {
+    a.addEventListener('click', (e) => {
+      e.stopPropagation();
+      setDateFilter(parseInt(a.dataset.days));
+      filterMenu.classList.remove('open');
+    });
+  });
   document.addEventListener('click', () => filterMenu.classList.remove('open'));
 
-  // Initialize date filter on load
   setDateFilter(State.dateFilter);
-
   loadOverview();
   startRefresh();
 });

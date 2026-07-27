@@ -1,24 +1,64 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+"""WebSocket endpoint for live metrics push.
+
+Browser WebSocket API does not support custom headers, so credentials are
+passed as query parameters:
+  ws://host/ws/metrics?provider=gitlab&token=xxx&url=https://gitlab.com
+                       &username=&project_ids=&limit=20
+"""
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
 import asyncio
 import json
 from datetime import datetime, timedelta
-from services.gitlab_client import GitLabClient
+from services.provider_factory import get_client_from_params
 from metrics import websocket_connections_active
 
 router = APIRouter(tags=["websocket"])
-_client = GitLabClient()
 
 
-async def _fetch_overview() -> dict:
-    since = (datetime.utcnow() - timedelta(days=30)).strftime("%Y-%m-%dT%H:%M:%SZ")
-    projects = await _client.get_projects()
+@router.websocket("/ws/metrics")
+async def ws_metrics(
+    websocket: WebSocket,
+    provider:    str = Query(default=""),
+    token:       str = Query(default=""),
+    url:         str = Query(default=""),
+    username:    str = Query(default=""),
+    project_ids: str = Query(default=""),
+    limit:       int = Query(default=20),
+):
+    await websocket.accept()
+    websocket_connections_active.inc()
+    try:
+        while True:
+            try:
+                client = get_client_from_params(
+                    provider=provider,
+                    token=token,
+                    url=url,
+                    username=username,
+                    project_ids=project_ids,
+                    limit=limit,
+                )
+                data = await _fetch_overview(client)
+                await websocket.send_text(json.dumps({"type": "metrics", "data": data}))
+            except Exception as e:
+                await websocket.send_text(json.dumps({"type": "error", "message": str(e)}))
+            await asyncio.sleep(30)
+    except WebSocketDisconnect:
+        pass
+    finally:
+        websocket_connections_active.dec()
+
+
+async def _fetch_overview(client) -> dict:
+    since_days = 30
+    repos = await client.get_repos()
 
     total = success = failed = running = 0
     durations = []
 
-    for project in projects:
+    for repo in repos:
         try:
-            pls = await _client.get_pipelines(project["id"], updated_after=since)
+            pls = await client.get_pipelines(repo["id"], days=since_days)
             for p in pls:
                 total += 1
                 s = p.get("status", "")
@@ -34,11 +74,11 @@ async def _fetch_overview() -> dict:
         except Exception:
             pass
 
-    open_mrs = 0
-    for project in projects:
+    open_prs = 0
+    for repo in repos:
         try:
-            mrs = await _client.get_merge_requests(project["id"], state="opened")
-            open_mrs += len(mrs)
+            prs = await client.get_pull_requests(repo["id"], days=since_days, state="opened")
+            open_prs += len(prs)
         except Exception:
             pass
 
@@ -46,30 +86,12 @@ async def _fetch_overview() -> dict:
 
     return {
         "total_pipelines": total,
-        "success": success,
-        "failed": failed,
-        "running": running,
-        "success_rate": round(success / total * 100, 1) if total > 0 else 0,
-        "avg_duration_s": avg_dur,
-        "open_mrs": open_mrs,
-        "total_projects": len(projects),
-        "timestamp": datetime.utcnow().isoformat(),
+        "success":         success,
+        "failed":          failed,
+        "running":         running,
+        "success_rate":    round(success / total * 100, 1) if total > 0 else 0,
+        "avg_duration_s":  avg_dur,
+        "open_mrs":        open_prs,
+        "total_projects":  len(repos),
+        "timestamp":       datetime.utcnow().isoformat(),
     }
-
-
-@router.websocket("/ws/metrics")
-async def ws_metrics(websocket: WebSocket):
-    await websocket.accept()
-    websocket_connections_active.inc()
-    try:
-        while True:
-            try:
-                data = await _fetch_overview()
-                await websocket.send_text(json.dumps({"type": "metrics", "data": data}))
-            except Exception as e:
-                await websocket.send_text(json.dumps({"type": "error", "message": str(e)}))
-            await asyncio.sleep(30)
-    except WebSocketDisconnect:
-        pass
-    finally:
-        websocket_connections_active.dec()

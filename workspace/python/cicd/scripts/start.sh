@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Starts the CI/CD Dashboard (Prometheus + Grafana + FastAPI) on macOS / Linux.
+# Provider credentials are entered in the browser Settings panel — not required here.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
@@ -37,11 +39,6 @@ PROM_RETAIN="${PROMETHEUS_RETENTION:-30d}"
 # -- Prerequisite checks
 [ -x "$PROMETHEUS_EXE" ] || err "Prometheus not found or not executable at $PROMETHEUS_EXE"
 [ -x "$GRAFANA_EXE" ]    || err "Grafana not found or not executable at $GRAFANA_EXE"
-
-if [ -z "${GITLAB_TOKEN:-}" ] || [ "$GITLAB_TOKEN" = "your_personal_access_token_here" ]; then
-    warn "GITLAB_TOKEN is not set in .env - the dashboard will show empty data"
-    warn "Edit .env and set a valid Personal Access Token"
-fi
 
 # -- Auto-install Python deps if needed
 if [ ! -f "dashboard_api/.venv/bin/uvicorn" ]; then
