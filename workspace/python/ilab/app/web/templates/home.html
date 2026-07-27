@@ -10,30 +10,39 @@
     <p class="start-tagline">Generate tailored interview questions from any job description or skill set</p>
   </div>
 
-  <!-- ── Model Status Banner ── -->
-  <div class="model-status {{ model_status.status }}">
-    <span class="ms-icon">
-      {% if model_status.status == 'ok' %}✅{% elif model_status.status == 'warning' %}⚠️{% else %}❌{% endif %}
-    </span>
+  <!-- ── Model Status Banner (populated by JS from localStorage) ── -->
+  <div class="model-status" id="model-status-banner" style="visibility:hidden;">
+    <span class="ms-icon">⏳</span>
+    <div class="ms-body"><div class="ms-title">Checking configuration…</div></div>
+  </div>
+
+  {% if request.args.get('error') == 'no_key' %}
+  <div class="model-status error" style="margin-bottom:12px;">
+    <span class="ms-icon">❌</span>
     <div class="ms-body">
-      <div class="ms-title">{{ model_status.title }}</div>
-      {% if model_status.sub %}
+      <div class="ms-title">No API key received</div>
       <div class="ms-sub">
-        {{ model_status.sub }}
+        Your API key may not be configured in this browser.
         <a href="{{ url_for('main.settings_page') }}" class="ms-link">Open Settings →</a>
       </div>
-      {% endif %}
     </div>
   </div>
+  {% endif %}
 
   <!-- ── Main Form Card ── -->
   <div class="card">
     <form method="POST" action="{{ url_for('main.generate') }}" id="gen-form">
 
-      <!-- hidden fields updated by JS -->
-      <input type="hidden" name="mode"              id="mode-input"  value="jd">
-      <input type="hidden" name="experience_level"  id="exp-hidden"  value="{{ cfg.experience_level }}">
-      <input type="hidden" name="num_questions"     id="num-hidden"  value="{{ cfg.num_questions }}">
+      <!-- server-side quiz defaults -->
+      <input type="hidden" name="mode"             id="mode-input" value="jd">
+      <input type="hidden" name="experience_level" id="exp-hidden" value="{{ cfg.experience_level }}">
+      <input type="hidden" name="num_questions"    id="num-hidden" value="{{ cfg.num_questions }}">
+
+      <!-- per-user AI credentials injected from localStorage by prepareSubmit() -->
+      <input type="hidden" name="ai_provider" id="hidden-provider" value="">
+      <input type="hidden" name="api_key"     id="hidden-api-key"  value="">
+      <input type="hidden" name="model"       id="hidden-model"    value="">
+      <input type="hidden" name="base_url"    id="hidden-base-url" value="">
 
       <!-- ── Input Mode Tabs ── -->
       <div class="tab-group">
@@ -102,8 +111,8 @@ One per line or comma-separated."></textarea>
       <!-- ── Submit ── -->
       <div class="mt-16">
         <button type="submit" class="btn btn-primary btn-lg btn-full"
-                onclick="return prepareSubmit()"
-                {% if model_status.status == 'error' %}disabled{% endif %}>
+                id="generate-btn"
+                onclick="return prepareSubmit()">
           Generate Interview Questions →
         </button>
       </div>
@@ -116,6 +125,54 @@ One per line or comma-separated."></textarea>
 
 {% block scripts %}
 <script>
+  /* ── Model status banner (driven by localStorage) ─── */
+  const PROVIDER_INFO = {
+    claude: ["🤖","Claude"], openai: ["🧠","OpenAI"],
+    gemini: ["✨","Gemini"], groq:   ["⚡","Groq"],
+    ollama: ["🦙","Ollama"], xai:   ["🚀","xAI"],
+  };
+
+  function updateModelStatusBanner() {
+    const banner      = document.getElementById("model-status-banner");
+    const submitBtn   = document.getElementById("generate-btn");
+    const active      = localStorage.getItem("ilab_active_provider");
+    const creds       = JSON.parse(localStorage.getItem("ilab_credentials") || "{}");
+
+    banner.style.visibility = "visible";
+
+    if (!active) {
+      banner.className = "model-status error";
+      banner.innerHTML = '<span class="ms-icon">❌</span><div class="ms-body">'
+        + '<div class="ms-title">No AI provider configured</div>'
+        + '<div class="ms-sub">Add your API key in <a href="/settings" class="ms-link">Settings →</a> to get started.</div>'
+        + '</div>';
+      submitBtn.disabled = true;
+      return;
+    }
+
+    const pcreds = creds[active] || {};
+    const hasKey = pcreds.api_key || active === "ollama";
+
+    if (!hasKey) {
+      const [emoji, label] = PROVIDER_INFO[active] || ["🤖", active];
+      banner.className = "model-status warning";
+      banner.innerHTML = `<span class="ms-icon">⚠️</span><div class="ms-body">`
+        + `<div class="ms-title">No API key for ${label}</div>`
+        + `<div class="ms-sub">Add your key in <a href="/settings" class="ms-link">Settings →</a></div>`
+        + `</div>`;
+      submitBtn.disabled = true;
+      return;
+    }
+
+    const [emoji, label] = PROVIDER_INFO[active] || ["🤖", active];
+    const model = pcreds.model || "";
+    banner.className = "model-status ok";
+    banner.innerHTML = `<span class="ms-icon">✅</span><div class="ms-body">`
+      + `<div class="ms-title">${emoji} ${label}${model ? " — " + model : ""}</div>`
+      + `</div>`;
+    submitBtn.disabled = false;
+  }
+
   /* ── Tab switching ────────────────────────────── */
   let activeTab = "jd";
   function switchTab(tab) {
@@ -147,7 +204,7 @@ One per line or comma-separated."></textarea>
     setSliderFill(document.getElementById("num-slider"));
   }
 
-  /* ── Form submit ─────────────────────────────── */
+  /* ── Form submit — inject credentials from localStorage ─ */
   function prepareSubmit() {
     const text = activeTab === "jd"
       ? document.getElementById("jd_text").value.trim()
@@ -158,6 +215,18 @@ One per line or comma-separated."></textarea>
         : "Please list at least one skill or technology.");
       return false;
     }
+
+    // Collect per-user credentials from localStorage and inject into form
+    const active = localStorage.getItem("ilab_active_provider") || "claude";
+    const creds  = JSON.parse(localStorage.getItem("ilab_credentials") || "{}");
+    const pcreds = creds[active] || {};
+
+    document.getElementById("hidden-provider").value  = active;
+    document.getElementById("hidden-api-key").value   = pcreds.api_key  || "";
+    document.getElementById("hidden-model").value     = pcreds.model    || "";
+    document.getElementById("hidden-base-url").value  = pcreds.base_url || "";
+
+    // Append the active textarea value as the unified "text" field
     const inp  = document.createElement("input");
     inp.type   = "hidden";
     inp.name   = "text";
@@ -166,10 +235,11 @@ One per line or comma-separated."></textarea>
     return true;
   }
 
-  /* ── Init sliders on load ────────────────────── */
+  /* ── Init ────────────────────────────────────── */
   document.addEventListener("DOMContentLoaded", () => {
     setSliderFill(document.getElementById("exp-slider"));
     setSliderFill(document.getElementById("num-slider"));
+    updateModelStatusBanner();
   });
 </script>
 {% endblock %}

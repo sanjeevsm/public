@@ -45,46 +45,6 @@ def _inject_theme():
     return {"theme": theme}
 
 
-def _model_status(cfg):
-    """Return a dict describing the active provider/model status for templates."""
-    active   = cfg.ai_provider
-    pcfg     = cfg.get_provider_config(active)
-    api_key  = (pcfg.get("api_key") or "").strip()
-    model    = pcfg.get("model") or ""
-    emoji, label = PROVIDER_LABELS.get(active, ("🤖", active.capitalize()))
-
-    # Ollama is local — no key needed
-    has_key = bool(api_key) or active == "ollama"
-
-    # Check whether ANY provider has a key at all
-    any_configured = any(
-        (cfg.get_provider_config(p).get("api_key") or "").strip() or p == "ollama"
-        for p in ALL_PROVIDERS
-    )
-
-    if not any_configured:
-        status = "error"
-        title  = "No AI provider configured"
-        sub    = "Add an API key in Settings to start generating questions."
-    elif not has_key:
-        status = "warning"
-        title  = f"No API key for {label}"
-        sub    = f"The active provider is {label} but no API key is set. Change provider or add a key in Settings."
-    else:
-        status = "ok"
-        title  = f"{emoji} {label} — {model}"
-        sub    = None
-
-    return {
-        "status": status,
-        "title":  title,
-        "sub":    sub,
-        "emoji":  emoji,
-        "label":  label,
-        "model":  model,
-    }
-
-
 # ── home (start interview) ────────────────────────────────────────────────────
 
 @bp.route("/")
@@ -94,7 +54,6 @@ def home():
     return render_template(
         "home.html",
         cfg=cfg,
-        model_status=_model_status(cfg),
         exp_levels=EXP_LEVELS,
         question_counts=QUESTION_COUNTS,
     )
@@ -109,29 +68,24 @@ def settings_page():
     return render_template(
         "settings.html",
         cfg=cfg,
-        providers_data=cfg.get("providers", {}),
         models=PROVIDER_MODELS,
-        active_provider=cfg.ai_provider,
-        exp_levels=EXP_LEVELS,
-        question_counts=QUESTION_COUNTS,
+        # active_provider defaults to "claude"; JS overrides from localStorage
+        active_provider="claude",
     )
 
 
 @bp.route("/settings", methods=["POST"])
 def save_settings():
+    """Save only non-sensitive server-side defaults.
+
+    API keys, models, and provider selection are stored exclusively in the
+    browser's localStorage — they never reach this endpoint.
+    """
     from app.config import get_config
     cfg = get_config()
-
-    cfg.set("ai_provider",     request.form.get("ai_provider", "claude"))
-    cfg.set("appearance_mode", request.form.get("appearance_mode", "dark-pro"))
-    cfg.set("num_questions",   int(request.form.get("num_questions", 10)))
+    cfg.set("appearance_mode",  request.form.get("appearance_mode", "dark-pro"))
+    cfg.set("num_questions",    int(request.form.get("num_questions", 10)))
     cfg.set("experience_level", request.form.get("experience_level", "mid"))
-
-    for p in ALL_PROVIDERS:
-        cfg.set_provider_config(p, "api_key",  request.form.get(f"{p}_api_key",  ""))
-        cfg.set_provider_config(p, "model",    request.form.get(f"{p}_model",    ""))
-        cfg.set_provider_config(p, "base_url", request.form.get(f"{p}_base_url", ""))
-
     cfg.save()
     return redirect(url_for("main.settings_page") + "?saved=1")
 
@@ -147,7 +101,6 @@ def setup():
 
 @bp.route("/generate", methods=["POST"])
 def generate():
-    from app.config import get_config
     from app.services.question_generator import QuestionGenerator
 
     text = request.form.get("text", "").strip()
@@ -158,16 +111,28 @@ def generate():
     if not text:
         return redirect(url_for("main.home"))
 
-    cfg = get_config()
-    cfg.set("experience_level", exp)
-    cfg.set("num_questions",    num)
-    cfg.save()
+    # Per-user AI credentials injected by the browser from localStorage.
+    # They are never persisted server-side.
+    provider_name = request.form.get("ai_provider", "").strip() or "claude"
+    api_key       = request.form.get("api_key",     "").strip()
+    model         = request.form.get("model",        "").strip()
+    base_url      = request.form.get("base_url",     "").strip()
+
+    if not api_key and provider_name != "ollama":
+        return redirect(url_for("main.home") + "?error=no_key")
+
+    provider_creds = {
+        "provider": provider_name,
+        "api_key":  api_key,
+        "model":    model,
+        "base_url": base_url,
+    }
 
     job_id = str(uuid.uuid4())
 
-    # Capture plain dict references NOW (in request context) so the background
-    # thread can safely update them — current_app is a proxy that only works
-    # inside the request thread and would raise RuntimeError in a daemon thread.
+    # Capture plain store reference NOW (in request context) so the daemon
+    # thread can safely update it — current_app is a proxy that raises
+    # RuntimeError outside the request thread.
     jobs_store = current_app.jobs
     jobs_store[job_id] = {
         "status":    "Initialising…",
@@ -198,7 +163,8 @@ def generate():
         jobs_store[job_id]["status"] = msg
 
     QuestionGenerator().generate_async(
-        text, exp, num, on_success, on_error, on_progress, mode=mode
+        text, exp, num, on_success, on_error, on_progress,
+        mode=mode, provider_creds=provider_creds,
     )
 
     return redirect(url_for("main.loading", job_id=job_id))
