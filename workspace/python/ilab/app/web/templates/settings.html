@@ -22,7 +22,17 @@
   </div>
   {% endif %}
 
-  <form method="POST" action="{{ url_for('main.save_settings') }}" id="settings-form">
+  <!-- API key notice: stored in this browser only -->
+  <div class="model-status ok" style="margin-bottom:20px;" id="key-storage-notice">
+    <span class="ms-icon">🔒</span>
+    <div class="ms-body">
+      <div class="ms-title">API keys are stored in your browser only</div>
+      <div class="ms-sub">Keys are saved to this browser's local storage and never sent to the server.
+        Clearing browser data will remove them.</div>
+    </div>
+  </div>
+
+  <form id="settings-form">
     <input type="hidden" name="appearance_mode" id="appearance_mode" value="{{ theme }}">
 
     <div class="settings-panel">
@@ -71,7 +81,7 @@
         </div>
       </div>
 
-      <!-- ── 3. Provider Config ── -->
+      <!-- ── 3. Provider Configuration (API keys stored in browser localStorage) ── -->
       <div class="settings-card">
         <div class="settings-card-header">Provider Configuration</div>
         <div class="settings-card-body">
@@ -85,25 +95,20 @@
           </div>
 
           {% for pid, emoji, label in providers %}
-          {% set pcfg = providers_data.get(pid, {}) %}
           <div class="ptab-pane {% if active_provider == pid %}active{% endif %}" data-provider="{{ pid }}">
 
             <div class="form-group">
               <label class="form-label">API Key</label>
-              <input type="password" name="{{ pid }}_api_key" class="form-input"
-                     value="{{ pcfg.get('api_key','') }}"
+              <input type="password" id="{{ pid }}_api_key" class="form-input"
                      placeholder="{% if pid == 'ollama' %}Not required (runs locally){% else %}Enter your {{ label }} API key{% endif %}">
             </div>
 
             <div class="form-group">
               <label class="form-label">Model</label>
-              <select name="{{ pid }}_model" class="form-select">
+              <select id="{{ pid }}_model" class="form-select">
                 {% for m in models.get(pid, []) %}
-                <option value="{{ m }}" {% if pcfg.get('model','') == m %}selected{% endif %}>{{ m }}</option>
+                <option value="{{ m }}">{{ m }}</option>
                 {% endfor %}
-                {% if pcfg.get('model','') and pcfg.get('model','') not in models.get(pid, []) %}
-                <option value="{{ pcfg.get('model','') }}" selected>{{ pcfg.get('model','') }}</option>
-                {% endif %}
               </select>
             </div>
 
@@ -116,8 +121,7 @@
                   {% if pid == 'xai' %}Default: https://api.x.ai/v1{% endif %}
                 </span>
               </label>
-              <input type="text" name="{{ pid }}_base_url" class="form-input"
-                     value="{{ pcfg.get('base_url','') }}"
+              <input type="text" id="{{ pid }}_base_url" class="form-input"
                      placeholder="Leave blank for default endpoint">
             </div>
           </div>
@@ -131,7 +135,6 @@
         <div class="settings-card-body">
           <div class="quiz-defaults-grid">
 
-            <!-- Default Experience Level slider -->
             <div class="slider-group" style="margin-bottom:0;">
               <div class="slider-header">
                 <label class="form-label">Default Experience Level</label>
@@ -146,7 +149,6 @@
               </div>
             </div>
 
-            <!-- Default Questions slider -->
             <div class="slider-group" style="margin-bottom:0;">
               <div class="slider-header">
                 <label class="form-label">Default Questions</label>
@@ -175,6 +177,65 @@
 
 {% block scripts %}
 <script>
+  const _PROVIDERS = ["claude","openai","gemini","groq","ollama","xai"];
+
+  /* ── localStorage helpers ────────────────────────────── */
+  function loadFromLocalStorage() {
+    const creds = JSON.parse(localStorage.getItem("ilab_credentials") || "{}");
+    const activeProvider = localStorage.getItem("ilab_active_provider") || "claude";
+
+    _PROVIDERS.forEach(p => {
+      const data = creds[p] || {};
+
+      const keyEl = document.getElementById(`${p}_api_key`);
+      if (keyEl) keyEl.value = data.api_key || "";
+
+      const modelEl = document.getElementById(`${p}_model`);
+      if (modelEl && data.model) {
+        // Add custom model option if it's not in the dropdown
+        if (!Array.from(modelEl.options).some(o => o.value === data.model)) {
+          modelEl.add(new Option(data.model, data.model));
+        }
+        modelEl.value = data.model;
+      }
+
+      const urlEl = document.getElementById(`${p}_base_url`);
+      if (urlEl) urlEl.value = data.base_url || "";
+    });
+
+    const radio = document.getElementById(`p_${activeProvider}`);
+    if (radio) radio.checked = true;
+    switchProviderTab(activeProvider);
+  }
+
+  /* ── Form submit: save keys to localStorage, POST only non-sensitive fields ── */
+  document.getElementById("settings-form").addEventListener("submit", function(e) {
+    e.preventDefault();
+
+    // Collect all credentials into localStorage — never sent to server
+    const creds = {};
+    _PROVIDERS.forEach(p => {
+      creds[p] = {
+        api_key:  (document.getElementById(`${p}_api_key`)  || {}).value || "",
+        model:    (document.getElementById(`${p}_model`)    || {}).value || "",
+        base_url: (document.getElementById(`${p}_base_url`) || {}).value || "",
+      };
+    });
+    localStorage.setItem("ilab_credentials", JSON.stringify(creds));
+
+    const activeProvider = (document.querySelector("input[name='ai_provider']:checked") || {}).value || "claude";
+    localStorage.setItem("ilab_active_provider", activeProvider);
+
+    // POST only theme + quiz defaults to server
+    const fd = new FormData();
+    fd.append("appearance_mode", document.getElementById("appearance_mode").value);
+    fd.append("num_questions",   document.getElementById("dnum-hidden").value);
+    fd.append("experience_level", document.getElementById("dexp-hidden").value);
+
+    fetch("/settings", { method: "POST", body: fd })
+      .then(() => { window.location.href = "/settings?saved=1"; });
+  });
+
   /* ── Provider tabs ───────────────────────────────── */
   function switchProviderTab(name) {
     document.querySelectorAll(".ptab-btn").forEach(b =>
@@ -217,6 +278,7 @@
   document.addEventListener("DOMContentLoaded", () => {
     setSliderFill(document.getElementById("dexp-slider"));
     setSliderFill(document.getElementById("dnum-slider"));
+    loadFromLocalStorage();
   });
 </script>
 {% endblock %}

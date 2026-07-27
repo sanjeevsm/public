@@ -1,8 +1,65 @@
 import hashlib
 import os
 import sys
+import threading
+import time
 
 sys.path.insert(0, os.path.dirname(__file__))
+
+
+class TTLStore:
+    """Thread-safe in-memory dict with TTL expiry and background cleanup.
+
+    Access refreshes the TTL so active jobs stay alive.
+    Items expire after `ttl` seconds of inactivity (default 2 hours).
+    A background daemon thread purges expired entries every 5 minutes.
+    """
+
+    def __init__(self, ttl: int = 7200):
+        self._data: dict = {}
+        self._ts: dict = {}
+        self._lock = threading.Lock()
+        self._ttl = ttl
+        t = threading.Thread(target=self._cleaner, daemon=True)
+        t.start()
+
+    def _alive(self, key: str) -> bool:
+        return key in self._data and (time.time() - self._ts.get(key, 0)) < self._ttl
+
+    def _cleaner(self):
+        while True:
+            time.sleep(300)
+            now = time.time()
+            with self._lock:
+                expired = [k for k, ts in self._ts.items() if now - ts >= self._ttl]
+                for k in expired:
+                    self._data.pop(k, None)
+                    self._ts.pop(k, None)
+
+    # dict-compatible interface -----------------------------------------------
+
+    def get(self, key: str, default=None):
+        with self._lock:
+            if not self._alive(key):
+                return default
+            self._ts[key] = time.time()
+            return self._data[key]
+
+    def __setitem__(self, key: str, value):
+        with self._lock:
+            self._data[key] = value
+            self._ts[key] = time.time()
+
+    def __getitem__(self, key: str):
+        with self._lock:
+            if not self._alive(key):
+                raise KeyError(key)
+            self._ts[key] = time.time()
+            return self._data[key]
+
+    def __contains__(self, key: str) -> bool:
+        with self._lock:
+            return self._alive(key)
 
 from flask import Flask
 
@@ -98,12 +155,16 @@ def create_app() -> Flask:
         static_folder=os.path.join(BASE, "app", "web", "static"),
         template_folder=os.path.join(BASE, "app", "web", "templates"),
     )
-    app.secret_key = os.environ.get("ILAB_SECRET", "ilab-dev-secret-key-change-in-prod")
+    secret = os.environ.get("ILAB_SECRET", "")
+    if not secret:
+        import secrets as _secrets
+        secret = _secrets.token_hex(32)
+    app.secret_key = secret
 
-    # In-memory stores (single-process dev server)
-    app.jobs    = {}   # job_id    → {status, questions, error, done}
-    app.quizzes = {}   # quiz_id   → {questions, answers}
-    app.results = {}   # result_id → {questions, answers}
+    # TTL-backed in-memory stores (auto-expire after 2 h, purged every 5 min)
+    app.jobs    = TTLStore()   # job_id    → {status, questions, error, done}
+    app.quizzes = TTLStore()   # quiz_id   → {questions, answers}
+    app.results = TTLStore()   # result_id → {questions, answers}
 
     # ── template filter ───────────────────────────────────────────────────────
     @app.template_filter("cat_style")
@@ -126,4 +187,7 @@ def create_app() -> Flask:
 
 if __name__ == "__main__":
     flask_app = create_app()
-    flask_app.run(debug=True, port=5000, threaded=True)
+    debug = os.environ.get("FLASK_DEBUG", "0") == "1"
+    host  = os.environ.get("HOST", "0.0.0.0")
+    port  = int(os.environ.get("PORT", 8000))
+    flask_app.run(debug=debug, host=host, port=port, threaded=True)

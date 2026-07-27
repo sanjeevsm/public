@@ -1,0 +1,6 @@
+# Web-only requirements — no desktop GUI dependencies (customtkinter / Pillow)
+anthropic>=0.40.0
+openai>=1.50.0
+google-generativeai>=0.8.0
+flask>=3.0.0
+gunicorn>=21.0.0
