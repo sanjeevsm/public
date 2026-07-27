@@ -23,15 +23,15 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     os.makedirs(settings.export_dir, exist_ok=True)
-    logger.info("GitLab CI/CD Dashboard starting on port %s", settings.app_port)
+    logger.info("CI/CD Dashboard starting on port %s", settings.app_port)
     yield
-    logger.info("GitLab CI/CD Dashboard shutting down")
+    logger.info("CI/CD Dashboard shutting down")
 
 
 app = FastAPI(
-    title="GitLab CI/CD Dashboard",
-    description="Real-time GitLab CI/CD metrics dashboard",
-    version="1.0.0",
+    title="CI/CD Dashboard",
+    description="Real-time CI/CD metrics dashboard — GitLab, GitHub, Bitbucket, Gitea",
+    version="2.0.0",
     docs_url="/api/docs",
     redoc_url="/api/redoc",
     lifespan=lifespan,
@@ -43,6 +43,7 @@ app.add_middleware(
     allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 app.include_router(overview.router, prefix="/api")
@@ -68,16 +69,14 @@ async def metrics():
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy", "service": "gitlab-cicd-dashboard", "version": "1.0.0"}
+    return {"status": "healthy", "service": "cicd-dashboard", "version": "2.0.0"}
 
 
 @app.get("/api/config")
 async def api_config():
     s = get_settings()
     return {
-        "gitlab_url": s.gitlab_url,
-        "has_token": bool(s.gitlab_token),
-        "project_limit": s.gitlab_project_limit,
+        "providers": ["gitlab", "github", "bitbucket", "gitea"],
         "cache_ttl": s.cache_ttl,
     }
 

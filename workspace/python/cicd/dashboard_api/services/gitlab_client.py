@@ -1,64 +1,47 @@
 import httpx
-import json
 import time
+from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
-from config import get_settings
+
 from metrics import (
     gitlab_api_requests_total,
     gitlab_api_request_duration_seconds,
     gitlab_api_errors_total,
-    cache_hits_total,
-    cache_misses_total,
-    cache_entries,
 )
+from services.base_client import BaseProviderClient
+from services.cache import get_cached, set_cached
 
-_cache: Dict[str, tuple] = {}
-
-
-def _cache_key(path: str, params: dict) -> str:
-    return f"{path}:{json.dumps(sorted((params or {}).items()))}"
+_PROVIDER = "gitlab"
 
 
-def _get_cached(key: str, ttl: int) -> Optional[Any]:
-    if key in _cache:
-        data, ts = _cache[key]
-        if time.time() - ts < ttl:
-            cache_hits_total.inc()
-            return data
-    cache_misses_total.inc()
-    return None
+class GitLabClient(BaseProviderClient):
+    PROVIDER_ID = "gitlab"
 
-
-def _set_cached(key: str, data: Any):
-    _cache[key] = (data, time.time())
-    cache_entries.set(len(_cache))
-
-
-class GitLabClient:
-    def __init__(self):
-        s = get_settings()
-        self.base = s.gitlab_url.rstrip("/") + "/api/v4"
-        self.token = s.gitlab_token
-        self.ttl = s.cache_ttl
+    def __init__(self, token: str, base_url: str = "https://gitlab.com",
+                 username: str = "", project_ids: str = "",
+                 project_limit: int = 20, cache_ttl: int = 60):
+        super().__init__(token, base_url, username, project_ids, project_limit, cache_ttl)
+        self._api = self.base_url + "/api/v4"
 
     @property
     def _headers(self) -> Dict[str, str]:
         return {"PRIVATE-TOKEN": self.token}
 
     async def _get(self, path: str, params: dict = None) -> Any:
-        key = _cache_key(path, params)
-        cached = _get_cached(key, self.ttl)
+        params = params or {}
+        cached = get_cached(_PROVIDER, self.token, path, params, self.cache_ttl)
         if cached is not None:
             return cached
+
         prefix = "/" + path.lstrip("/").split("/")[1] if path.count("/") > 1 else path
         gitlab_api_requests_total.labels(method="get").inc()
         t0 = time.perf_counter()
         try:
             async with httpx.AsyncClient(timeout=30) as c:
-                r = await c.get(f"{self.base}{path}", headers=self._headers, params=params or {})
+                r = await c.get(f"{self._api}{path}", headers=self._headers, params=params)
                 r.raise_for_status()
                 data = r.json()
-            _set_cached(key, data)
+            set_cached(_PROVIDER, self.token, path, params, data)
             return data
         except Exception:
             gitlab_api_errors_total.labels(path_prefix=prefix).inc()
@@ -71,8 +54,8 @@ class GitLabClient:
     async def _get_all(self, path: str, params: dict = None, max_items: int = 200) -> List:
         p = dict(params or {})
         p["per_page"] = 100
-        key = _cache_key(f"all:{path}:{max_items}", p)
-        cached = _get_cached(key, self.ttl)
+        cache_key = f"all:{path}:{max_items}"
+        cached = get_cached(_PROVIDER, self.token, cache_key, p, self.cache_ttl)
         if cached is not None:
             return cached
 
@@ -85,7 +68,7 @@ class GitLabClient:
             async with httpx.AsyncClient(timeout=30) as c:
                 while len(results) < max_items:
                     p["page"] = page
-                    r = await c.get(f"{self.base}{path}", headers=self._headers, params=p)
+                    r = await c.get(f"{self._api}{path}", headers=self._headers, params=p)
                     r.raise_for_status()
                     batch = r.json()
                     if not batch:
@@ -104,13 +87,14 @@ class GitLabClient:
             )
 
         result = results[:max_items]
-        _set_cached(key, result)
+        set_cached(_PROVIDER, self.token, cache_key, p, result)
         return result
 
-    async def get_projects(self) -> List[Dict]:
-        s = get_settings()
-        if s.gitlab_project_ids:
-            ids = [i.strip() for i in s.gitlab_project_ids.split(",") if i.strip()]
+    # ── Repo listing ─────────────────────────────────────────────────────────
+
+    async def get_repos(self) -> List[Dict]:
+        if self.project_ids:
+            ids = [i.strip() for i in self.project_ids.split(",") if i.strip()]
             out = []
             for pid in ids:
                 try:
@@ -121,32 +105,74 @@ class GitLabClient:
         return await self._get_all(
             "/projects",
             {"membership": True, "order_by": "last_activity_at", "sort": "desc"},
-            max_items=s.gitlab_project_limit,
+            max_items=self.project_limit,
         )
 
-    async def get_pipelines(self, project_id: int, **params) -> List[Dict]:
-        return await self._get_all(f"/projects/{project_id}/pipelines", params, max_items=200)
+    def _repo_id(self, repo: dict) -> str:
+        return str(repo.get("id", ""))
 
-    async def get_jobs(self, project_id: int, **params) -> List[Dict]:
-        return await self._get_all(f"/projects/{project_id}/jobs", params, max_items=100)
+    # ── Pipelines ─────────────────────────────────────────────────────────────
 
-    async def get_merge_requests(self, project_id: int, **params) -> List[Dict]:
-        return await self._get_all(f"/projects/{project_id}/merge_requests", params, max_items=100)
+    async def get_pipelines(self, repo_id: str, days: int = 30,
+                            ref: Optional[str] = None, **kwargs) -> List[Dict]:
+        since = (datetime.utcnow() - timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        params = {"updated_after": since}
+        if ref:
+            params["ref"] = ref
+        params.update(kwargs)
+        return await self._get_all(f"/projects/{repo_id}/pipelines", params, max_items=200)
 
-    async def get_deployments(self, project_id: int, **params) -> List[Dict]:
-        return await self._get_all(f"/projects/{project_id}/deployments", params, max_items=50)
+    async def get_pipeline_detail(self, repo_id: str, pipeline_id: str) -> dict:
+        return await self._get(f"/projects/{repo_id}/pipelines/{pipeline_id}")
 
-    async def get_pipeline(self, project_id: int, pipeline_id: int) -> Dict:
-        return await self._get(f"/projects/{project_id}/pipelines/{pipeline_id}")
-
-    async def get_branch(self, project_id: int, branch: str) -> Dict:
-        return await self._get(f"/projects/{project_id}/repository/branches/{branch}")
-
-    async def get_latest_pipeline(self, project_id: int, ref: str = None) -> Optional[Dict]:
+    async def get_latest_pipeline(self, repo_id: str,
+                                  ref: Optional[str] = None) -> Optional[Dict]:
         params = {"per_page": 1, "order_by": "id", "sort": "desc"}
         if ref:
             params["ref"] = ref
-        result = await self._get(f"/projects/{project_id}/pipelines", params)
+        result = await self._get(f"/projects/{repo_id}/pipelines", params)
         if isinstance(result, list) and result:
             return result[0]
         return None
+
+    # ── Jobs ──────────────────────────────────────────────────────────────────
+
+    async def get_failed_jobs(self, repo_id: str) -> List[Dict]:
+        return await self._get_all(f"/projects/{repo_id}/jobs",
+                                   {"scope": "failed"}, max_items=100)
+
+    async def get_all_jobs(self, repo_id: str) -> List[Dict]:
+        return await self._get_all(f"/projects/{repo_id}/jobs", max_items=100)
+
+    # ── Pull / Merge Requests ─────────────────────────────────────────────────
+
+    async def get_pull_requests(self, repo_id: str, days: int = 30,
+                                state: str = "all", **kwargs) -> List[Dict]:
+        since = (datetime.utcnow() - timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        params = {"updated_after": since, **kwargs}
+        if state != "all":
+            params["state"] = state
+        return await self._get_all(f"/projects/{repo_id}/merge_requests",
+                                   params, max_items=100)
+
+    # ── Deployments ───────────────────────────────────────────────────────────
+
+    async def get_deployments(self, repo_id: str, days: int = 30, **kwargs) -> List[Dict]:
+        return await self._get_all(f"/projects/{repo_id}/deployments",
+                                   {"order_by": "updated_at", "sort": "desc", **kwargs},
+                                   max_items=50)
+
+    # ── Branches ─────────────────────────────────────────────────────────────
+
+    async def get_branch(self, repo_id: str, branch_name: str) -> dict:
+        return await self._get(f"/projects/{repo_id}/repository/branches/{branch_name}")
+
+    # ── Labels ───────────────────────────────────────────────────────────────
+
+    @property
+    def pr_label(self) -> str:
+        return "Merge Requests"
+
+    @property
+    def pipeline_label(self) -> str:
+        return "Pipelines"

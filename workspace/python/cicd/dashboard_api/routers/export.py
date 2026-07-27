@@ -1,47 +1,59 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from fastapi.responses import Response
 from datetime import datetime, timedelta
-from services.gitlab_client import GitLabClient
+from services.base_client import BaseProviderClient
+from services.provider_factory import get_client
 from services.exporter import export_csv, export_json, export_excel, export_pdf
 
 router = APIRouter(prefix="/export", tags=["export"])
-_client = GitLabClient()
 
 
 def _ts() -> str:
     return datetime.utcnow().strftime("%Y%m%d_%H%M%S")
 
 
-async def _gather(days: int) -> dict:
-    since = (datetime.utcnow() - timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%SZ")
-    projects = await _client.get_projects()
+async def _gather(client: BaseProviderClient, days: int) -> dict:
+    repos = await client.get_repos()
 
     pipelines = []
-    for project in projects:
+    for repo in repos:
         try:
-            pls = await _client.get_pipelines(project["id"], updated_after=since)
+            pls = await client.get_pipelines(repo["id"], days=days)
             for p in pls:
-                p["project_name"] = project.get("name", "")
-                pipelines.append(p)
+                pipelines.append({
+                    "project_name": repo.get("name", ""),
+                    "id":           p.get("id", ""),
+                    "status":       p.get("status", ""),
+                    "ref":          p.get("ref", ""),
+                    "duration":     p.get("duration"),
+                    "created_at":   p.get("created_at", ""),
+                    "web_url":      p.get("web_url", ""),
+                })
         except Exception:
             pass
 
     mrs = []
-    for project in projects:
+    for repo in repos:
         try:
-            raw = await _client.get_merge_requests(project["id"], created_after=since)
-            for m in raw:
-                m["project_name"] = project.get("name", "")
-                mrs.append(m)
+            prs = await client.get_pull_requests(repo["id"], days=days)
+            for m in prs:
+                mrs.append({
+                    "project_name": repo.get("name", ""),
+                    "id":           m.get("id", ""),
+                    "title":        m.get("title", ""),
+                    "author_name":  m.get("author", ""),
+                    "state":        m.get("state", ""),
+                    "created_at":   m.get("created_at", ""),
+                })
         except Exception:
             pass
 
-    return {"pipelines": pipelines, "merge_requests": mrs, "projects": projects}
+    return {"pipelines": pipelines, "merge_requests": mrs, "projects": repos}
 
 
 @router.get("/csv")
-async def export_as_csv(days: int = 30):
-    data = await _gather(days)
+async def export_as_csv(days: int = 30, client: BaseProviderClient = Depends(get_client)):
+    data = await _gather(client, days)
     return Response(
         content=export_csv(data),
         media_type="text/csv",
@@ -50,8 +62,8 @@ async def export_as_csv(days: int = 30):
 
 
 @router.get("/json")
-async def export_as_json(days: int = 30):
-    data = await _gather(days)
+async def export_as_json(days: int = 30, client: BaseProviderClient = Depends(get_client)):
+    data = await _gather(client, days)
     return Response(
         content=export_json(data),
         media_type="application/json",
@@ -60,8 +72,8 @@ async def export_as_json(days: int = 30):
 
 
 @router.get("/excel")
-async def export_as_excel(days: int = 30):
-    data = await _gather(days)
+async def export_as_excel(days: int = 30, client: BaseProviderClient = Depends(get_client)):
+    data = await _gather(client, days)
     buf = export_excel(data)
     return Response(
         content=buf.read(),
@@ -71,8 +83,8 @@ async def export_as_excel(days: int = 30):
 
 
 @router.get("/pdf")
-async def export_as_pdf(days: int = 30):
-    data = await _gather(days)
+async def export_as_pdf(days: int = 30, client: BaseProviderClient = Depends(get_client)):
+    data = await _gather(client, days)
     buf = export_pdf(data)
     return Response(
         content=buf.read(),

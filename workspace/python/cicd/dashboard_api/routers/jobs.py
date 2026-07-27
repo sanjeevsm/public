@@ -1,24 +1,24 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from collections import defaultdict
-from services.gitlab_client import GitLabClient
+from services.base_client import BaseProviderClient
+from services.provider_factory import get_client
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
-_client = GitLabClient()
 
 
 @router.get("/top-failing")
-async def top_failing_jobs(limit: int = 10):
-    projects = await _client.get_projects()
+async def top_failing_jobs(limit: int = 10, client: BaseProviderClient = Depends(get_client)):
+    repos = await client.get_repos()
     stats: dict = defaultdict(lambda: {"name": "", "project": "", "failures": 0})
 
-    for project in projects:
+    for repo in repos:
         try:
-            failed = await _client.get_jobs(project["id"], scope="failed")
+            failed = await client.get_failed_jobs(repo["id"])
             for j in failed:
                 name = j.get("name", "unknown")
-                key = f"{project.get('name', '')}::{name}"
+                key = f"{repo.get('name', '')}::{name}"
                 stats[key]["name"] = name
-                stats[key]["project"] = project.get("name", "")
+                stats[key]["project"] = repo.get("name", "")
                 stats[key]["failures"] += 1
         except Exception:
             pass
@@ -28,13 +28,13 @@ async def top_failing_jobs(limit: int = 10):
 
 
 @router.get("/stages")
-async def job_stages():
-    projects = await _client.get_projects()
+async def job_stages(client: BaseProviderClient = Depends(get_client)):
+    repos = await client.get_repos()
     stage_stats: dict = defaultdict(lambda: {"total": 0, "success": 0, "failed": 0})
 
-    for project in projects[:5]:
+    for repo in repos[:5]:
         try:
-            jobs = await _client.get_jobs(project["id"])
+            jobs = await client.get_all_jobs(repo["id"])
             for j in jobs:
                 stage = j.get("stage", "unknown")
                 stage_stats[stage]["total"] += 1
@@ -50,24 +50,24 @@ async def job_stages():
 
 
 @router.get("/recent")
-async def recent_jobs(limit: int = 20):
-    projects = await _client.get_projects()
+async def recent_jobs(limit: int = 20, client: BaseProviderClient = Depends(get_client)):
+    repos = await client.get_repos()
     all_jobs = []
 
-    for project in projects[:5]:
+    for repo in repos[:5]:
         try:
-            jobs = await _client.get_jobs(project["id"])
+            jobs = await client.get_all_jobs(repo["id"])
             for j in jobs[:10]:
                 all_jobs.append({
-                    "id": j.get("id"),
-                    "name": j.get("name"),
-                    "project": project.get("name", ""),
-                    "stage": j.get("stage"),
-                    "status": j.get("status"),
-                    "duration": j.get("duration"),
+                    "id":         j.get("id"),
+                    "name":       j.get("name"),
+                    "project":    repo.get("name", ""),
+                    "stage":      j.get("stage"),
+                    "status":     j.get("status"),
+                    "duration":   j.get("duration"),
                     "created_at": j.get("created_at"),
-                    "web_url": j.get("web_url"),
-                    "ref": j.get("ref"),
+                    "web_url":    j.get("web_url"),
+                    "ref":        j.get("ref"),
                 })
         except Exception:
             pass

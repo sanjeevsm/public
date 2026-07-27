@@ -1,54 +1,53 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from datetime import datetime, timedelta
 from collections import defaultdict
-from services.gitlab_client import GitLabClient
+from services.base_client import BaseProviderClient
+from services.provider_factory import get_client
 
 router = APIRouter(prefix="/mrs", tags=["merge_requests"])
-_client = GitLabClient()
 
 
 @router.get("/trend")
-async def mr_trend(days: int = 30):
-    since = (datetime.utcnow() - timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%SZ")
-    since_dt = datetime.strptime(since[:10], "%Y-%m-%d")
-    projects = await _client.get_projects()
+async def mr_trend(days: int = 30, client: BaseProviderClient = Depends(get_client)):
+    since_dt = datetime.utcnow() - timedelta(days=days)
+    repos = await client.get_repos()
     daily: dict = defaultdict(lambda: {"opened": 0, "merged": 0, "closed": 0})
+    seen = set()
 
-    # Track all MRs we've seen to avoid double counting
-    seen_mrs = set()
-
-    for project in projects:
+    for repo in repos:
         try:
-            # Get all MRs updated since the time window - this matches what Recent MRs shows
-            mrs = await _client.get_merge_requests(project["id"], updated_after=since)
-            for m in mrs:
-                mr_key = f"{project['id']}_{m.get('iid')}"
-                if mr_key in seen_mrs:
+            prs = await client.get_pull_requests(repo["id"], days=days)
+            for m in prs:
+                key = f"{repo['id']}_{m.get('id')}"
+                if key in seen:
                     continue
-                seen_mrs.add(mr_key)
+                seen.add(key)
 
-                # Count when MR was created (if within window)
                 created_date = (m.get("created_at") or "")[:10]
                 if created_date:
-                    created_dt = datetime.strptime(created_date, "%Y-%m-%d")
-                    if created_dt >= since_dt:
-                        daily[created_date]["opened"] += 1
+                    try:
+                        if datetime.strptime(created_date, "%Y-%m-%d") >= since_dt.replace(hour=0, minute=0, second=0):
+                            daily[created_date]["opened"] += 1
+                    except Exception:
+                        pass
 
-                # Count when MR was merged (if within window)
                 if m.get("state") == "merged" and m.get("merged_at"):
                     merged_date = (m.get("merged_at") or "")[:10]
                     if merged_date:
-                        merged_dt = datetime.strptime(merged_date, "%Y-%m-%d")
-                        if merged_dt >= since_dt:
-                            daily[merged_date]["merged"] += 1
+                        try:
+                            if datetime.strptime(merged_date, "%Y-%m-%d") >= since_dt.replace(hour=0, minute=0, second=0):
+                                daily[merged_date]["merged"] += 1
+                        except Exception:
+                            pass
 
-                # Count when MR was closed (if within window and not merged)
                 if m.get("state") == "closed" and m.get("closed_at"):
                     closed_date = (m.get("closed_at") or "")[:10]
                     if closed_date:
-                        closed_dt = datetime.strptime(closed_date, "%Y-%m-%d")
-                        if closed_dt >= since_dt:
-                            daily[closed_date]["closed"] += 1
+                        try:
+                            if datetime.strptime(closed_date, "%Y-%m-%d") >= since_dt.replace(hour=0, minute=0, second=0):
+                                daily[closed_date]["closed"] += 1
+                        except Exception:
+                            pass
         except Exception:
             pass
 
@@ -61,24 +60,24 @@ async def mr_trend(days: int = 30):
 
 
 @router.get("/recent")
-async def recent_mrs(limit: int = 20):
-    projects = await _client.get_projects()
+async def recent_mrs(limit: int = 20, client: BaseProviderClient = Depends(get_client)):
+    repos = await client.get_repos()
     all_mrs = []
 
-    for project in projects:
+    for repo in repos:
         try:
-            mrs = await _client.get_merge_requests(project["id"], per_page=10, order_by="updated_at", sort="desc")
-            for m in mrs[:10]:
+            prs = await client.get_pull_requests(repo["id"], days=30)
+            for m in prs[:10]:
                 all_mrs.append({
-                    "id": m.get("iid"),
-                    "project": project.get("name", ""),
-                    "project_path": project.get("path_with_namespace", ""),
-                    "title": m.get("title", ""),
-                    "author": (m.get("author") or {}).get("name", ""),
-                    "state": m.get("state", ""),
-                    "created_at": m.get("created_at"),
-                    "updated_at": m.get("updated_at"),
-                    "web_url": m.get("web_url"),
+                    "id":            m.get("id"),
+                    "project":       repo.get("name", ""),
+                    "project_path":  repo.get("full_name", ""),
+                    "title":         m.get("title", ""),
+                    "author":        m.get("author", ""),
+                    "state":         m.get("state", ""),
+                    "created_at":    m.get("created_at"),
+                    "updated_at":    m.get("updated_at"),
+                    "web_url":       m.get("web_url"),
                     "source_branch": m.get("source_branch", ""),
                     "target_branch": m.get("target_branch", ""),
                 })

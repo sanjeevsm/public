@@ -29,7 +29,7 @@ def export_csv(data: dict) -> bytes:
 def export_json(data: dict) -> bytes:
     envelope = {
         "exported_at": datetime.utcnow().isoformat() + "Z",
-        "source": "gitlab-cicd-dashboard",
+        "source": "cicd-dashboard",
         "data": data,
     }
     return json.dumps(envelope, indent=2, default=str).encode()
@@ -83,7 +83,7 @@ def export_excel(data: dict) -> io.BytesIO:
                 "Project": m.get("project_name", ""),
                 "ID": m.get("id", ""),
                 "Title": m.get("title", ""),
-                "Author": m.get("author_name", ""),
+                "Author": m.get("author_name", m.get("author", "")),
                 "State": m.get("state", ""),
                 "Created At": m.get("created_at", ""),
             } for m in mrs])
@@ -100,7 +100,7 @@ def export_pdf(data: dict) -> io.BytesIO:
     styles = getSampleStyleSheet()
     elements = []
 
-    elements.append(Paragraph("GitLab CI/CD Dashboard Report", styles["Title"]))
+    elements.append(Paragraph("CI/CD Dashboard Report", styles["Title"]))
     elements.append(Paragraph(f"Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}", styles["Normal"]))
     elements.append(Spacer(1, 16))
 

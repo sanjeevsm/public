@@ -1,23 +1,22 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from datetime import datetime, timedelta
-from services.gitlab_client import GitLabClient
+from services.base_client import BaseProviderClient
+from services.provider_factory import get_client
 from metrics import gitlab_pipelines_total, gitlab_projects_total
 
 router = APIRouter(tags=["overview"])
-_client = GitLabClient()
 
 
 @router.get("/overview")
-async def get_overview(days: int = 30):
-    since = (datetime.utcnow() - timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%SZ")
-    projects = await _client.get_projects()
+async def get_overview(days: int = 30, client: BaseProviderClient = Depends(get_client)):
+    repos = await client.get_repos()
 
     total = success = failed = running = pending = canceled = 0
     durations = []
 
-    for project in projects:
+    for repo in repos:
         try:
-            pls = await _client.get_pipelines(project["id"], updated_after=since)
+            pls = await client.get_pipelines(repo["id"], days=days)
             for p in pls:
                 total += 1
                 s = p.get("status", "")
@@ -37,11 +36,11 @@ async def get_overview(days: int = 30):
         except Exception:
             pass
 
-    open_mrs = 0
-    for project in projects:
+    open_prs = 0
+    for repo in repos:
         try:
-            mrs = await _client.get_merge_requests(project["id"], state="opened")
-            open_mrs += len(mrs)
+            prs = await client.get_pull_requests(repo["id"], days=days, state="opened")
+            open_prs += len(prs)
         except Exception:
             pass
 
@@ -52,7 +51,7 @@ async def get_overview(days: int = 30):
     gitlab_pipelines_total.labels(status="running").set(running)
     gitlab_pipelines_total.labels(status="pending").set(pending)
     gitlab_pipelines_total.labels(status="canceled").set(canceled)
-    gitlab_projects_total.set(len(projects))
+    gitlab_projects_total.set(len(repos))
 
     return {
         "total_pipelines": total,
@@ -63,6 +62,8 @@ async def get_overview(days: int = 30):
         "canceled": canceled,
         "success_rate": round(success / total * 100, 1) if total > 0 else 0,
         "avg_duration_s": avg_dur,
-        "open_mrs": open_mrs,
-        "total_projects": len(projects),
+        "open_mrs": open_prs,
+        "total_projects": len(repos),
+        "pr_label": client.pr_label,
+        "pipeline_label": client.pipeline_label,
     }

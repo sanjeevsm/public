@@ -77,15 +77,34 @@ body {
   letter-spacing: -0.3px;
 }
 
-.gitlab-badge {
-  background: #fc6d26;
-  color: #fff;
+.provider-badge {
   font-size: 11px;
   font-weight: 700;
-  padding: 2px 8px;
+  padding: 2px 9px;
   border-radius: 4px;
   letter-spacing: 0.5px;
 }
+.provider-badge-gitlab    { background: #fc6d26; color: #fff; }
+.provider-badge-github    { background: #24292e; color: #fff; }
+.provider-badge-bitbucket { background: #0052cc; color: #fff; }
+.provider-badge-gitea     { background: #609926; color: #fff; }
+.provider-badge-unconfigured { background: var(--bg-3); color: var(--text-3); border: 1px solid var(--border); }
+
+.settings-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-3);
+  color: var(--text-2);
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+.settings-btn:hover { background: var(--bg-hover); }
 
 .ws-status {
   display: flex;
@@ -933,3 +952,215 @@ td a:hover { text-decoration: underline; }
     grid-template-columns: 1fr;
   }
 }
+
+/* ── Setup banner ────────────────────────────────────────────────── */
+.setup-banner {
+  display: flex;
+  margin-bottom: 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.setup-banner-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 22px;
+  width: 100%;
+}
+
+.setup-icon {
+  font-size: 28px;
+  flex-shrink: 0;
+}
+
+.setup-banner-content strong {
+  display: block;
+  font-size: 14px;
+  color: var(--text-1);
+  margin-bottom: 4px;
+}
+
+.setup-banner-content p {
+  font-size: 13px;
+  color: var(--text-3);
+  line-height: 1.5;
+}
+
+.setup-banner-content .btn-accent {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* ── Settings modal ──────────────────────────────────────────────── */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+
+.modal {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  width: 560px;
+  max-width: 96vw;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-header h2 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-1);
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 22px;
+  color: var(--text-3);
+  cursor: pointer;
+  line-height: 1;
+  padding: 0 4px;
+}
+.modal-close:hover { color: var(--text-1); }
+
+.modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 22px;
+}
+
+.modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 22px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-2);
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.settings-note {
+  font-size: 12px;
+  color: var(--text-3);
+  flex: 1;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* ── Settings sections ───────────────────────────────────────────── */
+.settings-section {
+  margin-bottom: 18px;
+}
+
+.settings-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 10px;
+}
+
+/* ── Provider tabs ───────────────────────────────────────────────── */
+.provider-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.provider-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-2);
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.provider-tab:hover { background: var(--bg-hover); color: var(--text-1); }
+.provider-tab.active { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); }
+
+.provider-icon {
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  display: inline-block;
+  flex-shrink: 0;
+}
+.provider-icon-gitlab    { background: #fc6d26; }
+.provider-icon-github    { background: #24292e; }
+.provider-icon-bitbucket { background: #0052cc; }
+.provider-icon-gitea     { background: #609926; }
+
+/* ── Provider panels ─────────────────────────────────────────────── */
+.provider-panel { display: none; padding-top: 16px; }
+.provider-panel.active { display: block; }
+
+/* ── Field groups (settings form) ───────────────────────────────── */
+.field-group {
+  margin-bottom: 14px;
+}
+
+.field-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-2);
+  margin-bottom: 6px;
+}
+
+.field-hint {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-3);
+}
+
+.field-group input {
+  width: 100%;
+  padding: 8px 11px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-2);
+  color: var(--text-1);
+  font-size: 13px;
+  transition: border-color 0.15s;
+}
+
+.field-group input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.field-group input::placeholder {
+  color: var(--text-3);
+}
+
