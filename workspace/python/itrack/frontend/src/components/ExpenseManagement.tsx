@@ -1,0 +1,326 @@
+import React, { useState, useEffect } from 'react';
+import { TrendingDown, Plus, Edit2, Trash2, Filter } from 'lucide-react';
+import { Transaction, TransactionInput } from '../types/transaction';
+import { transactionService } from '../services/transactionService';
+
+export const ExpenseManagement: React.FC = () => {
+  const [expenses, setExpenses] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<Transaction | null>(null);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [filterCategory, setFilterCategory] = useState<string>('');
+
+  const [formData, setFormData] = useState<TransactionInput>({
+    description: '',
+    amount: 0,
+    type: 'expense',
+    category: '',
+    date: new Date().toISOString().split('T')[0],
+    mode: 'private',
+  });
+
+  const expenseCategories = [
+    'Food & Dining',
+    'Transportation',
+    'Shopping',
+    'Entertainment',
+    'Bills & Utilities',
+    'Healthcare',
+    'Education',
+    'Housing',
+    'Other',
+  ];
+
+  useEffect(() => {
+    loadExpenses();
+  }, [filterCategory]);
+
+  const loadExpenses = async () => {
+    try {
+      setLoading(true);
+      const data = await transactionService.getTransactions({
+        type: 'expense',
+        category: filterCategory || undefined,
+      });
+      setExpenses(data);
+    } catch (err: any) {
+      setError('Failed to load expenses');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+
+    try {
+      const dataToSubmit = {
+        ...formData,
+        type: 'expense' as const,
+        date: new Date(formData.date).toISOString(),
+      };
+
+      if (editingExpense) {
+        await transactionService.updateTransaction(editingExpense.id, dataToSubmit);
+        setSuccess('Expense updated successfully');
+      } else {
+        await transactionService.createTransaction(dataToSubmit);
+        setSuccess('Expense added successfully');
+      }
+
+      resetForm();
+      loadExpenses();
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Operation failed');
+    }
+  };
+
+  const handleEdit = (expense: Transaction) => {
+    setEditingExpense(expense);
+    setFormData({
+      description: expense.description,
+      amount: expense.amount,
+      type: 'expense',
+      category: expense.category,
+      date: new Date(expense.date).toISOString().split('T')[0],
+      mode: expense.mode || 'private',
+    });
+    setShowForm(true);
+  };
+
+  const handleDelete = async (expenseId: string) => {
+    if (!window.confirm('Are you sure you want to delete this expense?')) {
+      return;
+    }
+
+    try {
+      await transactionService.deleteTransaction(expenseId);
+      setSuccess('Expense deleted successfully');
+      loadExpenses();
+    } catch (err: any) {
+      setError('Failed to delete expense');
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      description: '',
+      amount: 0,
+      type: 'expense',
+      category: '',
+      date: new Date().toISOString().split('T')[0],
+      mode: 'private',
+    });
+    setEditingExpense(null);
+    setShowForm(false);
+  };
+
+  const totalExpense = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div className="flex items-center space-x-3">
+          <TrendingDown className="text-red-600" size={32} />
+          <div>
+            <h1 className="text-3xl font-bold text-gray-800">Expense Management</h1>
+            <p className="text-gray-600">Track and manage your expenses</p>
+          </div>
+        </div>
+        <button
+          onClick={() => setShowForm(!showForm)}
+          className="btn btn-primary flex items-center space-x-2"
+        >
+          <Plus size={20} />
+          <span>{showForm ? 'Cancel' : 'Add Expense'}</span>
+        </button>
+      </div>
+
+      {/* Messages */}
+      {error && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-md text-red-700">
+          {error}
+        </div>
+      )}
+      {success && (
+        <div className="p-4 bg-green-50 border border-green-200 rounded-md text-green-700">
+          {success}
+        </div>
+      )}
+
+      {/* Summary Card */}
+      <div className="card bg-gradient-to-r from-red-500 to-pink-600 text-white">
+        <div className="flex justify-between items-center">
+          <div>
+            <p className="text-red-100 text-sm">Total Expenses</p>
+            <h2 className="text-4xl font-bold">${totalExpense.toFixed(2)}</h2>
+            <p className="text-red-100 text-sm mt-1">{expenses.length} transactions</p>
+          </div>
+          <TrendingDown size={64} className="text-red-200 opacity-50" />
+        </div>
+      </div>
+
+      {/* Form */}
+      {showForm && (
+        <div className="card">
+          <h2 className="text-xl font-semibold mb-4">
+            {editingExpense ? 'Edit Expense' : 'Add New Expense'}
+          </h2>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Description *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  className="input"
+                  placeholder="e.g., Grocery Shopping"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Amount *
+                </label>
+                <input
+                  type="number"
+                  required
+                  min="0.01"
+                  step="0.01"
+                  value={formData.amount || ''}
+                  onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) })}
+                  className="input"
+                  placeholder="0.00"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Category *
+                </label>
+                <select
+                  required
+                  value={formData.category}
+                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                  className="input"
+                >
+                  <option value="">Select category</option>
+                  {expenseCategories.map((cat) => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Date *
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={formData.date}
+                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                  className="input"
+                />
+              </div>
+            </div>
+
+            <div className="flex space-x-3">
+              <button type="submit" className="btn btn-primary flex-1">
+                {editingExpense ? 'Update Expense' : 'Add Expense'}
+              </button>
+              <button
+                type="button"
+                onClick={resetForm}
+                className="btn btn-secondary"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Filter */}
+      <div className="card">
+        <div className="flex items-center space-x-3">
+          <Filter size={20} className="text-gray-600" />
+          <label className="text-sm font-medium text-gray-700">Filter by Category:</label>
+          <select
+            value={filterCategory}
+            onChange={(e) => setFilterCategory(e.target.value)}
+            className="input max-w-xs"
+          >
+            <option value="">All Categories</option>
+            {expenseCategories.map((cat) => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Expense List */}
+      <div className="card">
+        <h2 className="text-xl font-semibold mb-4">Expense History</h2>
+        {loading ? (
+          <p className="text-gray-600">Loading expenses...</p>
+        ) : expenses.length === 0 ? (
+          <p className="text-gray-600">No expense transactions found. Add your first expense!</p>
+        ) : (
+          <div className="space-y-3">
+            {expenses.map((expense) => (
+              <div
+                key={expense.id}
+                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
+              >
+                <div className="flex-1">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                      <TrendingDown size={20} className="text-red-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-800">{expense.description}</h3>
+                      <p className="text-sm text-gray-600">
+                        {expense.category} • {new Date(expense.date).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-4">
+                  <span className="text-xl font-bold text-red-600">
+                    -${expense.amount.toFixed(2)}
+                  </span>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => handleEdit(expense)}
+                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                      title="Edit"
+                    >
+                      <Edit2 size={18} />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(expense.id)}
+                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
+                      title="Delete"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
