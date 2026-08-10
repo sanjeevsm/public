@@ -53,7 +53,13 @@ async def update_user_admin_fields(
         # prevent removing own superadmin flag accidentally
         if str(current_user.id) == user_id and payload.get("is_superadmin") is False:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot remove your own superadmin flag")
-        patch["is_superadmin"] = bool(payload.get("is_superadmin"))
+        # If attempting to grant superadmin, ensure there is no other superadmin
+        requested = bool(payload.get("is_superadmin"))
+        if requested:
+            existing = await db.users.find_one({"is_superadmin": True})
+            if existing and str(existing.get("_id")) != user_id:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only one superadmin allowed")
+        patch["is_superadmin"] = requested
 
     if not patch:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No updatable fields provided")
@@ -79,6 +85,11 @@ async def delete_user(
 
     if not ObjectId.is_valid(user_id):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid user id")
+
+    # Prevent deleting any superadmin account
+    target = await db.users.find_one({"_id": ObjectId(user_id)})
+    if target and target.get("is_superadmin"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot delete a superadmin account")
 
     res = await db.users.delete_one({"_id": ObjectId(user_id)})
     if res.deleted_count == 0:

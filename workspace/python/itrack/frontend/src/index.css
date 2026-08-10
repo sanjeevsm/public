@@ -1,3 +1,7 @@
+[data-theme] .bg-white { background-color: var(--card-bg) !important; color: var(--text) !important; }
+[data-theme] .bg-gray-50 { background-color: var(--bg) !important; color: var(--text) !important; }
+[data-theme] .text-gray-600 { color: var(--muted) !important; }
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -16,6 +20,157 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+/* Theme variables applied via data-theme on <html> (documentElement) */
+[data-theme="dark"] {
+  --bg: #0b1220;
+  --text: #e6eef6;
+  --primary: #6366f1;
+  --nav-bg: #0f1724;
+  --nav-text: #ffffff;
+  --card-bg: rgba(255,255,255,0.04);
+  --btn-text: #ffffff;
+  background-color: var(--bg);
+  color: var(--text);
+}
+
+[data-theme="light"] {
+  --bg: #ffffff;
+  --text: #0f172a;
+  --primary: #2563eb;
+  --nav-bg: #2563eb;
+  --nav-text: #ffffff;
+  --card-bg: #ffffff;
+  --btn-text: #ffffff;
+  background-color: var(--bg);
+  color: var(--text);
+}
+
+[data-theme="midnight"] {
+  --bg: #020617;
+  --text: #cfe7ff;
+  --primary: #7c3aed;
+  --nav-bg: #0b0620;
+  --nav-text: #e6e9ff;
+  --card-bg: rgba(255,255,255,0.03);
+  --btn-text: #ffffff;
+  background-color: var(--bg);
+  color: var(--text);
+}
+
+[data-theme="forest"] {
+  --bg: #0b2b0b;
+  --text: #dff6e1;
+  --primary: #16a34a;
+  --nav-bg: #063117;
+  --nav-text: #e6f8e8;
+  --card-bg: rgba(255,255,255,0.03);
+  --btn-text: #ffffff;
+  background-color: var(--bg);
+  color: var(--text);
+}
+
+[data-theme="navy"] {
+  --bg: #001529;
+  --text: #cfe7ff;
+  --primary: #06b6d4;
+  --nav-bg: #00243b;
+  --nav-text: #e6f7ff;
+  --card-bg: rgba(255,255,255,0.03);
+  --btn-text: #ffffff;
+  background-color: var(--bg);
+  color: var(--text);
+}
+
+[data-theme="warm"] {
+  --bg: #fff7ed;
+  --text: #432f1f;
+  --primary: #f97316;
+  --nav-bg: #f97316;
+  --nav-text: #ffffff;
+  --card-bg: #fffaf0;
+  --btn-text: #ffffff;
+  background-color: var(--bg);
+  color: var(--text);
+}
+
+/* Apply base background and text colors so Tailwind utilities inherit better */
+html, body {
+  background-color: inherit;
+  color: inherit;
+}
+
+/* Theme-driven component styles to override Tailwind where needed */
+:root {
+  --primary-700: rgba(0,0,0,0.08);
+  --card-bg: rgba(255,255,255,0.04);
+  --muted: rgba(255,255,255,0.6);
+}
+
+/* Map theme variables to component look */
+.nav-root, nav {
+  background-color: var(--nav-bg) !important;
+  color: var(--nav-text) !important;
+}
+
+/* Ensure nav links and menu items are visible */
+nav a, nav a * {
+  color: var(--nav-text) !important;
+}
+
+.btn-primary {
+  background-color: var(--primary) !important;
+  color: var(--btn-text, #fff) !important;
+  border-color: transparent !important;
+}
+.btn-primary:hover {
+  filter: brightness(0.95) !important;
+}
+
+.btn-secondary {
+  background-color: transparent !important;
+  color: var(--text) !important;
+  border: 1px solid rgba(255,255,255,0.06) !important;
+}
+
+.btn-danger {
+  background-color: #ef4444 !important;
+  color: #fff !important;
+}
+
+.card {
+  background-color: var(--card-bg, rgba(255,255,255,0.04)) !important;
+  color: var(--text) !important;
+}
+
+.input {
+  background-color: transparent !important;
+  color: var(--text) !important;
+  border-color: rgba(255,255,255,0.12) !important;
+}
+
+table, th, td {
+  color: var(--text) !important;
+}
+
+thead th {
+  background-color: rgba(0,0,0,0.06) !important;
+  color: var(--text) !important;
+}
+
+/* Link colors */
+a {
+  color: var(--primary) !important;
+}
+
+/* Make sure background uses theme */
+body, #root {
+  background-color: var(--bg) !important;
+  color: var(--text) !important;
+}
+
+/* Small helpers for contrast adjustments */
+.muted { color: var(--muted) !important; }
 
 body {
   margin: 0;

@@ -1,8 +1,13 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { apiClient } from '../services/api';
 import { User } from '../types/user';
+import { useConfirm } from '../components/ConfirmProvider';
+import { useToast } from '../components/ToastProvider';
 
 export const AdminPage: React.FC = () => {
+  const confirm = useConfirm();
+  const { showToast } = useToast();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -23,29 +28,35 @@ export const AdminPage: React.FC = () => {
     loadUsers();
   }, []);
 
+  const navigate = useNavigate();
+
   const promoteToAdmin = async (u: User) => {
-    if (!window.confirm(`Promote ${u.username} to entity admin?`)) return;
+    const ok = await confirm({ message: `Promote ${u.username} to entity admin?` });
+    if (!ok) return;
     setBusyId(u.id);
     try {
       await apiClient.put(`/api/admin/users/${u.id}`, { entity_role: 'admin' });
       await loadUsers();
+      showToast('Promoted to admin', 'success');
     } catch (err) {
       console.error('Promote failed', err);
-      alert('Promote failed');
+      showToast('Promote failed', 'error');
     } finally {
       setBusyId(null);
     }
   };
 
   const demoteFromAdmin = async (u: User) => {
-    if (!window.confirm(`Demote ${u.username} from entity admin?`)) return;
+    const ok = await confirm({ message: `Demote ${u.username} from entity admin?` });
+    if (!ok) return;
     setBusyId(u.id);
     try {
       await apiClient.put(`/api/admin/users/${u.id}`, { entity_role: null });
       await loadUsers();
+      showToast('Demoted from admin', 'success');
     } catch (err) {
       console.error('Demote failed', err);
-      alert('Demote failed');
+      showToast('Demote failed', 'error');
     } finally {
       setBusyId(null);
     }
@@ -53,28 +64,43 @@ export const AdminPage: React.FC = () => {
 
   const toggleSuperadmin = async (u: User) => {
     const to = !u.is_superadmin;
-    if (!window.confirm(`${to ? 'Grant' : 'Revoke'} superadmin for ${u.username}?`)) return;
+    if (u.is_superadmin === false) {
+      const existingCount = users.filter(x => x.is_superadmin).length;
+      if (existingCount > 0) {
+        showToast('There is already a superadmin; only one is allowed.', 'warn');
+        return;
+      }
+    }
+    const ok = await confirm({ message: `${to ? 'Grant' : 'Revoke'} superadmin for ${u.username}?` });
+    if (!ok) return;
     setBusyId(u.id);
     try {
       await apiClient.put(`/api/admin/users/${u.id}`, { is_superadmin: to });
       await loadUsers();
+      showToast('Superadmin status changed', 'success');
     } catch (err) {
       console.error('Toggle superadmin failed', err);
-      alert('Toggle superadmin failed');
+      showToast('Toggle superadmin failed', 'error');
     } finally {
       setBusyId(null);
     }
   };
 
   const deleteUser = async (u: User) => {
-    if (!window.confirm(`Delete user ${u.username}? This action is irreversible.`)) return;
+    if (u.is_superadmin) {
+      showToast('Cannot delete a superadmin account', 'warn');
+      return;
+    }
+    const ok = await confirm({ message: `Delete user ${u.username}? This action is irreversible.` });
+    if (!ok) return;
     setBusyId(u.id);
     try {
       await apiClient.delete(`/api/admin/users/${u.id}`);
       await loadUsers();
+      showToast('User deleted', 'success');
     } catch (err) {
       console.error('Delete failed', err);
-      alert('Delete failed');
+      showToast('Delete failed', 'error');
     } finally {
       setBusyId(null);
     }
@@ -82,8 +108,16 @@ export const AdminPage: React.FC = () => {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Superadmin Dashboard</h1>
-      <p className="mb-4">Overview and user management.</p>
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h1 className="text-2xl font-bold">Superadmin Dashboard</h1>
+          <p className="text-sm text-gray-600">Overview and user management.</p>
+        </div>
+        <div>
+          <button onClick={() => navigate(-1)} className="btn btn-secondary">Back</button>
+        </div>
+      </div>
+      
       {loading ? (
         <div>Loading...</div>
       ) : (
@@ -128,17 +162,17 @@ export const AdminPage: React.FC = () => {
                       )}
 
                       <button
-                        disabled={busyId === u.id}
+                        disabled={busyId === u.id || (!u.is_superadmin && users.filter(x => x.is_superadmin).length > 0)}
                         onClick={() => toggleSuperadmin(u)}
-                        className="px-2 py-1 bg-indigo-600 text-white rounded text-sm"
+                        className="px-2 py-1 bg-indigo-600 text-white rounded text-sm disabled:opacity-50"
                       >
                         {u.is_superadmin ? 'Revoke SA' : 'Grant SA'}
                       </button>
 
                       <button
-                        disabled={busyId === u.id}
+                        disabled={busyId === u.id || u.is_superadmin}
                         onClick={() => deleteUser(u)}
-                        className="px-2 py-1 bg-red-600 text-white rounded text-sm"
+                        className="px-2 py-1 bg-red-600 text-white rounded text-sm disabled:opacity-50"
                       >
                         Delete
                       </button>
