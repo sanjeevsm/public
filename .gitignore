@@ -20,6 +20,7 @@ __pycache__/
 *.pyo
 *.pyd
 .venv/
+.venv*/
 venv/
 env/
 
@@ -30,6 +31,7 @@ env/
 
 # Logs
 *.log
+*_log.txt
 
 # Temporary
 *.tmp

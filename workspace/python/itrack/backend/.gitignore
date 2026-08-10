@@ -32,6 +32,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+.venv*/
 
 # PyCharm
 .idea/
@@ -46,6 +47,7 @@ htmlcov/
 
 # Logs
 *.log
+*_log.txt
 
 # OS
 .DS_Store
