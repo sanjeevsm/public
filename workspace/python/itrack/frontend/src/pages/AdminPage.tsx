@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { apiClient } from '../services/api';
 import { User } from '../types/user';
 
@@ -22,6 +23,8 @@ export const AdminPage: React.FC = () => {
   useEffect(() => {
     loadUsers();
   }, []);
+
+  const navigate = useNavigate();
 
   const promoteToAdmin = async (u: User) => {
     if (!window.confirm(`Promote ${u.username} to entity admin?`)) return;
@@ -53,6 +56,14 @@ export const AdminPage: React.FC = () => {
 
   const toggleSuperadmin = async (u: User) => {
     const to = !u.is_superadmin;
+    if (u.is_superadmin === false) {
+      // If there's already a superadmin, do not allow granting here
+      const existingCount = users.filter(x => x.is_superadmin).length;
+      if (existingCount > 0) {
+        alert('There is already a superadmin; only one superadmin is allowed.');
+        return;
+      }
+    }
     if (!window.confirm(`${to ? 'Grant' : 'Revoke'} superadmin for ${u.username}?`)) return;
     setBusyId(u.id);
     try {
@@ -67,6 +78,10 @@ export const AdminPage: React.FC = () => {
   };
 
   const deleteUser = async (u: User) => {
+    if (u.is_superadmin) {
+      alert('Cannot delete a superadmin account');
+      return;
+    }
     if (!window.confirm(`Delete user ${u.username}? This action is irreversible.`)) return;
     setBusyId(u.id);
     try {
@@ -82,8 +97,16 @@ export const AdminPage: React.FC = () => {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Superadmin Dashboard</h1>
-      <p className="mb-4">Overview and user management.</p>
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h1 className="text-2xl font-bold">Superadmin Dashboard</h1>
+          <p className="text-sm text-gray-600">Overview and user management.</p>
+        </div>
+        <div>
+          <button onClick={() => navigate(-1)} className="btn btn-secondary">Back</button>
+        </div>
+      </div>
+      
       {loading ? (
         <div>Loading...</div>
       ) : (
@@ -128,17 +151,17 @@ export const AdminPage: React.FC = () => {
                       )}
 
                       <button
-                        disabled={busyId === u.id}
+                        disabled={busyId === u.id || (!u.is_superadmin && users.filter(x => x.is_superadmin).length > 0)}
                         onClick={() => toggleSuperadmin(u)}
-                        className="px-2 py-1 bg-indigo-600 text-white rounded text-sm"
+                        className="px-2 py-1 bg-indigo-600 text-white rounded text-sm disabled:opacity-50"
                       >
                         {u.is_superadmin ? 'Revoke SA' : 'Grant SA'}
                       </button>
 
                       <button
-                        disabled={busyId === u.id}
+                        disabled={busyId === u.id || u.is_superadmin}
                         onClick={() => deleteUser(u)}
-                        className="px-2 py-1 bg-red-600 text-white rounded text-sm"
+                        className="px-2 py-1 bg-red-600 text-white rounded text-sm disabled:opacity-50"
                       >
                         Delete
                       </button>
