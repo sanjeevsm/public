@@ -22,6 +22,10 @@
   --bg: #0b1220;
   --text: #e6eef6;
   --primary: #6366f1;
+  --nav-bg: #0f1724;
+  --nav-text: #ffffff;
+  --card-bg: rgba(255,255,255,0.04);
+  --btn-text: #ffffff;
   background-color: var(--bg);
   color: var(--text);
 }
@@ -30,6 +34,10 @@
   --bg: #ffffff;
   --text: #0f172a;
   --primary: #2563eb;
+  --nav-bg: #2563eb;
+  --nav-text: #ffffff;
+  --card-bg: #ffffff;
+  --btn-text: #ffffff;
   background-color: var(--bg);
   color: var(--text);
 }
@@ -38,6 +46,10 @@
   --bg: #020617;
   --text: #cfe7ff;
   --primary: #7c3aed;
+  --nav-bg: #0b0620;
+  --nav-text: #e6e9ff;
+  --card-bg: rgba(255,255,255,0.03);
+  --btn-text: #ffffff;
   background-color: var(--bg);
   color: var(--text);
 }
@@ -46,6 +58,10 @@
   --bg: #0b2b0b;
   --text: #dff6e1;
   --primary: #16a34a;
+  --nav-bg: #063117;
+  --nav-text: #e6f8e8;
+  --card-bg: rgba(255,255,255,0.03);
+  --btn-text: #ffffff;
   background-color: var(--bg);
   color: var(--text);
 }
@@ -54,6 +70,10 @@
   --bg: #001529;
   --text: #cfe7ff;
   --primary: #06b6d4;
+  --nav-bg: #00243b;
+  --nav-text: #e6f7ff;
+  --card-bg: rgba(255,255,255,0.03);
+  --btn-text: #ffffff;
   background-color: var(--bg);
   color: var(--text);
 }
@@ -62,6 +82,10 @@
   --bg: #fff7ed;
   --text: #432f1f;
   --primary: #f97316;
+  --nav-bg: #f97316;
+  --nav-text: #ffffff;
+  --card-bg: #fffaf0;
+  --btn-text: #ffffff;
   background-color: var(--bg);
   color: var(--text);
 }
@@ -80,9 +104,14 @@ html, body {
 }
 
 /* Map theme variables to component look */
-nav {
-  background-color: var(--primary) !important;
-  color: var(--text) !important;
+.nav-root, nav {
+  background-color: var(--nav-bg) !important;
+  color: var(--nav-text) !important;
+}
+
+/* Ensure nav links and menu items are visible */
+nav a, nav a * {
+  color: var(--nav-text) !important;
 }
 
 .btn-primary {
@@ -91,7 +120,7 @@ nav {
   border-color: transparent !important;
 }
 .btn-primary:hover {
-  background-color: var(--primary-700) !important;
+  filter: brightness(0.95) !important;
 }
 
 .btn-secondary {
