@@ -4,6 +4,7 @@ import { apiClient } from '../services/api';
 import { User } from '../types/user';
 import { useConfirm } from '../components/ConfirmProvider';
 import { useToast } from '../components/ToastProvider';
+import { useAuth } from '../contexts/AuthContext';
 
 export const AdminPage: React.FC = () => {
   const confirm = useConfirm();
@@ -11,6 +12,7 @@ export const AdminPage: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const { user: currentUser } = useAuth();
 
   const loadUsers = async () => {
     setLoading(true);
@@ -142,41 +144,45 @@ export const AdminPage: React.FC = () => {
                   <td className="px-4 py-2">{u.entity_role ?? '-'}</td>
                   <td className="px-4 py-2">{u.is_superadmin ? 'Yes' : 'No'}</td>
                   <td className="px-4 py-2">
-                    <div className="flex items-center gap-2">
-                      {u.entity_role !== 'admin' ? (
-                        <button
-                          disabled={busyId === u.id}
-                          onClick={() => promoteToAdmin(u)}
-                          className="px-2 py-1 bg-green-600 text-white rounded text-sm"
-                        >
-                          Promote
-                        </button>
-                      ) : (
-                        <button
-                          disabled={busyId === u.id}
-                          onClick={() => demoteFromAdmin(u)}
-                          className="px-2 py-1 bg-yellow-600 text-white rounded text-sm"
-                        >
-                          Demote
-                        </button>
-                      )}
+                    {currentUser && currentUser.id === u.id ? (
+                      <span className="text-sm muted">No actions for your account</span>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        {u.entity_role !== 'admin' ? (
+                          <button
+                            disabled={busyId === u.id}
+                            onClick={() => promoteToAdmin(u)}
+                            className="px-2 py-1 bg-green-600 text-white rounded text-sm"
+                          >
+                            Promote
+                          </button>
+                        ) : (
+                          <button
+                            disabled={busyId === u.id}
+                            onClick={() => demoteFromAdmin(u)}
+                            className="px-2 py-1 bg-yellow-600 text-white rounded text-sm"
+                          >
+                            Demote
+                          </button>
+                        )}
 
-                      <button
-                        disabled={busyId === u.id || (!u.is_superadmin && users.filter(x => x.is_superadmin).length > 0)}
-                        onClick={() => toggleSuperadmin(u)}
-                        className="px-2 py-1 bg-indigo-600 text-white rounded text-sm disabled:opacity-50"
-                      >
-                        {u.is_superadmin ? 'Revoke SA' : 'Grant SA'}
-                      </button>
+                        <button
+                          disabled={busyId === u.id || (!u.is_superadmin && users.filter(x => x.is_superadmin).length > 0)}
+                          onClick={() => toggleSuperadmin(u)}
+                          className="px-2 py-1 bg-indigo-600 text-white rounded text-sm disabled:opacity-50"
+                        >
+                          {u.is_superadmin ? 'Revoke SA' : 'Grant SA'}
+                        </button>
 
-                      <button
-                        disabled={busyId === u.id || u.is_superadmin}
-                        onClick={() => deleteUser(u)}
-                        className="px-2 py-1 bg-red-600 text-white rounded text-sm disabled:opacity-50"
-                      >
-                        Delete
-                      </button>
-                    </div>
+                        <button
+                          disabled={busyId === u.id || u.is_superadmin}
+                          onClick={() => deleteUser(u)}
+                          className="px-2 py-1 bg-red-600 text-white rounded text-sm disabled:opacity-50"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}
