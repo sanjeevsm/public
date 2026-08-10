@@ -1,3 +1,41 @@
 .claude/
 .codemie/
 .vscode/settings.json
+
+# Local environment files
+*.env
+.env.*
+!.env.example
+
+# Node / frontend
+node_modules/
+dist/
+build/
+.vite/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+
+# IDEs
+.vscode/
+.idea/
+.DS_Store
+
+# Logs
+*.log
+
+# Temporary
+*.tmp
+tmp/
+
+# Test / coverage
+.pytest_cache/
+.coverage
+
