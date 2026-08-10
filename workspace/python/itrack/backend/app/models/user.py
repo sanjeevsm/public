@@ -39,6 +39,20 @@ class UserResponse(BaseModel):
     created_at: datetime
 
 
+class UserUpdate(BaseModel):
+    """Fields the current user can change on their own profile."""
+    username: Optional[str] = Field(None, min_length=3, max_length=50)
+    email: Optional[EmailStr] = None
+    current_password: Optional[str] = Field(None, max_length=200)
+    new_password: Optional[str] = Field(None, min_length=8, max_length=100)
+
+
+class AdminUserUpdate(BaseModel):
+    """Fields an entity admin can change on a member's profile (no password)."""
+    username: Optional[str] = Field(None, min_length=3, max_length=50)
+    email: Optional[EmailStr] = None
+
+
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"

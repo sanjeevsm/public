@@ -1,5 +1,5 @@
 import { apiClient } from './api';
-import { User, UserRegister, UserLogin, AuthResponse } from '../types/user';
+import { User, UserRegister, UserLogin, AuthResponse, UserUpdate } from '../types/user';
 
 export const authService = {
   async register(userData: UserRegister): Promise<User> {
@@ -10,14 +10,9 @@ export const authService = {
   async login(credentials: UserLogin): Promise<AuthResponse> {
     const response = await apiClient.post<AuthResponse>('/api/auth/login', credentials);
     const { access_token } = response.data;
-    
-    // Store token
     localStorage.setItem('access_token', access_token);
-    
-    // Fetch and store user info
     const user = await this.getCurrentUser();
     localStorage.setItem('user', JSON.stringify(user));
-    
     return response.data;
   },
 
@@ -29,6 +24,12 @@ export const authService = {
 
   async getCurrentUser(): Promise<User> {
     const response = await apiClient.get<User>('/api/auth/me');
+    return response.data;
+  },
+
+  async updateProfile(data: UserUpdate): Promise<User> {
+    const response = await apiClient.put<User>('/api/auth/profile', data);
+    localStorage.setItem('user', JSON.stringify(response.data));
     return response.data;
   },
 

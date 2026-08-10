@@ -11,6 +11,7 @@ import { ExpensePage } from './pages/ExpensePage';
 import { CategoryPage } from './pages/CategoryPage';
 import { BudgetPage } from './pages/BudgetPage';
 import { MembersPage } from './pages/MembersPage';
+import { ProfilePage } from './pages/ProfilePage';
 import './index.css';
 
 function App() {
@@ -73,6 +74,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <MembersPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <ProfilePage />
               </ProtectedRoute>
             }
           />

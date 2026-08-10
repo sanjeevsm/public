@@ -2,6 +2,7 @@
 
 > A complete, production-ready personal finance tracker with multi-user collaboration, privacy controls, and real-time financial reporting.
 
+
 [![Status](https://img.shields.io/badge/status-production%20ready-brightgreen)]() [![Version](https://img.shields.io/badge/version-2.0.0-blue)]() [![License](https://img.shields.io/badge/license-MIT-green)]()
 
 **Built with:** FastAPI • React • TypeScript • MongoDB • Docker
@@ -2080,6 +2081,29 @@ services:
 ```
 
 ### Development Tools
+
+### Developer Notes (Recent Functional Changes)
+
+These notes document recent functional changes that developers should be aware of and how to adapt local environments or perform migrations.
+
+- Recurring transactions: Transactions now support recurring flags and metadata on the model: `is_recurring` (bool), `recurrence` (currently `'monthly'`), and `recurrence_start` (ISO datetime). When rendering or summarizing monthly views, recurring monthly items are included when active for the month.
+
+- Bulk import: Frontend includes an Excel-style bulk input component that can POST a JSON array to the backend bulk-create endpoint at `POST /api/transactions/bulk`. The backend validates each item using the existing `TransactionCreate` schema and performs an `insert_many` for atomic-ish bulk inserts.
+
+- API: The summary endpoint `GET /api/transactions/summary` accepts optional query parameters `year` and `month` to return a month-specific summary that includes active recurring monthly items.
+
+- Pagination caps: Transaction listing defaults to `limit=50` and enforces a maximum of `200` to avoid high memory usage on the server.
+
+- Redis (optional but recommended in production):
+  - When `REDIS_URL` is set, the app uses Redis for JWT blocklist persistence and for distributed rate-limiting (slowapi storage). This is recommended for multi-instance deployments.
+
+- Sentry: Set `SENTRY_DSN` in environment to enable Sentry error reporting.
+
+- Migration notes:
+  - Existing transaction documents should be backfilled with default fields: `is_recurring: false`, `recurrence: null`, `recurrence_start: null`.
+  - Recommended index additions to support monthly queries efficiently: index on `date`, and compound indexes on `is_recurring` + `recurrence` + `recurrence_start` as needed for aggregation performance.
+
+Add migration scripts or a one-off script to populate the new fields for existing documents before enabling monthly summaries in production.
 
 #### View Database Contents
 

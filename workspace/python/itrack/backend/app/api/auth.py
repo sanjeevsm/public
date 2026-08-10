@@ -7,7 +7,7 @@ from app.core.database import get_database
 from app.core.security import decode_access_token
 from app.core import token_blocklist
 from app.core.limiter import limiter
-from app.models.user import UserCreate, UserLogin, UserResponse, Token
+from app.models.user import UserCreate, UserLogin, UserResponse, Token, UserUpdate
 from app.services.auth_service import AuthService
 
 logger = logging.getLogger(__name__)
@@ -20,7 +20,7 @@ async def get_current_user(
     db: AsyncIOMotorDatabase = Depends(get_database),
 ) -> UserResponse:
     token = credentials.credentials
-    payload = decode_access_token(token)
+    payload = await decode_access_token(token)
     if payload is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -86,9 +86,9 @@ async def logout(
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ):
     """Revoke the supplied JWT so it cannot be used again."""
-    payload = decode_access_token(credentials.credentials)
+    payload = await decode_access_token(credentials.credentials)
     if payload and payload.get("jti"):
-        token_blocklist.revoke(payload["jti"])
+        await token_blocklist.revoke(payload["jti"])
     return {"message": "Successfully logged out"}
 
 
@@ -97,3 +97,13 @@ async def get_current_user_info(
     current_user: UserResponse = Depends(get_current_user),
 ):
     return current_user
+
+
+@router.put("/profile", response_model=UserResponse)
+async def update_profile(
+    update_data: UserUpdate,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_database),
+):
+    """Update the current user's own profile (username, email, or password)."""
+    return await AuthService(db).update_user(current_user.id, update_data)

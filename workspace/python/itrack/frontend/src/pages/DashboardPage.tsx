@@ -13,6 +13,9 @@ import { useAuth } from '../contexts/AuthContext';
 export const DashboardPage: React.FC = () => {
   const { user } = useAuth();
   const [summary, setSummary] = useState<TransactionSummary | null>(null);
+  const [viewMonthly, setViewMonthly] = useState(false);
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
@@ -23,7 +26,9 @@ export const DashboardPage: React.FC = () => {
   const fetchSummary = async () => {
     setIsLoading(true);
     try {
-      const data = await transactionService.getSummary();
+      const data = viewMonthly
+        ? await transactionService.getMonthlySummary(selectedYear, selectedMonth)
+        : await transactionService.getSummary();
       setSummary(data);
     } catch (error) {
       console.error('Failed to fetch summary:', error);
@@ -60,6 +65,25 @@ export const DashboardPage: React.FC = () => {
           <EntityStatusBanner hasEntity={!!user?.entity_id} />
 
           {/* Summary Cards */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-3">
+              <label className="flex items-center space-x-2">
+                <input type="checkbox" checked={viewMonthly} onChange={(e) => setViewMonthly(e.target.checked)} />
+                <span>Monthly view</span>
+              </label>
+              {viewMonthly && (
+                <div className="flex items-center space-x-2">
+                  <select value={selectedMonth} onChange={(e) => setSelectedMonth(parseInt(e.target.value))} className="input">
+                    {[...Array(12)].map((_, i) => (
+                      <option key={i} value={i + 1}>{new Date(0, i).toLocaleString(undefined, { month: 'long' })}</option>
+                    ))}
+                  </select>
+                  <input type="number" value={selectedYear} onChange={(e) => setSelectedYear(parseInt(e.target.value))} className="input w-28" />
+                  <button className="btn btn-ghost" onClick={() => fetchSummary()}>Go</button>
+                </div>
+              )}
+            </div>
+          </div>
           {summary && <DashboardSummary summary={summary} />}
 
           {/* Charts */}

@@ -74,5 +74,11 @@ export const entityService = {
       params: { include_private: includePrivate }
     });
     return response.data;
+  },
+
+  // Delete entity (admin only)
+  async deleteEntity(entityId: string): Promise<{ message: string }> {
+    const response = await api.delete(`/api/entities/${entityId}`);
+    return response.data;
   }
 };

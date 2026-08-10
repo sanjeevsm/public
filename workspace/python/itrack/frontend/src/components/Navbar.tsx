@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { LogOut, Home, Users, TrendingUp, TrendingDown, Tag, PieChart, UserPlus } from 'lucide-react';
+import { LogOut, Home, Users, TrendingUp, TrendingDown, Tag, PieChart, UserPlus, UserCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 export const Navbar: React.FC = () => {
@@ -74,8 +74,14 @@ export const Navbar: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center space-x-4">
-            <span className="text-sm">Welcome, {user?.username}</span>
+          <div className="flex items-center space-x-2">
+            <Link
+              to="/profile"
+              className="flex items-center space-x-1 px-3 py-2 rounded-md hover:bg-primary-700 transition-colors text-sm"
+            >
+              <UserCircle size={18} />
+              <span>{user?.username}</span>
+            </Link>
             <button
               onClick={handleLogout}
               className="flex items-center space-x-1 px-3 py-2 rounded-md hover:bg-primary-700 transition-colors"
