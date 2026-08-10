@@ -15,7 +15,7 @@ export interface UserRegister {
 }
 
 export interface UserLogin {
-  email: string;
+  identifier: string;
   password: string;
 }
 
