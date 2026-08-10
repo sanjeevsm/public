@@ -4,6 +4,7 @@ export interface User {
   email: string;
   entity_id?: string;
   entity_role?: string;
+  is_superadmin?: boolean;
   created_at: string;
 }
 

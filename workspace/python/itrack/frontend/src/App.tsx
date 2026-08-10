@@ -12,6 +12,7 @@ import { CategoryPage } from './pages/CategoryPage';
 import { BudgetPage } from './pages/BudgetPage';
 import { MembersPage } from './pages/MembersPage';
 import { ProfilePage } from './pages/ProfilePage';
+import { AdminPage } from './pages/AdminPage';
 import './index.css';
 
 function App() {
@@ -74,6 +75,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <MembersPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute>
+                <AdminPage />
               </ProtectedRoute>
             }
           />

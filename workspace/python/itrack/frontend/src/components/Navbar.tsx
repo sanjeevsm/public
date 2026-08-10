@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { LogOut, Home, Users, TrendingUp, TrendingDown, Tag, PieChart, UserPlus, UserCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import ThemeSelector from './ThemeSelector';
 
 export const Navbar: React.FC = () => {
   const { user, logout } = useAuth();
@@ -71,10 +72,22 @@ export const Navbar: React.FC = () => {
                 <UserPlus size={18} />
                 <span>Members</span>
               </Link>
+              {user?.is_superadmin && (
+                <Link
+                  to="/admin"
+                  className="flex items-center space-x-1 px-3 py-2 rounded-md hover:bg-primary-700 transition-colors"
+                >
+                  <Users size={18} />
+                  <span>Admin</span>
+                </Link>
+              )}
             </div>
           </div>
 
           <div className="flex items-center space-x-2">
+            <div className="mr-4 hidden sm:block">
+              <ThemeSelector />
+            </div>
             <Link
               to="/profile"
               className="flex items-center space-x-1 px-3 py-2 rounded-md hover:bg-primary-700 transition-colors text-sm"

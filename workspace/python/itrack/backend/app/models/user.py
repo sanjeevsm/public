@@ -25,6 +25,7 @@ class UserInDB(UserBase):
     password_hash: str
     entity_id: Optional[PyObjectId] = None
     entity_role: Optional[str] = None
+    is_superadmin: bool = False
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
@@ -36,6 +37,7 @@ class UserResponse(BaseModel):
     email: str
     entity_id: Optional[str] = None
     entity_role: Optional[str] = None
+    is_superadmin: bool | None = False
     created_at: datetime
 
 

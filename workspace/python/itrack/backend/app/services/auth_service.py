@@ -165,5 +165,6 @@ class AuthService:
             email=user["email"],
             entity_id=str(user["entity_id"]) if user.get("entity_id") else None,
             entity_role=user.get("entity_role"),
+            is_superadmin=user.get("is_superadmin", False),
             created_at=user["created_at"],
         )
