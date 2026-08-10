@@ -20,6 +20,9 @@ export const TransactionForm: React.FC<Props> = ({ onSuccess, hasEntity = false 
     category: '',
     date: new Date().toISOString().split('T')[0],
     mode: 'private', // Default to private for safety
+    is_recurring: false,
+    recurrence: undefined,
+    recurrence_start: undefined,
   });
 
   const categories = [
@@ -45,6 +48,9 @@ export const TransactionForm: React.FC<Props> = ({ onSuccess, hasEntity = false 
       await transactionService.createTransaction({
         ...formData,
         date: new Date(formData.date).toISOString(),
+        is_recurring: formData.is_recurring,
+        recurrence: formData.is_recurring ? 'monthly' : undefined,
+        recurrence_start: formData.is_recurring && formData.recurrence_start ? new Date(formData.recurrence_start).toISOString() : undefined,
       });
       
       // Reset form
@@ -54,7 +60,10 @@ export const TransactionForm: React.FC<Props> = ({ onSuccess, hasEntity = false 
         type: 'expense',
         category: '',
         date: new Date().toISOString().split('T')[0],
-        mode: 'private',
+          mode: 'private',
+          is_recurring: false,
+          recurrence: undefined,
+          recurrence_start: undefined,
       });
       
       setIsOpen(false);
@@ -226,6 +235,30 @@ export const TransactionForm: React.FC<Props> = ({ onSuccess, hasEntity = false 
             </p>
           </div>
         )}
+
+        {/* Recurrence */}
+        <div>
+          <label className="flex items-center cursor-pointer space-x-2">
+            <input
+              type="checkbox"
+              checked={!!formData.is_recurring}
+              onChange={(e) => setFormData({ ...formData, is_recurring: e.target.checked })}
+              className="mr-2"
+            />
+            <span className="font-medium">Monthly recurring</span>
+          </label>
+          {formData.is_recurring && (
+            <div className="mt-2">
+              <label className="block text-sm text-gray-700 mb-1">Recurrence start</label>
+              <input
+                type="date"
+                value={formData.recurrence_start || new Date().toISOString().split('T')[0]}
+                onChange={(e) => setFormData({ ...formData, recurrence_start: e.target.value })}
+                className="input"
+              />
+            </div>
+          )}
+        </div>
 
         <div className="flex space-x-3 pt-4">
           <button

@@ -40,6 +40,10 @@ export const transactionService = {
     const response = await apiClient.get<TransactionSummary>('/api/transactions/summary');
     return response.data;
   },
+  async getMonthlySummary(year: number, month: number): Promise<TransactionSummary> {
+    const response = await apiClient.get<TransactionSummary>('/api/transactions/summary', { params: { year, month } });
+    return response.data;
+  },
 
   async exportTransactions(): Promise<Blob> {
     const response = await apiClient.get('/api/transactions/export', {
@@ -61,6 +65,10 @@ export const transactionService = {
         },
       }
     );
+    return response.data;
+  },
+  async bulkCreate(transactions: TransactionInput[]): Promise<{ inserted: number; failed: number; errors: any[] }> {
+    const response = await apiClient.post('/api/transactions/bulk', transactions);
     return response.data;
   },
 };

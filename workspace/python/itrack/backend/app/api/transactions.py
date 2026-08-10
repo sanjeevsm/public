@@ -30,7 +30,7 @@ async def create_transaction(
 @router.get("", response_model=List[TransactionResponse])
 async def get_transactions(
     skip: int = Query(default=0, ge=0),
-    limit: int = Query(default=100, ge=1, le=1000),
+    limit: int = Query(default=50, ge=1, le=200),
     transaction_type: Optional[str] = Query(default=None, alias="type"),
     category: Optional[str] = None,
     current_user: UserResponse = Depends(get_current_user),
@@ -49,8 +49,10 @@ async def get_transactions(
 async def get_summary(
     current_user: UserResponse = Depends(get_current_user),
     db: AsyncIOMotorDatabase = Depends(get_database),
+    year: int | None = Query(default=None),
+    month: int | None = Query(default=None),
 ):
-    return await TransactionService(db).get_summary(current_user.id)
+    return await TransactionService(db).get_summary(current_user.id, year=year, month=month)
 
 
 @router.get("/export")
@@ -73,6 +75,17 @@ async def import_transactions(
     db: AsyncIOMotorDatabase = Depends(get_database),
 ):
     return await TransactionService(db).import_from_csv(current_user.id, file)
+
+
+@router.post("/bulk")
+async def bulk_create_transactions(
+    transactions: list[TransactionCreate],
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_database),
+):
+    """Accept a JSON array of transactions and create them in a single DB operation."""
+    tx_dicts = [t.model_dump() for t in transactions]
+    return await TransactionService(db).bulk_create_transactions(current_user.id, tx_dicts)
 
 
 @router.get("/{transaction_id}", response_model=TransactionResponse)

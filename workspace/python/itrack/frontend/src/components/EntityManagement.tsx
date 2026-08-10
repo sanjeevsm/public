@@ -98,6 +98,31 @@ export const EntityManagement: React.FC<EntityManagementProps> = ({
     }
   };
 
+  const handleDeleteEntity = async () => {
+    const confirmed = window.confirm(
+      `Delete "${entity.name}"?\n\nThis will permanently remove the entity and disconnect all members. Transactions will not be deleted but will become private.\n\nType the entity name to confirm.`
+    );
+    if (!confirmed) return;
+
+    const typedName = window.prompt(`Type "${entity.name}" to confirm deletion:`);
+    if (typedName !== entity.name) {
+      setError('Entity name did not match. Deletion cancelled.');
+      return;
+    }
+
+    setError('');
+    setLoading(true);
+    try {
+      await entityService.deleteEntity(entity.id);
+      setSuccess('Entity deleted successfully.');
+      onUpdate();
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to delete entity');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleLeaveEntity = async () => {
     if (!window.confirm('Are you sure you want to leave this entity? You will lose access to all entity data.')) {
       return;
@@ -260,19 +285,36 @@ export const EntityManagement: React.FC<EntityManagementProps> = ({
         </div>
       </div>
 
-      {/* Leave Entity Button */}
-      <div className="mt-6 pt-6 border-t border-gray-200">
+      {/* Leave / Delete Entity */}
+      <div className="mt-6 pt-6 border-t border-gray-200 space-y-3">
         <button
           onClick={handleLeaveEntity}
           className="w-full bg-red-100 text-red-700 py-2 px-4 rounded-md hover:bg-red-200 transition font-medium"
         >
           Leave Entity
         </button>
-        <p className="mt-2 text-xs text-gray-500 text-center">
+        <p className="text-xs text-gray-500 text-center">
           {isAdmin && members.filter(m => m.role === 'admin').length === 1
             ? '⚠️ You are the only admin. Promote another member before leaving.'
             : 'You can rejoin if invited again.'}
         </p>
+
+        {isAdmin && (
+          <>
+            <div className="border-t border-gray-200 pt-3">
+              <button
+                onClick={handleDeleteEntity}
+                disabled={loading}
+                className="w-full bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition font-medium"
+              >
+                🗑️ Delete Entity
+              </button>
+              <p className="mt-1 text-xs text-gray-500 text-center">
+                Permanently deletes the entity and disconnects all members.
+              </p>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

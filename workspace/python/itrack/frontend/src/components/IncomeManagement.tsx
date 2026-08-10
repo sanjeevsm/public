@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { TrendingUp, Plus, Edit2, Trash2, Filter } from 'lucide-react';
 import { Transaction, TransactionInput } from '../types/transaction';
 import { transactionService } from '../services/transactionService';
+import TransactionBulkInput from './TransactionBulkInput';
 
 export const IncomeManagement: React.FC = () => {
   const [incomes, setIncomes] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [showBulk, setShowBulk] = useState(false);
   const [editingIncome, setEditingIncome] = useState<Transaction | null>(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -19,6 +21,9 @@ export const IncomeManagement: React.FC = () => {
     category: '',
     date: new Date().toISOString().split('T')[0],
     mode: 'private',
+    is_recurring: false,
+    recurrence: undefined,
+    recurrence_start: undefined,
   });
 
   const incomeCategories = ['Salary', 'Freelance', 'Investment', 'Business', 'Other'];
@@ -52,6 +57,9 @@ export const IncomeManagement: React.FC = () => {
         ...formData,
         type: 'income' as const,
         date: new Date(formData.date).toISOString(),
+        is_recurring: formData.is_recurring,
+        recurrence: formData.is_recurring ? 'monthly' : undefined,
+        recurrence_start: formData.is_recurring && formData.recurrence_start ? new Date(formData.recurrence_start).toISOString() : undefined,
       };
 
       if (editingIncome) {
@@ -78,6 +86,9 @@ export const IncomeManagement: React.FC = () => {
       category: income.category,
       date: new Date(income.date).toISOString().split('T')[0],
       mode: income.mode || 'private',
+      is_recurring: (income as any).is_recurring || false,
+      recurrence: (income as any).recurrence,
+      recurrence_start: (income as any).recurrence_start ? new Date((income as any).recurrence_start).toISOString().split('T')[0] : undefined,
     });
     setShowForm(true);
   };
@@ -122,13 +133,21 @@ export const IncomeManagement: React.FC = () => {
             <p className="text-gray-600">Track and manage your income sources</p>
           </div>
         </div>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="btn btn-primary flex items-center space-x-2"
-        >
-          <Plus size={20} />
-          <span>{showForm ? 'Cancel' : 'Add Income'}</span>
-        </button>
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="btn btn-primary flex items-center space-x-2"
+          >
+            <Plus size={20} />
+            <span>{showForm ? 'Cancel' : 'Add Income'}</span>
+          </button>
+          <button
+            onClick={() => setShowBulk(!showBulk)}
+            className="btn btn-outline flex items-center"
+          >
+            Bulk Input
+          </button>
+        </div>
       </div>
 
       {/* Messages */}
@@ -222,6 +241,29 @@ export const IncomeManagement: React.FC = () => {
                   className="input"
                 />
               </div>
+
+              <div>
+                <label className="flex items-center cursor-pointer space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={!!formData.is_recurring}
+                    onChange={(e) => setFormData({ ...formData, is_recurring: e.target.checked })}
+                    className="mr-2"
+                  />
+                  <span className="font-medium">Monthly recurring</span>
+                </label>
+                {formData.is_recurring && (
+                  <div className="mt-2">
+                    <label className="block text-sm text-gray-700 mb-1">Recurrence start</label>
+                    <input
+                      type="date"
+                      value={formData.recurrence_start || new Date().toISOString().split('T')[0]}
+                      onChange={(e) => setFormData({ ...formData, recurrence_start: e.target.value })}
+                      className="input"
+                    />
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="flex space-x-3">
@@ -237,6 +279,12 @@ export const IncomeManagement: React.FC = () => {
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {showBulk && (
+        <div>
+          <TransactionBulkInput defaultType="income" onDone={() => { setShowBulk(false); loadIncomes(); }} />
         </div>
       )}
 

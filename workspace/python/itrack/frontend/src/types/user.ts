@@ -22,3 +22,15 @@ export interface AuthResponse {
   access_token: string;
   token_type: string;
 }
+
+export interface UserUpdate {
+  username?: string;
+  email?: string;
+  current_password?: string;
+  new_password?: string;
+}
+
+export interface AdminUserUpdate {
+  username?: string;
+  email?: string;
+}

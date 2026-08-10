@@ -21,6 +21,9 @@ export interface TransactionInput {
   category: string;
   date: string;
   mode?: TransactionMode;
+  is_recurring?: boolean;
+  recurrence?: 'monthly' | undefined;
+  recurrence_start?: string | undefined;
 }
 
 export interface TransactionSummary {

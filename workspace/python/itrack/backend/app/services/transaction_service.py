@@ -42,7 +42,7 @@ class TransactionService:
         self,
         user_id: str,
         skip: int = 0,
-        limit: int = 100,
+        limit: int = 50,
         type_filter: Optional[str] = None,
         category_filter: Optional[str] = None,
     ) -> List[TransactionResponse]:
@@ -51,6 +51,10 @@ class TransactionService:
             query["type"] = type_filter
         if category_filter:
             query["category"] = category_filter
+        # Enforce a reasonable maximum limit to prevent large memory consumption
+        MAX_LIMIT = 200
+        if limit > MAX_LIMIT:
+            limit = MAX_LIMIT
         cursor = self.collection.find(query).sort("date", -1).skip(skip).limit(limit)
         transactions = await cursor.to_list(length=limit)
         return [self._transaction_to_response(t) for t in transactions]
@@ -90,12 +94,59 @@ class TransactionService:
         )
         return result.deleted_count > 0
 
-    async def get_summary(self, user_id: str) -> TransactionSummary:
-        pipeline = [
-            {"$match": {"user_id": ObjectId(user_id)}},
-            {"$group": {"_id": "$type", "total": {"$sum": "$amount"}, "count": {"$sum": 1}}},
-        ]
-        results = await self.collection.aggregate(pipeline).to_list(length=10)
+    async def get_summary(self, user_id: str, year: int | None = None, month: int | None = None) -> TransactionSummary:
+        """Return summary. If year and month are provided, compute totals for that month including monthly recurring items."""
+        match_base = {"user_id": ObjectId(user_id)}
+
+        # If monthly view is requested, compute start/end for the month and include recurring monthly items
+        if year and month:
+            from calendar import monthrange
+
+            start = datetime(year, month, 1, tzinfo=timezone.utc)
+            last_day = monthrange(year, month)[1]
+            end = datetime(year, month, last_day, 23, 59, 59, tzinfo=timezone.utc)
+
+            pipeline = [
+                {"$match": match_base},
+                {
+                    "$project": {
+                        "amount": 1,
+                        "type": 1,
+                        "category": 1,
+                        "date": 1,
+                        "is_recurring": 1,
+                        "recurrence": 1,
+                        "recurrence_start": 1,
+                        "in_month": {
+                            "$and": [{"$gte": ["$date", start]}, {"$lte": ["$date", end]}]
+                        },
+                        "is_active_recurring": {
+                            "$and": [
+                                {"$eq": ["$is_recurring", True]},
+                                {"$eq": ["$recurrence", "monthly"]},
+                                {"$or": [{"$eq": ["$recurrence_start", None]}, {"$lte": ["$recurrence_start", end]}]}
+                            ]
+                        },
+                    }
+                },
+                {
+                    "$addFields": {
+                        "count_included": {"$cond": [{"$or": ["$in_month", "$is_active_recurring"]}, 1, 0]},
+                        "amount_included": {"$cond": [{"$or": ["$in_month", "$is_active_recurring"]}, "$amount", 0]},
+                    }
+                },
+                {
+                    "$group": {"_id": "$type", "total": {"$sum": "$amount_included"}, "count": {"$sum": "$count_included"}}
+                },
+            ]
+            results = await self.collection.aggregate(pipeline).to_list(length=10)
+        else:
+            pipeline = [
+                {"$match": match_base},
+                {"$group": {"_id": "$type", "total": {"$sum": "$amount"}, "count": {"$sum": 1}}},
+            ]
+            results = await self.collection.aggregate(pipeline).to_list(length=10)
+
         income_total = expense_total = income_count = expense_count = 0
         for r in results:
             if r["_id"] == "income":
@@ -103,20 +154,42 @@ class TransactionService:
             elif r["_id"] == "expense":
                 expense_total, expense_count = r["total"], r["count"]
 
-        cat_results = await self.collection.aggregate(
-            [
-                {"$match": {"user_id": ObjectId(user_id)}},
-                {"$group": {"_id": "$category", "total": {"$sum": "$amount"}}},
+        # categories breakdown: for monthly view consider same inclusion logic
+        if year and month:
+            cat_pipeline = [
+                {"$match": match_base},
+                {
+                    "$project": {
+                        "category": 1,
+                        "amount": 1,
+                        "date": 1,
+                        "is_recurring": 1,
+                        "recurrence": 1,
+                        "recurrence_start": 1,
+                        "in_month": {"$and": [{"$gte": ["$date", start]}, {"$lte": ["$date", end]}]},
+                        "is_active_recurring": {"$and": [{"$eq": ["$is_recurring", True]}, {"$eq": ["$recurrence", "monthly"]}, {"$or": [{"$eq": ["$recurrence_start", None]}, {"$lte": ["$recurrence_start", end]}]}]},
+                    }
+                },
+                {
+                    "$project": {"category": 1, "amount_included": {"$cond": [{"$or": ["$in_month", "$is_active_recurring"]}, "$amount", 0]}}
+                },
+                {"$group": {"_id": "$category", "total": {"$sum": "$amount_included"}}},
             ]
-        ).to_list(length=500)
+            cat_results = await self.collection.aggregate(cat_pipeline).to_list(length=500)
+        else:
+            cat_results = await self.collection.aggregate([
+                {"$match": match_base},
+                {"$group": {"_id": "$category", "total": {"$sum": "$amount"}}},
+            ]).to_list(length=500)
+
         categories_breakdown = {r["_id"]: round(r["total"], 2) for r in cat_results}
 
         return TransactionSummary(
             total_balance=round(income_total - expense_total, 2),
             total_income=round(income_total, 2),
             total_expense=round(expense_total, 2),
-            income_count=income_count,
-            expense_count=expense_count,
+            income_count=int(income_count),
+            expense_count=int(expense_count),
             categories_breakdown=categories_breakdown,
         )
 
@@ -198,3 +271,40 @@ class TransactionService:
             user_id=str(transaction["user_id"]),
             entity_id=str(transaction["entity_id"]) if transaction.get("entity_id") else None,
         )
+
+    async def bulk_create_transactions(self, user_id: str, transactions: list[dict]) -> dict:
+        """Create many transactions in a single DB operation. Returns summary with inserted count and errors.
+
+        Each item in `transactions` should conform to TransactionCreate fields.
+        """
+        from app.models.transaction import TransactionCreate
+
+        # Validate and prepare documents
+        prepared = []
+        errors = []
+        user = await self.db.users.find_one({"_id": ObjectId(user_id)})
+        entity_id = user.get("entity_id") if user else None
+
+        for idx, t in enumerate(transactions):
+            try:
+                tx = TransactionCreate.model_validate(t)
+                doc = tx.model_dump()
+                doc["user_id"] = ObjectId(user_id)
+                doc["created_at"] = datetime.now(timezone.utc)
+                if entity_id:
+                    doc["entity_id"] = entity_id
+                prepared.append(doc)
+            except Exception as exc:
+                errors.append({"row": idx, "error": str(exc)})
+
+        if not prepared:
+            return {"inserted": 0, "failed": len(errors), "errors": errors}
+
+        try:
+            result = await self.collection.insert_many(prepared, ordered=False)
+            inserted = len(result.inserted_ids)
+        except Exception as exc:
+            # If insert_many fails, report partial failure
+            return {"inserted": 0, "failed": len(prepared), "errors": errors + [{"db_error": str(exc)}]}
+
+        return {"inserted": inserted, "failed": len(errors), "errors": errors}

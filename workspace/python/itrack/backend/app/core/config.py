@@ -22,6 +22,11 @@ class Settings(BaseSettings):
 
     # Environment
     ENVIRONMENT: str = "development"
+    # Redis (optional) - used for rate limiter and token blocklist persistence
+    REDIS_URL: str | None = None
+
+    # Sentry (optional) for error reporting
+    SENTRY_DSN: str | None = None
 
     @model_validator(mode="after")
     def validate_secret_key(self):

@@ -2,6 +2,9 @@ from fastapi import HTTPException, status
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from app.core.config import get_settings
 from typing import Optional
+import logging
+
+logger = logging.getLogger(__name__)
 
 settings = get_settings()
 
@@ -37,14 +40,14 @@ async def connect_to_mongo():
     db.db = db.client[settings.MONGODB_DB_NAME]
     await create_indexes()
     await db.client.admin.command("ping")
-    print(f"Connected to MongoDB: {settings.MONGODB_DB_NAME}")
+    logger.info("Connected to MongoDB: %s", settings.MONGODB_DB_NAME)
 
 
 async def close_mongo_connection():
     """Close MongoDB connection."""
     if db.client:
         db.client.close()
-        print("Closed MongoDB connection")
+        logger.info("Closed MongoDB connection")
 
 
 async def create_indexes():
@@ -65,6 +68,6 @@ async def create_indexes():
         await db.db.entities.create_index("created_by")
         await db.db.entities.create_index("members.user_id")
 
-        print("Database indexes created successfully")
+        logger.info("Database indexes created successfully")
     except Exception as e:
-        print(f"WARNING: Error creating indexes: {e}")
+        logger.warning("Error creating indexes: %s", e)

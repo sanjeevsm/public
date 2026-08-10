@@ -15,6 +15,10 @@ class TransactionBase(BaseModel):
     category: str = Field(..., min_length=1, max_length=50)
     date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     mode: TransactionMode = "private"
+    # Recurrence
+    is_recurring: bool = False
+    recurrence: Optional[Literal["monthly"]] = None
+    recurrence_start: Optional[datetime] = None
 
     @field_validator("amount")
     @classmethod

@@ -7,20 +7,30 @@ from slowapi.errors import RateLimitExceeded
 from app.core.config import get_settings
 from app.core.database import connect_to_mongo, close_mongo_connection, get_database
 from app.core.limiter import limiter
-from app.api import auth, transactions, entities, categories, budgets
+from app.core.redis_client import connect_to_redis, close_redis_connection
+from app.api import auth, transactions, entities, categories, budgets, users
+import logging
+import sentry_sdk
 
 settings = get_settings()
+
+# Initialize Sentry if configured
+if settings.SENTRY_DSN:
+    sentry_sdk.init(dsn=settings.SENTRY_DSN, traces_sample_rate=0.1)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await connect_to_mongo()
+    # Connect to Redis (optional)
+    await connect_to_redis()
     # Seed default categories once at startup
     from app.services.category_service import CategoryService
     db = await get_database()
     await CategoryService(db).initialize_default_categories()
     yield
     await close_mongo_connection()
+    await close_redis_connection()
 
 
 app = FastAPI(
@@ -46,6 +56,7 @@ app.include_router(transactions.router)
 app.include_router(entities.router)
 app.include_router(categories.router)
 app.include_router(budgets.router)
+app.include_router(users.router)
 
 
 @app.get("/")
