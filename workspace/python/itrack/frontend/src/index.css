@@ -72,6 +72,73 @@ html, body {
   color: inherit;
 }
 
+/* Theme-driven component styles to override Tailwind where needed */
+:root {
+  --primary-700: rgba(0,0,0,0.08);
+  --card-bg: rgba(255,255,255,0.04);
+  --muted: rgba(255,255,255,0.6);
+}
+
+/* Map theme variables to component look */
+nav {
+  background-color: var(--primary) !important;
+  color: var(--text) !important;
+}
+
+.btn-primary {
+  background-color: var(--primary) !important;
+  color: var(--btn-text, #fff) !important;
+  border-color: transparent !important;
+}
+.btn-primary:hover {
+  background-color: var(--primary-700) !important;
+}
+
+.btn-secondary {
+  background-color: transparent !important;
+  color: var(--text) !important;
+  border: 1px solid rgba(255,255,255,0.06) !important;
+}
+
+.btn-danger {
+  background-color: #ef4444 !important;
+  color: #fff !important;
+}
+
+.card {
+  background-color: var(--card-bg, rgba(255,255,255,0.04)) !important;
+  color: var(--text) !important;
+}
+
+.input {
+  background-color: transparent !important;
+  color: var(--text) !important;
+  border-color: rgba(255,255,255,0.12) !important;
+}
+
+table, th, td {
+  color: var(--text) !important;
+}
+
+thead th {
+  background-color: rgba(0,0,0,0.06) !important;
+  color: var(--text) !important;
+}
+
+/* Link colors */
+a {
+  color: var(--primary) !important;
+}
+
+/* Make sure background uses theme */
+body, #root {
+  background-color: var(--bg) !important;
+  color: var(--text) !important;
+}
+
+/* Small helpers for contrast adjustments */
+.muted { color: var(--muted) !important; }
+
 body {
   margin: 0;
   min-width: 320px;
