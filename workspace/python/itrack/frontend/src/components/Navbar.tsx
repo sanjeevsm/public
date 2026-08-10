@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { LogOut, Home, Users, TrendingUp, TrendingDown, Tag, PieChart, UserPlus, UserCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import ThemeSelector from './ThemeSelector';
+import ThemeToggle from './ThemeToggle';
 
 export const Navbar: React.FC = () => {
   const { user, logout } = useAuth();
@@ -86,7 +86,7 @@ export const Navbar: React.FC = () => {
 
           <div className="flex items-center space-x-2">
             <div className="mr-4 hidden sm:block">
-              <ThemeSelector />
+              <ThemeToggle />
             </div>
             <Link
               to="/profile"

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import ThemeSelector from '../components/ThemeSelector';
+import ThemeToggle from '../components/ThemeToggle';
 
 export const LoginPage: React.FC = () => {
   const [identifier, setIdentifier] = useState('');
@@ -36,7 +36,7 @@ export const LoginPage: React.FC = () => {
             iTrack+
             </h2>
             <div className="ml-4">
-              <ThemeSelector />
+              <ThemeToggle />
             </div>
           </div>
           <p className="mt-2 text-center text-sm text-gray-600">

@@ -2,8 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiClient } from '../services/api';
 import { User } from '../types/user';
+import { useConfirm } from '../components/ConfirmProvider';
+import { useToast } from '../components/ToastProvider';
 
 export const AdminPage: React.FC = () => {
+  const confirm = useConfirm();
+  const { showToast } = useToast();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -27,28 +31,32 @@ export const AdminPage: React.FC = () => {
   const navigate = useNavigate();
 
   const promoteToAdmin = async (u: User) => {
-    if (!window.confirm(`Promote ${u.username} to entity admin?`)) return;
+    const ok = await confirm({ message: `Promote ${u.username} to entity admin?` });
+    if (!ok) return;
     setBusyId(u.id);
     try {
       await apiClient.put(`/api/admin/users/${u.id}`, { entity_role: 'admin' });
       await loadUsers();
+      showToast('Promoted to admin', 'success');
     } catch (err) {
       console.error('Promote failed', err);
-      alert('Promote failed');
+      showToast('Promote failed', 'error');
     } finally {
       setBusyId(null);
     }
   };
 
   const demoteFromAdmin = async (u: User) => {
-    if (!window.confirm(`Demote ${u.username} from entity admin?`)) return;
+    const ok = await confirm({ message: `Demote ${u.username} from entity admin?` });
+    if (!ok) return;
     setBusyId(u.id);
     try {
       await apiClient.put(`/api/admin/users/${u.id}`, { entity_role: null });
       await loadUsers();
+      showToast('Demoted from admin', 'success');
     } catch (err) {
       console.error('Demote failed', err);
-      alert('Demote failed');
+      showToast('Demote failed', 'error');
     } finally {
       setBusyId(null);
     }
@@ -57,21 +65,22 @@ export const AdminPage: React.FC = () => {
   const toggleSuperadmin = async (u: User) => {
     const to = !u.is_superadmin;
     if (u.is_superadmin === false) {
-      // If there's already a superadmin, do not allow granting here
       const existingCount = users.filter(x => x.is_superadmin).length;
       if (existingCount > 0) {
-        alert('There is already a superadmin; only one superadmin is allowed.');
+        showToast('There is already a superadmin; only one is allowed.', 'warn');
         return;
       }
     }
-    if (!window.confirm(`${to ? 'Grant' : 'Revoke'} superadmin for ${u.username}?`)) return;
+    const ok = await confirm({ message: `${to ? 'Grant' : 'Revoke'} superadmin for ${u.username}?` });
+    if (!ok) return;
     setBusyId(u.id);
     try {
       await apiClient.put(`/api/admin/users/${u.id}`, { is_superadmin: to });
       await loadUsers();
+      showToast('Superadmin status changed', 'success');
     } catch (err) {
       console.error('Toggle superadmin failed', err);
-      alert('Toggle superadmin failed');
+      showToast('Toggle superadmin failed', 'error');
     } finally {
       setBusyId(null);
     }
@@ -79,17 +88,19 @@ export const AdminPage: React.FC = () => {
 
   const deleteUser = async (u: User) => {
     if (u.is_superadmin) {
-      alert('Cannot delete a superadmin account');
+      showToast('Cannot delete a superadmin account', 'warn');
       return;
     }
-    if (!window.confirm(`Delete user ${u.username}? This action is irreversible.`)) return;
+    const ok = await confirm({ message: `Delete user ${u.username}? This action is irreversible.` });
+    if (!ok) return;
     setBusyId(u.id);
     try {
       await apiClient.delete(`/api/admin/users/${u.id}`);
       await loadUsers();
+      showToast('User deleted', 'success');
     } catch (err) {
       console.error('Delete failed', err);
-      alert('Delete failed');
+      showToast('Delete failed', 'error');
     } finally {
       setBusyId(null);
     }

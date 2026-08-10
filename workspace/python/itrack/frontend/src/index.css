@@ -1,3 +1,7 @@
+[data-theme] .bg-white { background-color: var(--card-bg) !important; color: var(--text) !important; }
+[data-theme] .bg-gray-50 { background-color: var(--bg) !important; color: var(--text) !important; }
+[data-theme] .text-gray-600 { color: var(--muted) !important; }
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
