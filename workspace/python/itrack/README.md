@@ -160,6 +160,14 @@ These endpoints are available to the superadmin for promotion/demotion and user 
 
 ---
 
+### Platform Notes
+
+- Windows users: Docker Desktop requires **WSL2** on modern Windows (10/11). Use PowerShell for Windows-specific examples shown in this README. When following POSIX examples, run them from WSL or Git Bash.
+- macOS / Linux users: use the shell (`bash`/`zsh`) examples. Paths shown in Windows examples (e.g. `C:\data\db`) are illustrative — replace with POSIX paths (e.g. `/data/db`).
+- Avoid committing virtual environments (`.venv/`, `venv/`) to the repository. Use the provided `.gitignore` entries and create venvs locally with `python -m venv .venv` per-project.
+- If you run Docker on Windows via WSL2, prefer running build/start commands from a WSL shell to avoid path translation issues.
+
+
 ### 📝 Script Summary
 
 iTrack+ includes convenient startup/stop scripts for both methods:
