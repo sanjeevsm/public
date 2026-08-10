@@ -8,7 +8,7 @@ from app.core.config import get_settings
 from app.core.database import connect_to_mongo, close_mongo_connection, get_database
 from app.core.limiter import limiter
 from app.core.redis_client import connect_to_redis, close_redis_connection
-from app.api import auth, transactions, entities, categories, budgets, users
+from app.api import auth, transactions, entities, categories, budgets, users, admin
 import logging
 import sentry_sdk
 
@@ -28,6 +28,9 @@ async def lifespan(app: FastAPI):
     from app.services.category_service import CategoryService
     db = await get_database()
     await CategoryService(db).initialize_default_categories()
+    # Ensure a default superadmin exists
+    from app.services.admin_service import AdminService
+    await AdminService.ensure_superadmin(db)
     yield
     await close_mongo_connection()
     await close_redis_connection()
@@ -57,6 +60,7 @@ app.include_router(entities.router)
 app.include_router(categories.router)
 app.include_router(budgets.router)
 app.include_router(users.router)
+app.include_router(admin.router)
 
 
 @app.get("/")
