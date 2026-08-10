@@ -82,6 +82,32 @@ This application includes **full CRUD (Create, Read, Update, Delete) functionali
 - ✅ **Error Handling**: User-friendly error messages
 - ✅ **Entity Status Banner**: Dashboard widget for entity info
 
+---
+
+## 🔧 Admin & Theming (Recent)
+
+### Superadmin provisioning
+- A default **superadmin** user is automatically seeded on API startup to simplify initial setup.
+- Default credentials (development only):
+  - Username: `admin`
+  - Email: `admin@example.com`
+  - Password: `admin`
+- The seeded user has `is_superadmin=true` and can perform global admin activities. For security, rotate or disable this account in production immediately.
+
+### Admin API Endpoints
+- `GET /api/admin/users` — list all users (superadmin-only)
+- `PUT /api/admin/users/{user_id}` — update `entity_role`, `entity_id`, and `is_superadmin` for a user (superadmin-only). Example body: `{"entity_role":"admin","is_superadmin":true}`
+- `DELETE /api/admin/users/{user_id}` — delete a user (superadmin-only; cannot delete yourself)
+
+These endpoints are available to the superadmin for promotion/demotion and user management. Use the frontend admin UI at `/admin` for a simple user list and action buttons (read-only view by default).
+
+### Theme support
+- The frontend includes a theme selector (top-right in the navbar) with multiple options:
+  - dark, light, midnight, forest, navy, warm
+- Selection is persisted in `localStorage` and applied via the HTML `data-theme` attribute. You can extend theme tokens in `frontend/src/index.css` or the Tailwind config to customize colors.
+
+---
+
 #### 🐳 Production Ready
 - ✅ **Dockerized**: Complete containerization for easy deployment
 - ✅ **Docker Compose**: Multi-container orchestration
