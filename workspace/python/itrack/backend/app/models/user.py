@@ -14,7 +14,8 @@ class UserCreate(UserBase):
 
 
 class UserLogin(BaseModel):
-    email: EmailStr
+    # Accept either username or email for login
+    identifier: str = Field(..., min_length=3, max_length=100)
     password: str = Field(..., max_length=200)
 
 

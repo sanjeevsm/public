@@ -33,8 +33,9 @@ class AuthService:
         created_user = await self.collection.find_one({"_id": result.inserted_id})
         return self._to_response(created_user)
 
-    async def authenticate_user(self, email: str, password: str) -> Optional[UserInDB]:
-        user = await self.collection.find_one({"email": email})
+    async def authenticate_user(self, identifier: str, password: str) -> Optional[UserInDB]:
+        # Allow authentication by email or username
+        user = await self.collection.find_one({"$or": [{"email": identifier}, {"username": identifier}]})
         if not user:
             return None
         if not verify_password(password, user["password_hash"]):

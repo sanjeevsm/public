@@ -71,7 +71,8 @@ async def login(
     db: AsyncIOMotorDatabase = Depends(get_database),
 ):
     auth_service = AuthService(db)
-    user = await auth_service.authenticate_user(user_data.email, user_data.password)
+    # Support login by username or email via `identifier`
+    user = await auth_service.authenticate_user(user_data.identifier, user_data.password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
