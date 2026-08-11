@@ -38,19 +38,23 @@ Write-Host "Starting Backend Server..." -ForegroundColor Cyan
 Write-Host "=============================" -ForegroundColor Cyan
 
 # Start backend in a new window
-$backendScript = @"
-Set-Location "$repoRoot\backend"
-.\venv\Scripts\Activate.ps1
+$backendScript = @'
+Set-Location (Resolve-Path (Join-Path $PSScriptRoot '..\backend'))
+. .\venv\Scripts\Activate.ps1
 Write-Host 'Backend server starting on http://localhost:8000' -ForegroundColor Green
 Write-Host 'API Documentation: http://localhost:8000/docs' -ForegroundColor Cyan
 Write-Host ''
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-"@
+'@
 
 $backendScriptPath = Join-Path $repoRoot "scripts\start-backend.ps1"
-Set-Content $backendScriptPath $backendScript
-
-Start-Process powershell -ArgumentList "-NoExit", "-ExecutionPolicy", "Bypass", "-File", $backendScriptPath
+if (-Not (Test-Path $backendScriptPath)) {
+    Set-Content $backendScriptPath $backendScript -Encoding UTF8
+    Start-Process powershell -ArgumentList "-NoExit", "-ExecutionPolicy", "Bypass", "-File", $backendScriptPath
+} else {
+    Write-Host "Skipping generation; $backendScriptPath already exists." -ForegroundColor Yellow
+    Start-Process powershell -ArgumentList "-NoExit", "-ExecutionPolicy", "Bypass", "-File", $backendScriptPath
+}
 
 Write-Host "Backend started in new window" -ForegroundColor Green
 Write-Host "   URL: http://localhost:8000" -ForegroundColor Cyan
@@ -62,17 +66,21 @@ Write-Host "Starting Frontend Server..." -ForegroundColor Cyan
 Write-Host "==============================" -ForegroundColor Cyan
 
 # Start frontend in a new window
-$frontendScript = @"
-Set-Location "$repoRoot\frontend"
+$frontendScript = @'
+Set-Location (Resolve-Path (Join-Path $PSScriptRoot '..\frontend'))
 Write-Host 'Frontend server starting on http://localhost:3000' -ForegroundColor Green
 Write-Host ''
 npm run dev
-"@
+'@
 
 $frontendScriptPath = Join-Path $repoRoot "scripts\start-frontend.ps1"
-Set-Content $frontendScriptPath $frontendScript
-
-Start-Process powershell -ArgumentList "-NoExit", "-ExecutionPolicy", "Bypass", "-File", $frontendScriptPath
+if (-Not (Test-Path $frontendScriptPath)) {
+    Set-Content $frontendScriptPath $frontendScript -Encoding UTF8
+    Start-Process powershell -ArgumentList "-NoExit", "-ExecutionPolicy", "Bypass", "-File", $frontendScriptPath
+} else {
+    Write-Host "Skipping generation; $frontendScriptPath already exists." -ForegroundColor Yellow
+    Start-Process powershell -ArgumentList "-NoExit", "-ExecutionPolicy", "Bypass", "-File", $frontendScriptPath
+}
 
 Write-Host "Frontend started in new window" -ForegroundColor Green
 Write-Host "   URL: http://localhost:3000" -ForegroundColor Cyan
