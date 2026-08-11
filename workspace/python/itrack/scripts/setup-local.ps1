@@ -1,5 +1,4 @@
-# iTrack+ Local Setup Script for Windows (No Docker)
-# This script sets up the application to run directly on Windows
+# iTrack+ Local Setup Script for Windows (No Docker) - moved to scripts/
 
 param(
     [switch]$SkipMongoCheck,
@@ -9,6 +8,11 @@ param(
 Write-Host "🚀 iTrack+ Local Setup (Non-Docker)" -ForegroundColor Cyan
 Write-Host "=====================================" -ForegroundColor Cyan
 Write-Host ""
+
+# Resolve script and repo paths
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$repoRoot = Join-Path $scriptDir '..'
+Set-Location $repoRoot
 
 # Check Python
 Write-Host "📦 Checking Python installation..." -ForegroundColor Yellow
@@ -142,7 +146,7 @@ Write-Host "   mongod --dbpath C:\data\db" -ForegroundColor Yellow
 Write-Host "   (or start MongoDB service)" -ForegroundColor Gray
 Write-Host ""
 Write-Host "2. Start the application:" -ForegroundColor White
-Write-Host "   .\start-local.ps1" -ForegroundColor Yellow
+Write-Host "   .\scripts\start-local.ps1" -ForegroundColor Yellow
 Write-Host ""
 Write-Host "3. Access the application:" -ForegroundColor White
 Write-Host "   Frontend: http://localhost:3000" -ForegroundColor Cyan
