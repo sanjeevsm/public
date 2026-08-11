@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# Resolve repo root (script is in ./scripts)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$REPO_ROOT" || exit 1
+
 # iTrack+ Quick Start Script for Linux/Mac
 
 echo "🚀 Starting iTrack+ Setup..."
@@ -44,7 +49,7 @@ if docker-compose ps | grep -q "Up"; then
     echo "🔧 Backend API: http://localhost:8000"
     echo "📚 API Docs: http://localhost:8000/docs"
     echo ""
-    echo "To stop the application, run: docker-compose down"
+    echo "To stop the application, run: ./scripts/stop.sh"
     echo "To view logs, run: docker-compose logs -f"
 else
     echo ""

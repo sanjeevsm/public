@@ -1,8 +1,13 @@
-# iTrack+ Local Stop Script for Windows (No Docker)
+# iTrack+ Local Stop Script for Windows (No Docker) - moved to scripts/
 
 Write-Host "Stopping iTrack+ (Local Mode)" -ForegroundColor Yellow
 Write-Host "=================================" -ForegroundColor Yellow
 Write-Host ""
+
+# Resolve script and repo paths
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$repoRoot = Join-Path $scriptDir '..'
+Set-Location $repoRoot
 
 # Function to kill process by port
 function Stop-ProcessByPort {
@@ -72,5 +77,5 @@ Write-Host "Note: MongoDB is still running (if you started it)" -ForegroundColor
 Write-Host "   To stop MongoDB service: net stop MongoDB" -ForegroundColor Gray
 Write-Host "   Or just close the mongod window if running manually" -ForegroundColor Gray
 Write-Host ""
-Write-Host "To start again: .\start-local.ps1" -ForegroundColor Cyan
+Write-Host "To start again: .\scripts\start-local.ps1" -ForegroundColor Cyan
 Write-Host ""

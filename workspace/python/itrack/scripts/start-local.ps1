@@ -1,14 +1,15 @@
-# iTrack+ Local Start Script for Windows (No Docker)
+# iTrack+ Local Start Script for Windows (No Docker) — moved to scripts/
 
 Write-Host "Starting iTrack+ (Local Mode)" -ForegroundColor Cyan
 Write-Host "=================================" -ForegroundColor Cyan
 Write-Host ""
 
-# Get the script directory
+# Resolve script and repo paths
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-Set-Location $scriptDir
+$repoRoot = Join-Path $scriptDir '..'
+Set-Location $repoRoot
 
-Write-Host "Working directory: $scriptDir" -ForegroundColor Gray
+Write-Host "Working directory: $repoRoot" -ForegroundColor Gray
 Write-Host ""
 
 # Check if MongoDB service is running
@@ -38,7 +39,7 @@ Write-Host "=============================" -ForegroundColor Cyan
 
 # Start backend in a new window
 $backendScript = @"
-Set-Location '$scriptDir\backend'
+Set-Location "$repoRoot\backend"
 .\venv\Scripts\Activate.ps1
 Write-Host 'Backend server starting on http://localhost:8000' -ForegroundColor Green
 Write-Host 'API Documentation: http://localhost:8000/docs' -ForegroundColor Cyan
@@ -46,7 +47,7 @@ Write-Host ''
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 "@
 
-$backendScriptPath = Join-Path $scriptDir "backend\start-backend.ps1"
+$backendScriptPath = Join-Path $repoRoot "backend\start-backend.ps1"
 Set-Content $backendScriptPath $backendScript
 
 Start-Process powershell -ArgumentList "-NoExit", "-ExecutionPolicy", "Bypass", "-File", $backendScriptPath
@@ -62,13 +63,13 @@ Write-Host "==============================" -ForegroundColor Cyan
 
 # Start frontend in a new window
 $frontendScript = @"
-Set-Location '$scriptDir\frontend'
+Set-Location "$repoRoot\frontend"
 Write-Host 'Frontend server starting on http://localhost:3000' -ForegroundColor Green
 Write-Host ''
 npm run dev
 "@
 
-$frontendScriptPath = Join-Path $scriptDir "frontend\start-frontend.ps1"
+$frontendScriptPath = Join-Path $repoRoot "frontend\start-frontend.ps1"
 Set-Content $frontendScriptPath $frontendScript
 
 Start-Process powershell -ArgumentList "-NoExit", "-ExecutionPolicy", "Bypass", "-File", $frontendScriptPath
@@ -88,5 +89,5 @@ Write-Host ""
 Write-Host "Please wait 10-15 seconds for all services to start..." -ForegroundColor Yellow
 Write-Host ""
 Write-Host "To stop: Close the backend and frontend PowerShell windows" -ForegroundColor Yellow
-Write-Host "   Or run: .\stop-local.ps1" -ForegroundColor Yellow
+Write-Host "   Or run: .\scripts\stop-local.ps1" -ForegroundColor Yellow
 Write-Host ""

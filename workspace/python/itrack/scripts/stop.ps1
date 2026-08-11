@@ -1,6 +1,11 @@
-# iTrack+ Stop Script for Windows PowerShell
+# iTrack+ Stop Script for Windows PowerShell (moved to scripts/)
 
 Write-Host "🛑 Stopping iTrack+ Application..." -ForegroundColor Yellow
+
+# Resolve script and repo paths
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$repoRoot = Join-Path $scriptDir '..'
+Set-Location $repoRoot
 
 # Check if Docker is installed
 if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
@@ -30,6 +35,6 @@ docker-compose down
 Write-Host ""
 Write-Host "✅ iTrack+ has been stopped successfully!" -ForegroundColor Green
 Write-Host ""
-Write-Host "💡 To start again, run: .\start.ps1 or docker-compose up -d" -ForegroundColor Cyan
+Write-Host "💡 To start again, run: .\scripts\start.ps1 or docker-compose up -d" -ForegroundColor Cyan
 Write-Host "🗑️  To remove all data (including database), run: docker-compose down -v" -ForegroundColor Cyan
 Write-Host ""

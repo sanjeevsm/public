@@ -1,6 +1,11 @@
-# iTrack+ Quick Start Script for Windows PowerShell
+# iTrack+ Quick Start Script for Windows PowerShell (moved to scripts/)
 
 Write-Host "🚀 Starting iTrack+ Setup..." -ForegroundColor Green
+
+# Resolve script and repo paths
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$repoRoot = Join-Path $scriptDir '..'
+Set-Location $repoRoot
 
 # Check if Docker is installed
 if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
@@ -37,17 +42,17 @@ Start-Sleep -Seconds 10
 $running = docker-compose ps | Select-String "Up"
 
 if ($running) {
-    Write-Host ""
+    Write-Host "";
     Write-Host "✅ iTrack+ is now running!" -ForegroundColor Green
-    Write-Host ""
+    Write-Host "";
     Write-Host "📱 Frontend: http://localhost:3000" -ForegroundColor Cyan
     Write-Host "🔧 Backend API: http://localhost:8000" -ForegroundColor Cyan
     Write-Host "📚 API Docs: http://localhost:8000/docs" -ForegroundColor Cyan
-    Write-Host ""
-    Write-Host "To stop the application, run: docker-compose down" -ForegroundColor Yellow
+    Write-Host "";
+    Write-Host "To stop the application, run: .\scripts\stop.ps1" -ForegroundColor Yellow
     Write-Host "To view logs, run: docker-compose logs -f" -ForegroundColor Yellow
 } else {
-    Write-Host ""
+    Write-Host "";
     Write-Host "❌ Failed to start services. Check logs with: docker-compose logs" -ForegroundColor Red
     exit 1
 }

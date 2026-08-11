@@ -1,4 +1,4 @@
-# iTrack+ Installation Verification Script for Windows
+# iTrack+ Installation Verification Script for Windows (moved to scripts/)
 
 Write-Host "=========================================" -ForegroundColor Cyan
 Write-Host "iTrack+ Installation Verification" -ForegroundColor Cyan
@@ -112,7 +112,7 @@ if ($allChecksPass -and $portsOk) {
     Write-Host ""
     Write-Host "You're ready to start iTrack+!" -ForegroundColor Cyan
     Write-Host ""
-    Write-Host "Run: .\start.ps1" -ForegroundColor Yellow
+    Write-Host "Run: .\scripts\start.ps1" -ForegroundColor Yellow
     Write-Host "Or: docker-compose up --build -d" -ForegroundColor Yellow
     Write-Host ""
     Write-Host "Then visit: http://localhost:3000" -ForegroundColor Cyan
