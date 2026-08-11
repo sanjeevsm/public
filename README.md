@@ -8,10 +8,10 @@ Use the links below to open a project README and follow its Quick Start section 
 
 | Project | Description | README |
 |---|---|---|
-| CI/CD Dashboard | Real-time CI/CD metrics dashboard with multi-provider support. | [public/workspace/python/cicd/README.md](public/workspace/python/cicd/README.md)
-| iLab+ — AI Interview Simulator | AI-powered interview question generator and quiz platform (desktop + web modes). | [public/workspace/python/ilab/README.md](public/workspace/python/ilab/README.md)
-| iTrack+ — Personal Finance Tracker | Personal finance tracker with multi-user collaboration and reporting. | [public/workspace/python/itrack/README.md](public/workspace/python/itrack/README.md)
-| PrimeCare+ — Clinic Management System | Clinic management system with REST API and reporting features. | [public/workspace/python/primecare/README.md](public/workspace/python/primecare/README.md)
+| CI/CD Dashboard | Real-time CI/CD metrics dashboard with multi-provider support. | [workspace/python/cicd/README.md](workspace/python/cicd/README.md)
+| iLab+ — AI Interview Simulator | AI-powered interview question generator and quiz platform (desktop + web modes). | [workspace/python/ilab/README.md](workspace/python/ilab/README.md)
+| iTrack+ — Personal Finance Tracker | Personal finance tracker with multi-user collaboration and reporting. | [workspace/python/itrack/README.md](workspace/python/itrack/README.md)
+| PrimeCare+ — Clinic Management System | Clinic management system with REST API and reporting features. | [workspace/python/primecare/README.md](workspace/python/primecare/README.md)
 
 ## Quick start — view any project
 
@@ -26,7 +26,7 @@ cd public
 
 ```bash
 # Open the CI/CD Dashboard README in your editor or viewer
-code public/workspace/python/cicd/README.md
+code workspace/python/cicd/README.md
 ```
 
 Each project README contains platform-specific setup steps (Docker, local, Windows PowerShell and macOS/Linux shells) and quick demo commands.
