@@ -1,6 +1,7 @@
 from pydantic_settings import BaseSettings
 from pydantic import model_validator
 from functools import lru_cache
+from pathlib import Path
 
 _EXAMPLE_KEY = "your-secret-key-change-this-in-production-min-32-chars"
 
@@ -40,7 +41,9 @@ class Settings(BaseSettings):
         return self
 
     class Config:
-        env_file = ".env"
+        # Prefer a project-level .env in the itrack root so Settings
+        # are loaded correctly no matter the current working directory.
+        env_file = str(Path(__file__).resolve().parents[3] / ".env")
         case_sensitive = True
         extra = "ignore"
 
