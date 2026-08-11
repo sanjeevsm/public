@@ -180,7 +180,7 @@ iTrack+ includes convenient startup/stop scripts for both methods (now located u
 .\scripts\stop.ps1           # Stop Docker containers
 
 # Local Method
-.\setup-local.ps1    # One-time setup (first time only)
+.\scripts\setup-local.ps1    # One-time setup (first time only)
 .\scripts\start-local.ps1    # Start application
 .\scripts\stop-local.ps1     # Stop application
 ```
@@ -193,7 +193,7 @@ iTrack+ includes convenient startup/stop scripts for both methods (now located u
 ./scripts/stop.sh            # Stop Docker containers
 
 # Local Method
-./setup-local.sh     # One-time setup (first time only)
+./scripts/setup-local.sh     # One-time setup (first time only)
 ./scripts/start-local.sh     # Start application
 ./scripts/stop-local.sh      # Stop application
 ```
@@ -422,7 +422,7 @@ Wait 30-60 seconds for all services to initialize.
 **Linux/macOS (Bash):**
 ```bash
 # Make scripts executable (first time only)
-chmod +x *.sh
+chmod +x scripts/*.sh
 
 # 1. Setup (first time only)
 ./setup-local.sh

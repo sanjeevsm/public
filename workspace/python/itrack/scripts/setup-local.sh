@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# Resolve repo root (script is in ./scripts)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$REPO_ROOT" || exit 1
+
 # iTrack+ Local Setup Script for Linux/macOS (No Docker)
 
 echo "🚀 iTrack+ Local Setup (Non-Docker)"
@@ -60,7 +65,7 @@ echo "🔧 Setting up Backend..."
 echo "========================"
 
 # Create virtual environment for backend
-cd backend
+cd backend || exit 1
 
 if [ -d "venv" ]; then
     echo "♻️  Virtual environment already exists, using it..."
@@ -83,7 +88,7 @@ echo ""
 echo "🎨 Setting up Frontend..."
 echo "========================"
 
-cd frontend
+cd frontend || exit 1
 
 # Install npm dependencies
 if [ -d "node_modules" ]; then
@@ -130,16 +135,16 @@ echo ""
 echo "✅ Setup Complete!"
 echo "=================="
 echo ""
-echo "📝 Next Steps:"
+echo "📝 Next Steps:" 
 echo ""
-echo "1. Make sure MongoDB is running:"
+echo "1. Make sure MongoDB is running:" 
 echo "   mongod --dbpath /data/db"
 echo "   (or start MongoDB service: sudo systemctl start mongod)"
 echo ""
-echo "2. Start the application:"
-echo "   ./start-local.sh"
+echo "2. Start the application:" 
+echo "   ./scripts/start-local.sh"
 echo ""
-echo "3. Access the application:"
+echo "3. Access the application:" 
 echo "   Frontend: http://localhost:3000"
 echo "   Backend:  http://localhost:8000"
 echo "   API Docs: http://localhost:8000/docs"
