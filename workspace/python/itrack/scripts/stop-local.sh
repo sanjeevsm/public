@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# Resolve repo root (script is in ./scripts)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$REPO_ROOT" || exit 1
+
 # iTrack+ Local Stop Script for Linux/macOS (No Docker)
 
 echo "🛑 Stopping iTrack+ (Local Mode)"
@@ -64,5 +69,5 @@ echo "   - Service: sudo systemctl stop mongod"
 echo "   - Homebrew: brew services stop mongodb-community"
 echo "   - Manual: Just close the mongod terminal"
 echo ""
-echo "💡 To start again: ./start-local.sh"
+echo "💡 To start again: ./scripts/start-local.sh"
 echo ""

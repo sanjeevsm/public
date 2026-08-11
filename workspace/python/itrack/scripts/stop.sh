@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# Resolve repo root (script is in ./scripts)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$REPO_ROOT" || exit 1
+
 # iTrack+ Stop Script for Linux/Mac
 
 echo "🛑 Stopping iTrack+ Application..."
@@ -30,6 +35,6 @@ docker-compose down
 echo ""
 echo "✅ iTrack+ has been stopped successfully!"
 echo ""
-echo "💡 To start again, run: ./start.sh or docker-compose up -d"
+echo "💡 To start again, run: ./scripts/start.sh or docker-compose up -d"
 echo "🗑️  To remove all data (including database), run: docker-compose down -v"
 echo ""

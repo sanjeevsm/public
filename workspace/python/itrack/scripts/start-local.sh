@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# Resolve repo root (script is in ./scripts)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$REPO_ROOT" || exit 1
+
 # iTrack+ Local Start Script for Linux/macOS (No Docker)
 
 echo "🚀 Starting iTrack+ (Local Mode)"
@@ -27,7 +32,7 @@ echo "🔧 Starting Backend Server..."
 echo "============================="
 
 # Start backend in background
-cd backend
+cd backend || exit 1
 source venv/bin/activate
 
 echo "🔥 Backend server starting on http://localhost:8000"
@@ -46,11 +51,11 @@ elif command -v xterm &> /dev/null; then
     xterm -e "source venv/bin/activate && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload" &
 else
     # Fallback: run in background
-    nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload > ../backend.log 2>&1 &
+    nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload > "$REPO_ROOT/backend.log" 2>&1 &
     echo "⚠️  Backend started in background. Check backend.log for logs."
 fi
 
-cd ..
+cd "$REPO_ROOT" || exit 1
 
 echo "✅ Backend started"
 echo "   URL: http://localhost:8000"
@@ -61,7 +66,7 @@ echo ""
 echo "🎨 Starting Frontend Server..."
 echo "=============================="
 
-cd frontend
+cd frontend || exit 1
 
 echo "🎨 Frontend server starting on http://localhost:3000"
 echo ""
@@ -78,11 +83,11 @@ elif command -v xterm &> /dev/null; then
     xterm -e "npm run dev" &
 else
     # Fallback: run in background
-    nohup npm run dev > ../frontend.log 2>&1 &
+    nohup npm run dev > "$REPO_ROOT/frontend.log" 2>&1 &
     echo "⚠️  Frontend started in background. Check frontend.log for logs."
 fi
 
-cd ..
+cd "$REPO_ROOT" || exit 1
 
 echo "✅ Frontend started"
 echo "   URL: http://localhost:3000"
@@ -98,6 +103,6 @@ echo "   API Docs: http://localhost:8000/docs"
 echo ""
 echo "⏱️  Please wait 10-15 seconds for all services to start..."
 echo ""
-echo "🛑 To stop: Run ./stop-local.sh"
+echo "🛑 To stop: Run ./scripts/stop-local.sh"
 echo "   Or close the terminal windows"
 echo ""

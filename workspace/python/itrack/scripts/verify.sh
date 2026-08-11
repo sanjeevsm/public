@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# Resolve repo root (script is in ./scripts)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$REPO_ROOT" || exit 1
+
 # iTrack+ Installation Verification Script
 
 echo "========================================="
@@ -110,7 +115,7 @@ if [ "$PORTS_OK" = true ]; then
     echo ""
     echo "You're ready to start iTrack+!"
     echo ""
-    echo "Run: ./start.sh"
+    echo "Run: ./scripts/start.sh"
     echo "Or: docker-compose up --build -d"
     echo ""
     echo "Then visit: http://localhost:3000"

@@ -170,32 +170,32 @@ These endpoints are available to the superadmin for promotion/demotion and user 
 
 ### 📝 Script Summary
 
-iTrack+ includes convenient startup/stop scripts for both methods:
+iTrack+ includes convenient startup/stop scripts for both methods (now located under `scripts/`):
 
 #### Windows (PowerShell)
 ```powershell
 # Docker Method
-.\verify.ps1         # Verify Docker installation
-.\start.ps1          # Start with Docker
-.\stop.ps1           # Stop Docker containers
+.\scripts\verify.ps1         # Verify Docker installation
+.\scripts\start.ps1          # Start with Docker
+.\scripts\stop.ps1           # Stop Docker containers
 
 # Local Method
 .\setup-local.ps1    # One-time setup (first time only)
-.\start-local.ps1    # Start application
-.\stop-local.ps1     # Stop application
+.\scripts\start-local.ps1    # Start application
+.\scripts\stop-local.ps1     # Stop application
 ```
 
 #### Linux/macOS (Bash)
 ```bash
 # Docker Method
-./verify.sh          # Verify Docker installation
-./start.sh           # Start with Docker
-./stop.sh            # Stop Docker containers
+./scripts/verify.sh          # Verify Docker installation
+./scripts/start.sh           # Start with Docker
+./scripts/stop.sh            # Stop Docker containers
 
 # Local Method
 ./setup-local.sh     # One-time setup (first time only)
-./start-local.sh     # Start application
-./stop-local.sh      # Stop application
+./scripts/start-local.sh     # Start application
+./scripts/stop-local.sh      # Stop application
 ```
 
 ---
@@ -224,23 +224,23 @@ wsl --install
 wsl --set-default-version 2
 ```
 
-**Step 3: Clone and Setup**
-```powershell
+# Step 2: Clone and Setup
+```bash
 # Navigate to project
-cd public\workspace\python\itrack
+cd public/workspace/python/itrack
 
 # Create environment file
-Copy-Item .env.example .env
+cp .env.example .env
+
+# Make scripts executable
+chmod +x scripts/start.sh scripts/verify.sh
 
 # Verify installation
-.\verify.ps1
+./scripts/verify.sh
 
 # Start application
-.\start.ps1
+./scripts/start.sh
 ```
-
-**Alternative - Manual Start (Windows):**
-```powershell
 docker-compose up --build
 ```
 
@@ -275,7 +275,7 @@ docker --version
 docker compose version
 ```
 
-**Step 2: Clone and Setup**
+# Step 2: Clone and Setup
 ```bash
 # Navigate to project
 cd public/workspace/python/itrack
@@ -284,13 +284,13 @@ cd public/workspace/python/itrack
 cp .env.example .env
 
 # Make scripts executable
-chmod +x start.sh verify.sh
+chmod +x scripts/start.sh scripts/verify.sh
 
 # Verify installation
-./verify.sh
+./scripts/verify.sh
 
 # Start application
-./start.sh
+./scripts/start.sh
 ```
 
 **Alternative - Manual Start (Linux):**
@@ -325,13 +325,13 @@ cd public/workspace/python/itrack
 cp .env.example .env
 
 # Make scripts executable
-chmod +x start.sh verify.sh
+chmod +x scripts/start.sh scripts/verify.sh
 
 # Verify installation
-./verify.sh
+./scripts/verify.sh
 
 # Start application
-./start.sh
+./scripts/start.sh
 ```
 
 **Alternative - Manual Start (macOS):**
@@ -345,29 +345,29 @@ docker-compose up --build
 
 iTrack+ includes OS-specific scripts for easy setup:
 
-#### Windows
+### Windows
 ```powershell
 # Verify installation
-.\verify.ps1
+.\scripts\verify.ps1
 
 # Start application
-.\start.ps1
+.\scripts\start.ps1
 
 # Stop application
-.\stop.ps1
+.\scripts\stop.ps1
 ```
 
-#### Linux/macOS
+### Linux/macOS
 ```bash
 # Verify installation
-./verify.sh
+./scripts/verify.sh
 
 # Start application
-./start.sh
+./scripts/start.sh
 
 # Stop application
-./stop.sh
-```
+./scripts/stop.sh
+``` 
 
 ### Manual Start (All OS)
 
