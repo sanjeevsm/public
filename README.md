@@ -1,16 +1,17 @@
-# public
 # Public — Independent Projects
 
-This repository is a curated portfolio of independent projects demonstrating full‑stack Python applications, developer tooling, and deployment automation. Each project includes a dedicated README with installation steps, usage notes, and troubleshooting instructions.
+This repository is a curated portfolio of independent projects showcasing applications, developer tooling, and deployment automation. Each project includes a dedicated README with platform-specific setup, usage notes, and troubleshooting guidance.
 
-If you are reviewing this repository (for example from a CV link), use the links below to open the project you want to evaluate and follow its Quick Start section for a runnable demo.
+Use the links below to open a project README and follow its Quick Start section for a runnable demo.
 
 ## Projects
 
-- **CI/CD Dashboard** — Real-time CI/CD metrics dashboard (FastAPI + SPA). Supports GitLab, GitHub, Bitbucket and Gitea. See detailed instructions: [public/workspace/python/cicd/README.md](public/workspace/python/cicd/README.md)
-- **iLab+ — AI Interview Simulator** — AI-powered interview question generator and quiz platform (Flask / desktop + web modes). See: [public/workspace/python/ilab/README.md](public/workspace/python/ilab/README.md)
-- **iTrack+ — Personal Finance Tracker** — Production-ready personal finance app with multi-user collaboration (FastAPI + React + MongoDB). See: [public/workspace/python/itrack/README.md](public/workspace/python/itrack/README.md)
-- **PrimeCare+ — Clinic Management System** — Full-stack clinic management (Flask + PostgreSQL). See: [public/workspace/python/primecare/README.md](public/workspace/python/primecare/README.md)
+| Project | Description | README |
+|---|---|---|
+| CI/CD Dashboard | Real-time CI/CD metrics dashboard with multi-provider support. | [public/workspace/python/cicd/README.md](public/workspace/python/cicd/README.md)
+| iLab+ — AI Interview Simulator | AI-powered interview question generator and quiz platform (desktop + web modes). | [public/workspace/python/ilab/README.md](public/workspace/python/ilab/README.md)
+| iTrack+ — Personal Finance Tracker | Personal finance tracker with multi-user collaboration and reporting. | [public/workspace/python/itrack/README.md](public/workspace/python/itrack/README.md)
+| PrimeCare+ — Clinic Management System | Clinic management system with REST API and reporting features. | [public/workspace/python/primecare/README.md](public/workspace/python/primecare/README.md)
 
 ## Quick start — view any project
 
