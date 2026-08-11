@@ -1751,7 +1751,7 @@ iTrack+ includes 12 essential scripts (6 for Docker, 6 for Local):
 | Script | OS | Purpose |
 |--------|----|---------|
 | `setup-local.ps1` / `setup-local.sh` | Windows / Linux+Mac | One-time environment setup |
-| `start-local.ps1` / `start-local.sh` | Windows / Linux+Mac | Start backend + frontend (creates `scripts/start-backend` and `scripts/start-frontend` helper scripts) |
+| `start-local.ps1` / `start-local.sh` | Windows / Linux+Mac | Start backend + frontend (generates on first run `scripts/start-backend.*` and `scripts/start-frontend.*`; will not overwrite existing helpers) |
 | `stop-local.ps1` / `stop-local.sh` | Windows / Linux+Mac | Stop all processes |
 | `start-backend.ps1` / `start-backend.sh` | Windows / Linux+Mac | Start backend only (from `scripts/`) |
 | `start-frontend.ps1` / `start-frontend.sh` | Windows / Linux+Mac | Start frontend only (from `scripts/`) |
@@ -1785,7 +1785,7 @@ iTrack+ includes 12 essential scripts (6 for Docker, 6 for Local):
 - Proper path resolution for reliability
 - User prompt if MongoDB not running
  
-**Implementation note:** `start-local` now generates and invokes centralized helper scripts under the `scripts/` folder (`scripts/start-backend.*` and `scripts/start-frontend.*`). Those helper scripts can be used directly to start only the backend or only the frontend during development.
+**Implementation note:** `start-local` generates centralized helper scripts under the `scripts/` folder (`scripts/start-backend.*` and `scripts/start-frontend.*`) on first run. The generator will skip overwriting those helper scripts if they already exist to preserve local edits. Use the helpers directly to start only the backend or only the frontend during development.
 
 #### stop-local (Shutdown)
 **What it does:**
