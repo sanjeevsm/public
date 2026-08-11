@@ -31,7 +31,7 @@ Complete troubleshooting guide with common issues and solutions.
 ## How to Start the Application
 
 ### Quick Start (Recommended)
-1. Navigate to: `C:\Users\SanjeevMenon\workspace\python\primecare\`
+1. Navigate to: `workspace/python/primecare/`
 2. Double-click `start_servers.bat` OR right-click `start_servers.ps1` → Run with PowerShell
 3. Wait 5 seconds for both servers to start
 4. Open browser: http://localhost:5001/reports
