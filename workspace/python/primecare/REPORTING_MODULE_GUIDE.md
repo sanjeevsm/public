@@ -29,13 +29,13 @@ The issue is that the servers need to be running properly.
 **Terminal 1 - API Server:**
 ```powershell
 $env:DB_PASSWORD="postgres"
-C:\Users\SanjeevMenon\workspace\python\primecare\api\venv\Scripts\python.exe C:\Users\SanjeevMenon\workspace\python\primecare\api\app.py
+workspace/python/primecare/api/venv/Scripts/python.exe workspace/python/primecare/api/app.py
 ```
 
 **Terminal 2 - Web Client:**
 ```powershell
 $env:DB_PASSWORD="postgres"
-C:\Users\SanjeevMenon\workspace\python\primecare\web-app\venv\Scripts\python.exe C:\Users\SanjeevMenon\workspace\python\primecare\web-app\client.py
+workspace/python/primecare/web-app/venv/Scripts/python.exe workspace/python/primecare/web-app/client.py
 ```
 
 ## Verification Steps
@@ -79,10 +79,10 @@ taskkill /PID <PID> /F
 **Solution:** Install dependencies:
 ```powershell
 # For API
-C:\Users\SanjeevMenon\workspace\python\primecare\api\venv\Scripts\pip.exe install -r C:\Users\SanjeevMenon\workspace\python\primecare\api\requirements.txt
+workspace/python/primecare/api/venv/Scripts/pip.exe install -r workspace/python/primecare/api/requirements.txt
 
 # For Web Client
-C:\Users\SanjeevMenon\workspace\python\primecare\web-app\venv\Scripts\pip.exe install -r C:\Users\SanjeevMenon\workspace\python\primecare\web-app\requirements.txt
+workspace/python/primecare/web-app/venv/Scripts/pip.exe install -r workspace/python/primecare/web-app/requirements.txt
 ```
 
 ## Available Reports
