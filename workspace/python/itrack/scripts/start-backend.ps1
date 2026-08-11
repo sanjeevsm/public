@@ -1,4 +1,9 @@
-Set-Location 'C:\Users\SanjeevMenon\PGit\public\workspace\python\itrack\backend'
+# Start backend (PowerShell) — placed in scripts/
+
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$repoRoot = Join-Path $scriptDir '..'
+Set-Location (Join-Path $repoRoot 'backend')
+
 .\venv\Scripts\Activate.ps1
 Write-Host 'Backend server starting on http://localhost:8000' -ForegroundColor Green
 Write-Host 'API Documentation: http://localhost:8000/docs' -ForegroundColor Cyan

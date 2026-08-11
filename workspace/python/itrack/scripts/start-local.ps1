@@ -47,7 +47,7 @@ Write-Host ''
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 "@
 
-$backendScriptPath = Join-Path $repoRoot "backend\start-backend.ps1"
+$backendScriptPath = Join-Path $repoRoot "scripts\start-backend.ps1"
 Set-Content $backendScriptPath $backendScript
 
 Start-Process powershell -ArgumentList "-NoExit", "-ExecutionPolicy", "Bypass", "-File", $backendScriptPath
@@ -69,7 +69,7 @@ Write-Host ''
 npm run dev
 "@
 
-$frontendScriptPath = Join-Path $repoRoot "frontend\start-frontend.ps1"
+$frontendScriptPath = Join-Path $repoRoot "scripts\start-frontend.ps1"
 Set-Content $frontendScriptPath $frontendScript
 
 Start-Process powershell -ArgumentList "-NoExit", "-ExecutionPolicy", "Bypass", "-File", $frontendScriptPath
