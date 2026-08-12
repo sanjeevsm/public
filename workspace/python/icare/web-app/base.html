@@ -6,14 +6,27 @@
     <title>{% block title %}iCare+{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-      // Tailwind theme variables and a simple theme toggle using localStorage
-      if (!localStorage.getItem('icare:theme')) localStorage.setItem('icare:theme','light');
-      const theme = localStorage.getItem('icare:theme');
-      if (theme === 'dark') document.documentElement.classList.add('dark');
-      function toggleTheme(){
-        if (document.documentElement.classList.contains('dark')){ document.documentElement.classList.remove('dark'); localStorage.setItem('icare:theme','light'); }
-        else { document.documentElement.classList.add('dark'); localStorage.setItem('icare:theme','dark'); }
+      // Theme presets and applying selection via localStorage
+      const THEMES = {
+        light: {dark:false, brand:'#2563eb'},
+        dark: {dark:true, brand:'#60a5fa'},
+        solar: {dark:false, brand:'#b58900'},
+        green: {dark:false, brand:'#10b981'},
+        slate: {dark:false, brand:'#334155'}
+      };
+      function applyTheme(name){
+        const t = THEMES[name] || THEMES.light;
+        localStorage.setItem('icare:theme', name);
+        if (t.dark) document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark');
+        document.documentElement.style.setProperty('--brand', t.brand);
+        // mark selected button
+        document.querySelectorAll('[data-theme-btn]').forEach(b=>b.classList.remove('ring-2','ring-sky-400'));
+        const el = document.querySelector(`[data-theme-btn="${name}"]`);
+        if (el) el.classList.add('ring-2','ring-sky-400');
       }
+      // initialize
+      const saved = localStorage.getItem('icare:theme') || 'light';
+      applyTheme(saved);
     </script>
     <style>
       :root{--brand:#2563eb}
@@ -32,7 +45,13 @@
           </nav>
         </div>
         <div class="flex items-center gap-3">
-          <button onclick="toggleTheme()" class="px-3 py-1 bg-slate-100 dark:bg-slate-700 rounded">Toggle theme</button>
+          <div class="flex items-center gap-2">
+            <button data-theme-btn="light" onclick="applyTheme('light')" class="px-2 py-1 rounded bg-white">Light</button>
+            <button data-theme-btn="dark" onclick="applyTheme('dark')" class="px-2 py-1 rounded bg-slate-700 text-white">Dark</button>
+            <button data-theme-btn="solar" onclick="applyTheme('solar')" class="px-2 py-1 rounded bg-yellow-600 text-white">Solar</button>
+            <button data-theme-btn="green" onclick="applyTheme('green')" class="px-2 py-1 rounded bg-emerald-600 text-white">Green</button>
+            <button data-theme-btn="slate" onclick="applyTheme('slate')" class="px-2 py-1 rounded bg-slate-500 text-white">Slate</button>
+          </div>
         </div>
       </div>
     </header>

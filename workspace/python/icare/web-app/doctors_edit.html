@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}iCare+ — Doctor{% endblock %}
+{% block content %}
+<div class="page-head"><div class="page-head-text"><h1>Doctor</h1><p>Create or edit doctor and schedules.</p></div></div>
+<div class="container">
+  <form method="post" action="{{ action }}" class="mb-6">
+    <div class="grid grid-cols-2 gap-4">
+      <input type="text" name="first_name" placeholder="First name" value="{{ doctor.first_name if doctor }}" class="p-2 border" />
+      <input type="text" name="last_name" placeholder="Last name" value="{{ doctor.last_name if doctor }}" class="p-2 border" />
+      <input type="text" name="email" placeholder="Email" value="{{ doctor.email if doctor }}" class="p-2 border" />
+      <input type="text" name="phone" placeholder="Phone" value="{{ doctor.phone if doctor }}" class="p-2 border" />
+    </div>
+    <div class="mt-4"><button class="px-3 py-1 bg-emerald-600 text-white rounded">Save</button></div>
+  </form>
+
+  {% if doctor and doctor.schedules %}
+  <div class="mb-4">
+    <h3 class="text-lg font-semibold">Schedules</h3>
+    <table class="w-full border-collapse"><thead><tr><th>Day</th><th>Start</th><th>End</th><th></th></tr></thead>
+      <tbody>
+        {% for s in doctor.schedules %}
+          <tr class="border-t"><td>{{ s.day_of_week }}</td><td>{{ s.start_time }}</td><td>{{ s.end_time }}</td><td>
+            <form method="post" action="/schedules/{{ s.id }}/delete" style="display:inline">
+              <button class="text-red-600">Delete</button>
+            </form>
+          </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  {% if doctor %}
+  <div class="mb-6">
+    <h4 class="font-semibold">Add schedule</h4>
+    <form method="post" action="/doctors/{{ doctor.id }}/schedules" class="grid grid-cols-4 gap-2 items-end">
+      <label>Day
+        <select name="day_of_week" class="p-2 border">
+          <option value="0">Mon</option><option value="1">Tue</option><option value="2">Wed</option><option value="3">Thu</option><option value="4">Fri</option><option value="5">Sat</option><option value="6">Sun</option>
+        </select>
+      </label>
+      <label>Start <input type="time" name="start_time" class="p-2 border" /></label>
+      <label>End <input type="time" name="end_time" class="p-2 border" /></label>
+      <div><button class="px-3 py-1 bg-sky-600 text-white rounded">Add</button></div>
+    </form>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+// convert time inputs to HH:MM:SS when submitting
+document.querySelectorAll('form').forEach(f=>f.addEventListener('submit', e=>{
+  f.querySelectorAll('input[type=time]').forEach(inp=>{ if (inp.value && inp.name) inp.value = inp.value + ':00'; })
+}))
+</script>
+{% endblock %}
