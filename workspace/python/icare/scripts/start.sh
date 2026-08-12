@@ -39,8 +39,13 @@ DB_PASSWORD="${DB_PASSWORD:-}"
 
 # -- Auto-setup if venvs are missing ---------------------------------------------
 if [ ! -d "api/venv" ] || [ ! -d "web-app/venv" ]; then
-    info "Virtual environments not found — running setup first..."
-    bash "$ROOT/scripts/setup.sh"
+    if [ -f "$ROOT/scripts/setup.sh" ]; then
+        info "Virtual environments not found — running setup first..."
+        bash "$ROOT/scripts/setup.sh"
+    else
+        echo "[ERROR] Virtual environments not found and setup.sh is missing. Run scripts/setup.sh to create venvs and install dependencies." >&2
+        exit 1
+    fi
 fi
 
 # -- Auto-install if deps are stale ----------------------------------------------
