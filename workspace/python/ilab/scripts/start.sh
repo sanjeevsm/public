@@ -144,19 +144,36 @@ else
         warn ".env not found — copy .env.example to .env to configure ILAB_SECRET and PORT"
     fi
 
-    # Resolve port: CLI flag > .env/PORT > default 8000
+    # Resolve port: CLI flag > .env/PORT > default 8001
     if [ -n "$CLI_PORT" ]; then
         PORT="$CLI_PORT"
     elif [ -n "${PORT:-}" ]; then
         : # already set by .env
     else
-        PORT=8000
+        PORT=8001
     fi
     export PORT
 
     # Resolve bind host: .env HOST > default 0.0.0.0 (all interfaces = LAN accessible)
     HOST="${HOST:-0.0.0.0}"
     export HOST
+
+        check_and_free_port() {
+            local port="$1"
+            if command -v lsof >/dev/null 2>&1; then
+                pids=$(lsof -t -iTCP:"$port" -sTCP:LISTEN 2>/dev/null || true)
+            else
+                pids=$(netstat -aon 2>/dev/null | grep ":$port " | sed -n 's/.* \([0-9]*\)$/\1/p' || true)
+            fi
+            if [ -n "$pids" ]; then
+                for pid in $pids; do
+                    cmd=$(ps -p "$pid" -o args= 2>/dev/null || true)
+                    echo "Port $port is in use by PID $pid -> $cmd"
+                done
+                echo "Please stop the above process(es) and retry." >&2
+                exit 1
+            fi
+        }
 
     # Warn if session secret is unset (flask_app.py auto-generates one, but
     # every restart will invalidate in-flight sessions)
@@ -169,6 +186,7 @@ else
 
     if [ -x "$GUNICORN" ]; then
         info "Starting iLab+ web server with Gunicorn on $HOST:$PORT ..."
+        check_and_free_port "$PORT"
         # Single worker required — TTLStore is process-local.
         # See wsgi.py for notes on upgrading to multi-worker with Redis.
         nohup "$GUNICORN" \
@@ -183,6 +201,7 @@ else
         warn "gunicorn not found — falling back to Flask built-in server (NOT for production)."
         warn "Install gunicorn: .venv/bin/pip install gunicorn"
         info "Starting Flask built-in server on $HOST:$PORT ..."
+        check_and_free_port "$PORT"
         HOST="$HOST" FLASK_DEBUG=0 nohup "$VENV_PYTHON" flask_app.py >> "$LOG_FILE" 2>&1 &
         WEB_PID=$!
     fi

@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}iCare+ — Patients{% endblock %}
+{% block content %}
+<div class="page-head"><div class="page-head-text"><h1>Patients</h1><p>Patient records and contact details.</p></div></div>
+<div class="container">
+  <table>
+    <thead><tr><th>#</th><th>Name</th><th>Phone</th><th>Email</th></tr></thead>
+    <tbody id="patientsBody"></tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+fetch('{{ api_url }}/patients').then(r=>r.json()).then(data=>{
+  const body = document.getElementById('patientsBody');
+  data.forEach(p=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${p.id}</td><td>${p.first_name} ${p.last_name}</td><td>${p.phone}</td><td>${p.email||''}</td>`;
+    body.appendChild(tr);
+  })
+})
+</script>
+{% endblock %}

@@ -16,11 +16,11 @@ function Stop-ProcessByPort {
     $process = Get-NetTCPConnection -LocalPort $Port -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique
     
     if ($process) {
-        foreach ($pid in $process) {
-            $processInfo = Get-Process -Id $pid -ErrorAction SilentlyContinue
+        foreach ($thePid in $process) {
+            $processInfo = Get-Process -Id $thePid -ErrorAction SilentlyContinue
             if ($processInfo) {
-                Write-Host "  Stopping $($processInfo.ProcessName) (PID: $pid)" -ForegroundColor Yellow
-                Stop-Process -Id $pid -Force -ErrorAction SilentlyContinue
+                Write-Host "  Stopping $($processInfo.ProcessName) (PID: $thePid)" -ForegroundColor Yellow
+                Stop-Process -Id $thePid -Force -ErrorAction SilentlyContinue
             }
         }
         return $true
@@ -28,9 +28,9 @@ function Stop-ProcessByPort {
     return $false
 }
 
-# Stop Backend (Port 8000)
-Write-Host "Stopping Backend Server (Port 8000)..." -ForegroundColor Cyan
-if (Stop-ProcessByPort -Port 8000) {
+# Stop Backend (Port 8002)
+Write-Host "Stopping Backend Server (Port 8002)..." -ForegroundColor Cyan
+if (Stop-ProcessByPort -Port 8002) {
     Write-Host "Backend stopped" -ForegroundColor Green
 } else {
     Write-Host "Backend not running on port 8000" -ForegroundColor Gray

@@ -40,8 +40,8 @@ stop_process_by_port() {
     return 1
 }
 
-# Stop Backend (Port 8000)
-stop_process_by_port 8000 "Backend Server"
+# Stop Backend (Port 8002)
+stop_process_by_port 8002 "Backend Server"
 
 # Stop Frontend (Port 3000)
 stop_process_by_port 3000 "Frontend Server"

@@ -125,7 +125,7 @@ fi
 # Create frontend .env file
 if [ ! -f "frontend/.env" ]; then
     echo "📝 Creating frontend .env file..."
-    echo "VITE_API_URL=http://localhost:8000" > frontend/.env
+    echo "VITE_API_URL=http://localhost:8002" > frontend/.env
     echo "✅ Frontend .env file created"
 else
     echo "✅ Frontend .env file already exists"
@@ -146,6 +146,6 @@ echo "   ./scripts/start-local.sh"
 echo ""
 echo "3. Access the application:" 
 echo "   Frontend: http://localhost:3000"
-echo "   Backend:  http://localhost:8000"
-echo "   API Docs: http://localhost:8000/docs"
+echo "   Backend:  http://localhost:8002"
+echo "   API Docs: http://localhost:8002/docs"
 echo ""

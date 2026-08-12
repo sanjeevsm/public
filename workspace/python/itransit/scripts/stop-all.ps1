@@ -3,8 +3,8 @@
 Stop all iTransit+ services (Windows / PowerShell).
 
 Stops:
-- backend (port 9100)
-- frontend (ports 3000, 3002)
+- backend (port 8003)
+- frontend (ports 3000, 3001)
 - Node.js / Python processes scoped to this project where detectable
 
 Safe: will only attempt to stop discovered PIDs and prints a summary.
@@ -38,7 +38,7 @@ function Stop-ProcessByPort {
 Write-Host "Stopping iTransit+ services" -ForegroundColor Cyan
 Write-Host "===========================" -ForegroundColor Cyan
 
-$ports = @(9100, 3002, 3000)
+$ports = @(8003, 3001, 3000)
 $stoppedAll = @()
 foreach ($p in $ports) {
     $res = Stop-ProcessByPort -Port $p

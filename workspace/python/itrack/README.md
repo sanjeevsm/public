@@ -141,7 +141,7 @@ These endpoints are available to the superadmin for promotion/demotion and user 
 ##### All Operating Systems
 - 4GB RAM available
 - 10GB free disk space
-- Ports 3000, 8000, 27017 available
+- Ports 3000, 8002, 27017 available
 
 #### 🪟 Windows (10/11)
 - **Docker Desktop for Windows** (20.10+) - [Download](https://docs.docker.com/desktop/install/windows-install/)
@@ -546,7 +546,7 @@ Copy-Item .env.example .env  # Windows
 # - SECRET_KEY=your-secret-key-change-in-production
 
 # Create frontend .env
-echo "VITE_API_URL=http://localhost:8000" > frontend/.env
+echo "VITE_API_URL=http://localhost:8002" > frontend/.env
 ```
 
 **Step 4: Start Services**
@@ -558,7 +558,7 @@ mongod --dbpath C:\data\db  # Windows
 # Terminal 2: Start Backend
 cd backend
 source venv/bin/activate  # or .\venv\Scripts\Activate.ps1
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+uvicorn app.main:app --host 0.0.0.0 --port 8002 --reload
 
 # Terminal 3: Start Frontend
 cd frontend
@@ -585,8 +585,8 @@ npm run dev
 
 ```
 Frontend:  http://localhost:3000
-Backend:   http://localhost:8000
-API Docs:  http://localhost:8000/docs
+Backend:   http://localhost:8002
+API Docs:  http://localhost:8002/docs
 ```
 
 ### Step 5: Create Your Account
@@ -1094,7 +1094,7 @@ Note: Admins warned if they're the only admin
 
 ## 📡 API Reference
 
-Interactive Swagger docs available at **http://localhost:8000/docs** when running.  
+Interactive Swagger docs available at **http://localhost:8002/docs** when running.
 All endpoints except `/`, `/health`, `POST /api/auth/register`, and `POST /api/auth/login` require `Authorization: Bearer <token>`.
 
 ### Authentication
@@ -1613,17 +1613,17 @@ docker-compose -f docker-compose.prod.yml up --scale backend=3 -d
 # Add load balancer (Nginx upstream)
 # Edit nginx.prod.conf
 upstream backend {
-    server backend:8000;
-    server backend:8001;
-    server backend:8002;
+  server backend:8002;
+  server backend:8003;
+  server backend:8004;
 }
 ```
 
 ### Complete API Reference
 
-**Base URL:** `http://localhost:8000/api`
+**Base URL:** `http://localhost:8002/api`
 
-**Interactive Docs:** `http://localhost:8000/docs` (Swagger UI)
+**Interactive Docs:** `http://localhost:8002/docs` (Swagger UI)
 
 #### Authentication Endpoints
 
@@ -1636,7 +1636,7 @@ upstream backend {
 
 **Example: Register**
 ```bash
-curl -X POST http://localhost:8000/api/auth/register \
+curl -X POST http://localhost:8002/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{
     "username": "john",
@@ -1647,7 +1647,7 @@ curl -X POST http://localhost:8000/api/auth/register \
 
 **Example: Login**
 ```bash
-curl -X POST http://localhost:8000/api/auth/login \
+curl -X POST http://localhost:8002/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "john@example.com",
@@ -1671,7 +1671,7 @@ curl -X POST http://localhost:8000/api/auth/login \
 
 **Example: Create Transaction**
 ```bash
-curl -X POST http://localhost:8000/api/transactions \
+curl -X POST http://localhost:8002/api/transactions \
   -H "Content-Type: application/json" \
   -b cookies.txt \
   -d '{
@@ -1686,7 +1686,7 @@ curl -X POST http://localhost:8000/api/transactions \
 
 **Example: Get Summary**
 ```bash
-curl -X GET http://localhost:8000/api/transactions/summary \
+curl -X GET http://localhost:8002/api/transactions/summary \
   -b cookies.txt
 ```
 
@@ -1707,7 +1707,7 @@ curl -X GET http://localhost:8000/api/transactions/summary \
 
 **Example: Create Entity**
 ```bash
-curl -X POST http://localhost:8000/api/entities \
+curl -X POST http://localhost:8002/api/entities \
   -H "Content-Type: application/json" \
   -b cookies.txt \
   -d '{
@@ -1719,7 +1719,7 @@ curl -X POST http://localhost:8000/api/entities \
 
 **Example: Invite Member**
 ```bash
-curl -X POST http://localhost:8000/api/entities/{entity_id}/invite \
+curl -X POST http://localhost:8002/api/entities/{entity_id}/invite \
   -H "Content-Type: application/json" \
   -b cookies.txt \
   -d '{
@@ -1730,7 +1730,7 @@ curl -X POST http://localhost:8000/api/entities/{entity_id}/invite \
 
 **Example: Get Entity Summary (Admin View)**
 ```bash
-curl -X GET "http://localhost:8000/api/entities/{entity_id}/summary?include_private=true" \
+curl -X GET "http://localhost:8002/api/entities/{entity_id}/summary?include_private=true" \
   -b cookies.txt
 ```
 
@@ -1954,16 +1954,16 @@ npm run dev
 #### Cannot Connect to Backend API
 
 1. **Verify backend is running:**
-   ```bash
-   curl http://localhost:8000/docs
-   # Should return Swagger UI HTML
-   ```
+  ```bash
+  curl http://localhost:8002/docs
+  # Should return Swagger UI HTML
+  ```
 
 2. **Check `frontend/.env` file:**
-   ```bash
-   # Should contain:
-   VITE_API_URL=http://localhost:8000
-   ```
+  ```bash
+  # Should contain:
+  VITE_API_URL=http://localhost:8002
+  ```
 
 3. **Clear browser cache:**
    - Chrome: Ctrl+Shift+Delete
@@ -2203,8 +2203,8 @@ npm run dev -- --debug
 
 3. **Test API directly:**
    ```bash
-   # Test backend health
-   curl http://localhost:8000/docs
+  # Test backend health
+  curl http://localhost:8002/docs
 
    # Test MongoDB connection
    mongosh --eval "db.runCommand({ ping: 1 })"

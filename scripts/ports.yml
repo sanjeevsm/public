@@ -1,0 +1,24 @@
+# Recommended default ports for projects in this repository
+# Edit per-project `.env` if you need to change local ports.
+projects:
+  - name: cicd-dashboard_api
+    backend_port: 8000
+    grafana_port: 9001
+    prometheus_port: 9000
+  - name: ilab
+    web_port: 8001
+  - name: itrack
+    backend_port: 8002
+    frontend_port: 3000
+    mongodb_port: 27017
+  - name: itransit
+    backend_port: 8003
+    frontend_port: 3001
+  - name: icare
+    backend_port: 8004
+    frontend_port: 3003
+system:
+  postgres: 5432
+  mongodb: 27017
+  prometheus: 9000
+  grafana: 9001

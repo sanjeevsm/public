@@ -29,15 +29,30 @@ Get-Content ".env" | Where-Object { $_ -notmatch "^\s*#" -and $_ -match "=" } | 
     [System.Environment]::SetEnvironmentVariable($parts[0].Trim(), $parts[1].Trim(), "Process")
 }
 
-$API_PORT    = if ($env:APP_PORT)               { $env:APP_PORT }               else { "8090" }
-$PROM_PORT   = if ($env:PROMETHEUS_PORT)        { $env:PROMETHEUS_PORT }        else { "9091" }
-$GRAF_PORT   = if ($env:GRAFANA_PORT)           { $env:GRAFANA_PORT }           else { "3001" }
+$API_PORT    = if ($env:APP_PORT)               { $env:APP_PORT }               else { "8000" }
+$PROM_PORT   = if ($env:PROMETHEUS_PORT)        { $env:PROMETHEUS_PORT }        else { "9000" }
+$GRAF_PORT   = if ($env:GRAFANA_PORT)           { $env:GRAFANA_PORT }           else { "9001" }
 $LOG_LEVEL   = if ($env:LOG_LEVEL)              { $env:LOG_LEVEL }              else { "info" }
 $PROM_RETAIN = if ($env:PROMETHEUS_RETENTION)   { $env:PROMETHEUS_RETENTION }   else { "30d" }
 
 $PROMETHEUS_EXE = if ($env:PROMETHEUS_EXE) { $env:PROMETHEUS_EXE } else { Write-Err "Set PROMETHEUS_EXE in .env to the path of prometheus.exe" }
 $GRAFANA_EXE    = if ($env:GRAFANA_EXE)    { $env:GRAFANA_EXE }    else { Write-Err "Set GRAFANA_EXE in .env to the path of grafana.exe" }
 $GRAFANA_ROOT   = if ($env:GRAFANA_ROOT)   { $env:GRAFANA_ROOT }   else { Write-Err "Set GRAFANA_ROOT in .env to the Grafana installation directory" }
+
+function Get-ListenersByPort { param([int]$Port) Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique }
+
+function Ensure-PortFree {
+    param([int]$Port)
+    $pids = Get-ListenersByPort -Port $Port
+    if ($pids) {
+        foreach ($thePid in $pids) {
+            $cmdline = ""
+            try { $cmdline = (Get-CimInstance Win32_Process -Filter "ProcessId=$thePid" | Select-Object -ExpandProperty CommandLine) } catch {}
+            Write-Err "Port $Port is in use by PID $thePid (cmd: $cmdline). Please stop it and retry."
+        }
+        exit 1
+    }
+}
 
 # -- Prerequisite checks -------------------------------------------------------
 if (-not (Test-Path $PROMETHEUS_EXE)) {
@@ -67,8 +82,19 @@ foreach ($dir in @(".pids", "exports", "data", "data\prometheus", "data\grafana-
     $null = New-Item -ItemType Directory -Force -Path $dir
 }
 
+function Ensure-PortFree {
+    param([int]$Port)
+    $pids = Get-ListenersByPort -Port $Port
+    if ($pids) {
+        foreach ($thePid in $pids) {
+            if (-not (Stop-If-ProjectOrForce -TargetPid $thePid -Port $Port)) { Write-Err "Aborting start due to occupied port $Port" }
+        }
+    }
+}
+
 # -- Start Prometheus ----------------------------------------------------------
 Write-Info "Starting Prometheus on port $PROM_PORT ..."
+Ensure-PortFree -Port $PROM_PORT
 $promArgs = @(
     "--config.file=$ROOT\prometheus\prometheus.yml",
     "--storage.tsdb.path=$ROOT\data\prometheus",
@@ -85,6 +111,8 @@ $promProc = Start-Process -FilePath $PROMETHEUS_EXE `
 $promProc.Id | Out-File ".pids\prometheus.pid" -Encoding ascii
 Write-Ok "Prometheus started (PID $($promProc.Id))"
 
+# Ensure Grafana port is free
+Ensure-PortFree -Port $GRAF_PORT
 # -- Start Grafana -------------------------------------------------------------
 Write-Info "Starting Grafana on port $GRAF_PORT ..."
 $grafanaAdminUser = if ($env:GRAFANA_ADMIN_USER)     { $env:GRAFANA_ADMIN_USER }     else { "admin" }
@@ -109,6 +137,7 @@ $grafanaProc = Start-Process -FilePath $GRAFANA_EXE `
 $grafanaProc.Id | Out-File ".pids\grafana.pid" -Encoding ascii
 Write-Ok "Grafana started (PID $($grafanaProc.Id))"
 
+Ensure-PortFree -Port $API_PORT
 # -- Start FastAPI -------------------------------------------------------------
 Write-Info "Starting CI/CD Dashboard API on port $API_PORT ..."
 

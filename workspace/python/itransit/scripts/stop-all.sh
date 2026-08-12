@@ -9,7 +9,7 @@ cd "$ROOT_DIR"
 echo "Stopping iTransit+ services (POSIX)"
 echo "==============================="
 
-ports=(9100 3002 3000)
+ports=(8003 3001 3000)
 stopped=()
 for p in "${ports[@]}"; do
   # prefer lsof if available

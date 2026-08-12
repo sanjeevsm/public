@@ -41,10 +41,8 @@ Write-Host "=============================" -ForegroundColor Cyan
 $backendScript = @'
 Set-Location (Resolve-Path (Join-Path $PSScriptRoot '..\backend'))
 . .\venv\Scripts\Activate.ps1
-Write-Host 'Backend server starting on http://localhost:8000' -ForegroundColor Green
-Write-Host 'API Documentation: http://localhost:8000/docs' -ForegroundColor Cyan
-Write-Host ''
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+'Write-Host ''
+uvicorn app.main:app --host 0.0.0.0 --port 8002 --reload
 '@
 
 $backendScriptPath = Join-Path $repoRoot "scripts\start-backend.ps1"
@@ -57,7 +55,7 @@ if (-Not (Test-Path $backendScriptPath)) {
 }
 
 Write-Host "Backend started in new window" -ForegroundColor Green
-Write-Host "   URL: http://localhost:8000" -ForegroundColor Cyan
+Write-Host "   URL: http://localhost:8002" -ForegroundColor Cyan
 
 Start-Sleep -Seconds 3
 
@@ -91,8 +89,8 @@ Write-Host "=========================" -ForegroundColor Green
 Write-Host ""
 Write-Host "Access the application:" -ForegroundColor Cyan
 Write-Host "   Frontend: http://localhost:3000" -ForegroundColor White
-Write-Host "   Backend:  http://localhost:8000" -ForegroundColor White
-Write-Host "   API Docs: http://localhost:8000/docs" -ForegroundColor White
+Write-Host "   Backend:  http://localhost:8002" -ForegroundColor White
+Write-Host "   API Docs: http://localhost:8002/docs" -ForegroundColor White
 Write-Host ""
 Write-Host "Please wait 10-15 seconds for all services to start..." -ForegroundColor Yellow
 Write-Host ""

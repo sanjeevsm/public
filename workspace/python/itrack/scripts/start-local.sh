@@ -35,30 +35,30 @@ echo "============================="
 cd backend || exit 1
 source venv/bin/activate
 
-echo "🔥 Backend server starting on http://localhost:8000"
-echo "📚 API Documentation: http://localhost:8000/docs"
+echo "🔥 Backend server starting on http://localhost:8002"
+echo "📚 API Documentation: http://localhost:8002/docs"
 echo ""
 
 # Start backend in a new terminal or background
 if [[ "$OSTYPE" == "darwin"* ]]; then
     # macOS
-    osascript -e 'tell app "Terminal" to do script "cd \"'"$(pwd)"'\" && source venv/bin/activate && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"'
+    osascript -e 'tell app "Terminal" to do script "cd \"'"$(pwd)"'\" && source venv/bin/activate && uvicorn app.main:app --host 0.0.0.0 --port 8002 --reload"'
 elif command -v gnome-terminal &> /dev/null; then
     # Linux with gnome-terminal
-    gnome-terminal -- bash -c "source venv/bin/activate && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload; exec bash"
+    gnome-terminal -- bash -c "source venv/bin/activate && uvicorn app.main:app --host 0.0.0.0 --port 8002 --reload; exec bash"
 elif command -v xterm &> /dev/null; then
     # Linux with xterm
-    xterm -e "source venv/bin/activate && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload" &
+    xterm -e "source venv/bin/activate && uvicorn app.main:app --host 0.0.0.0 --port 8002 --reload" &
 else
     # Fallback: run in background
-    nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload > "$REPO_ROOT/backend.log" 2>&1 &
+    nohup uvicorn app.main:app --host 0.0.0.0 --port 8002 --reload > "$REPO_ROOT/backend.log" 2>&1 &
     echo "⚠️  Backend started in background. Check backend.log for logs."
 fi
 
 cd "$REPO_ROOT" || exit 1
 
 echo "✅ Backend started"
-echo "   URL: http://localhost:8000"
+echo "   URL: http://localhost:8002"
 
 sleep 3
 
@@ -98,8 +98,8 @@ echo "========================="
 echo ""
 echo "📱 Access the application:"
 echo "   Frontend: http://localhost:3000"
-echo "   Backend:  http://localhost:8000"
-echo "   API Docs: http://localhost:8000/docs"
+echo "   Backend:  http://localhost:8002"
+echo "   API Docs: http://localhost:8002/docs"
 echo ""
 echo "⏱️  Please wait 10-15 seconds for all services to start..."
 echo ""

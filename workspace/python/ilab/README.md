@@ -325,10 +325,10 @@ cp .env.example .env
 |---|---|---|
 | `ILAB_SECRET` | *(auto-generated)* | Secret key used to sign Flask sessions. Set a fixed value so sessions survive restarts. Generate one with: `python -c "import secrets; print(secrets.token_hex(32))"` |
 | `HOST` | `0.0.0.0` | IP address to bind to. `0.0.0.0` = all interfaces (accessible from the LAN). Use `127.0.0.1` to restrict to localhost only. |
-| `PORT` | `8000` | TCP port the web server listens on. |
+| `PORT` | `8001` | TCP port the web server listens on. |
 | `FLASK_DEBUG` | `0` | Set to `1` to enable Flask debug mode. Never use `1` in production. |
 
-If `.env` is not present, the server starts with safe defaults (random secret, all interfaces, port 8000).
+If `.env` is not present, the server starts with safe defaults (random secret, all interfaces, port 8001).
 
 ### API Keys
 
@@ -409,18 +409,18 @@ python main.py
 ```bash
 # macOS / Linux
 source .venv/bin/activate
-HOST=0.0.0.0 PORT=8000 python flask_app.py
+HOST=0.0.0.0 PORT=8001 python flask_app.py
 ```
 ```powershell
 # Windows
 .venv\Scripts\Activate.ps1
-$env:HOST="0.0.0.0"; $env:PORT="8000"; python flask_app.py
+$env:HOST="0.0.0.0"; $env:PORT="8001"; python flask_app.py
 ```
 
 **Web mode — Gunicorn (macOS / Linux production)**
 ```bash
 source .venv/bin/activate
-gunicorn --workers 1 --bind 0.0.0.0:8000 --timeout 120 wsgi:application
+gunicorn --workers 1 --bind 0.0.0.0:8001 --timeout 120 wsgi:application
 ```
 
 > **Important:** Always use `--workers 1` with Gunicorn. The job, quiz, and result stores are held in memory within the single worker process. Multiple workers would route different requests to different stores and silently lose data.
@@ -473,18 +473,18 @@ If the scripts are not available or the PID files are missing, find and kill the
 
 **macOS / Linux**
 ```bash
-kill $(lsof -t -i:8000)
+kill $(lsof -t -i:8001)
 ```
 
 **Windows (PowerShell)**
 ```powershell
-$pid = (Get-NetTCPConnection -LocalPort 8000 -ErrorAction SilentlyContinue).OwningProcess | Select-Object -First 1
+ $pid = (Get-NetTCPConnection -LocalPort 8001 -ErrorAction SilentlyContinue).OwningProcess | Select-Object -First 1
 if ($pid) { Stop-Process -Id $pid -Force }
 ```
 
 **Windows (Command Prompt)**
 ```cmd
-netstat -ano | findstr :8000
+netstat -ano | findstr :8001
 taskkill /PID <pid> /F
 ```
 
@@ -503,16 +503,16 @@ The application window opens automatically when you run the start script. No bro
 Once the server is running, open a browser on the same machine and go to:
 
 ```
-http://localhost:8000
+http://localhost:8001
 ```
 
 or
 
 ```
-http://127.0.0.1:8000
+http://127.0.0.1:8001
 ```
 
-If you specified a custom port, replace `8000` with your port number.
+If you specified a custom port, replace `8001` with your port number.
 
 ---
 
@@ -523,8 +523,8 @@ When the server binds to `0.0.0.0` (the default), anyone on the same local netwo
 The start script prints the network URL automatically when it starts:
 
 ```
-  Local URL   -> http://127.0.0.1:8000
-  Network URL -> http://10.220.29.125:8000  (share this with others on your LAN)
+   Local URL   -> http://127.0.0.1:8001
+   Network URL -> http://10.220.29.125:8001  (share this with others on your LAN)
 ```
 
 Share the **Network URL** with other users. They open it in any browser — no installation required on their machine.
@@ -548,10 +548,10 @@ ip route get 1.1.1.1 | awk '/src/{print $7}'
 
 **Windows Firewall**
 
-If other machines cannot connect, Windows Firewall may be blocking port 8000. Allow it with:
+If other machines cannot connect, Windows Firewall may be blocking port 8001. Allow it with:
 
 ```powershell
-New-NetFirewallRule -DisplayName "iLab+ Web" -Direction Inbound -Protocol TCP -LocalPort 8000 -Action Allow
+New-NetFirewallRule -DisplayName "iLab+ Web" -Direction Inbound -Protocol TCP -LocalPort 8001 -Action Allow
 ```
 
 To remove this rule later:
@@ -625,7 +625,7 @@ For a production deployment accessible beyond a local network (internet-facing),
 Gunicorn is included in `requirements-web.txt` and is used automatically by `start.sh --web` on Unix. Always run with a single worker:
 
 ```bash
-gunicorn --workers 1 --bind 0.0.0.0:8000 --timeout 120 wsgi:application
+gunicorn --workers 1 --bind 0.0.0.0:8001 --timeout 120 wsgi:application
 ```
 
 **Reverse proxy with Nginx or Caddy**
@@ -638,7 +638,7 @@ server {
     server_name ilab.yourdomain.com;
 
     location / {
-        proxy_pass http://127.0.0.1:8000;
+      proxy_pass http://127.0.0.1:8001;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_buffering off;          # required for SSE streaming
@@ -705,15 +705,15 @@ Run the server manually to see the full error output:
 ```
 
 Common causes:
-- Port 8000 is already in use — change `PORT` in `.env` or stop the existing process.
+-- Port 8001 is already in use — change `PORT` in `.env` or stop the existing process.
 - A required package is missing — delete `.venv` and run the start script again.
 
 ---
 
 ### Can't connect from another machine on the LAN
 
-1. Confirm the server is bound to `0.0.0.0` — the start script output should say `Running on http://0.0.0.0:8000`.
-2. Check that no firewall is blocking port 8000 (see [Windows Firewall](#web-mode--lan-access-sharing-with-others)).
+1. Confirm the server is bound to `0.0.0.0` — the start script output should say `Running on http://0.0.0.0:8001`.
+2. Check that no firewall is blocking port 8001 (see [Windows Firewall](#web-mode--lan-access-sharing-with-others)).
 3. Ensure you are using the **LAN IP address** of the host machine, not `localhost` or `127.0.0.1`.
 
 ---

@@ -65,8 +65,8 @@ Git Provider API
    (GitLab / GitHub / Bitbucket / Gitea)
 
 Optional monitoring:
-   Prometheus :9091  ◄── /metrics
-   Grafana    :3001  ◄── Prometheus datasource
+   Prometheus :9000  ◄── /metrics
+   Grafana    :9001  ◄── Prometheus datasource
 ```
 
 ## Technology Stack
