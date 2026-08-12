@@ -12,7 +12,7 @@ Use the links below to open a project README and follow its Quick Start section 
 | iLab+ — AI Interview Simulator | AI-powered interview question generator and quiz platform (desktop + web modes). | [workspace/python/ilab/README.md](workspace/python/ilab/README.md)
 | iTrack+ — Personal Finance Tracker | Personal finance tracker with multi-user collaboration and reporting. | [workspace/python/itrack/README.md](workspace/python/itrack/README.md)
 | iTransit+ — Public Transport Viewer | Stateless frontend + FastAPI backend integrating TfL and other UK transport APIs with client-side favourites and mock fallback. | [workspace/python/itransit/README.md](workspace/python/itransit/README.md)
-| iCare+ — Clinic Management System | Clinic management system with REST API and reporting features. | [workspace/python/icare/README.md](workspace/python/icare/README.md)
+| iCare+ — Clinic Management System | Clinic management system with REST API and reporting features. (updated Aug 2026) | [workspace/python/icare/README.md](workspace/python/icare/README.md)
 
 **Default Ports**
 
