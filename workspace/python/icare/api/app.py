@@ -5,6 +5,7 @@ import json
 from datetime import date, time, datetime, timedelta
 from decimal import Decimal
 from flask import Flask, request, jsonify, send_file
+from werkzeug.exceptions import HTTPException
 from flask_cors import CORS
 import psycopg2
 import psycopg2.extras
@@ -68,6 +69,9 @@ def fail(msg, code=400):
 
 @app.errorhandler(Exception)
 def handle_exception(e):
+    # Preserve HTTP exceptions (404, 400, etc.) so clients see correct status codes.
+    if isinstance(e, HTTPException):
+        return fail(e.description or str(e), e.code or 500)
     return fail(str(e), 500)
 
 # Minimal API routes for local development and tests.
@@ -164,6 +168,238 @@ def delete_speciality(sid):
                 _FALLBACK['specialities'].pop(i)
                 return ok({'deleted': sid})
         return fail('not found', 404)
+
+
+# --- Patients endpoints --------------------------------------------------------
+@app.route('/patients', methods=['GET'])
+def list_patients():
+    if _use_db():
+        rows = query('SELECT id, first_name, last_name, email, phone FROM patients ORDER BY id LIMIT 200')
+        return ok(rows)
+    else:
+        return ok([])
+
+
+# --- Appointments endpoints ----------------------------------------------------
+@app.route('/appointments', methods=['GET'])
+def list_appointments():
+    if _use_db():
+        # Simple appointment view joining patient and doctor names
+        sql = '''
+            SELECT a.id, a.appointment_date, a.start_time, a.end_time,
+                   d.id as doctor_id, d.first_name as doctor_first, d.last_name as doctor_last,
+                   p.id as patient_id, p.first_name as patient_first, p.last_name as patient_last,
+                   a.status
+            FROM appointments a
+            LEFT JOIN doctors d ON d.id = a.doctor_id
+            LEFT JOIN patients p ON p.id = a.patient_id
+            ORDER BY a.appointment_date DESC, a.start_time DESC
+            LIMIT 500
+        '''
+        rows = query(sql)
+        # Flatten doctor/patient names for the frontend
+        for r in rows:
+            r['doctor_name'] = f"{r.get('doctor_first') or ''} {r.get('doctor_last') or ''}".strip()
+            r['patient_name'] = f"{r.get('patient_first') or ''} {r.get('patient_last') or ''}".strip()
+        return ok(rows)
+    else:
+        return ok([])
+
+
+# --- Doctors and schedules ---------------------------------------------------
+@app.route('/doctors', methods=['GET'])
+def list_doctors():
+    if _use_db():
+        rows = query('SELECT id, first_name, last_name, email, phone, speciality_id FROM doctors ORDER BY id')
+        return ok(rows)
+    else:
+        return ok([])
+
+
+@app.route('/doctors/<int:did>', methods=['GET'])
+def get_doctor(did):
+    if _use_db():
+        rows = query('SELECT id, first_name, last_name, email, phone, speciality_id FROM doctors WHERE id=%s', (did,))
+        if not rows:
+            return fail('not found', 404)
+        doctor = rows[0]
+        schedules = query('SELECT id, doctor_id, day_of_week, start_time, end_time FROM doctor_schedules WHERE doctor_id=%s ORDER BY day_of_week, start_time', (did,))
+        doctor['schedules'] = schedules
+        return ok(doctor)
+    else:
+        return fail('not available without DB', 404)
+
+
+@app.route('/doctors', methods=['POST'])
+def create_doctor():
+    body = request.get_json(force=True, silent=True) or {}
+    if not body.get('first_name') or not body.get('last_name'):
+        return fail('first_name and last_name required', 400)
+    if _use_db():
+        r = query('INSERT INTO doctors (first_name, last_name, email, phone, speciality_id) VALUES (%s,%s,%s,%s,%s) RETURNING id, first_name, last_name, email, phone, speciality_id',
+                  (body.get('first_name'), body.get('last_name'), body.get('email'), body.get('phone'), body.get('speciality_id')))
+        return ok(r[0], 201)
+    else:
+        return fail('not available without DB', 400)
+
+
+@app.route('/doctors/<int:did>', methods=['PUT'])
+def update_doctor(did):
+    body = request.get_json(force=True, silent=True) or {}
+    if _use_db():
+        r = query('UPDATE doctors SET first_name=%s,last_name=%s,email=%s,phone=%s,speciality_id=%s WHERE id=%s RETURNING id, first_name, last_name, email, phone, speciality_id',
+                  (body.get('first_name'), body.get('last_name'), body.get('email'), body.get('phone'), body.get('speciality_id'), did))
+        if not r:
+            return fail('not found', 404)
+        return ok(r[0])
+    else:
+        return fail('not available without DB', 404)
+
+
+@app.route('/doctors/<int:did>', methods=['DELETE'])
+def delete_doctor(did):
+    if _use_db():
+        r = query('DELETE FROM doctors WHERE id=%s RETURNING id', (did,))
+        if not r:
+            return fail('not found', 404)
+        return ok({'deleted': r[0]['id']})
+    else:
+        return fail('not available without DB', 404)
+
+
+@app.route('/doctors/<int:did>/schedules', methods=['POST'])
+def add_schedule(did):
+    body = request.get_json(force=True, silent=True) or {}
+    dow = body.get('day_of_week')
+    start = body.get('start_time')
+    end = body.get('end_time')
+    if dow is None or not start or not end:
+        return fail('day_of_week, start_time and end_time required', 400)
+    if _use_db():
+        r = query('INSERT INTO doctor_schedules (doctor_id, day_of_week, start_time, end_time) VALUES (%s,%s,%s,%s) RETURNING id, doctor_id, day_of_week, start_time, end_time',
+                  (did, dow, start, end))
+        return ok(r[0], 201)
+    else:
+        return fail('not available without DB', 400)
+
+
+@app.route('/schedules/<int:sid>', methods=['PUT'])
+def update_schedule(sid):
+    body = request.get_json(force=True, silent=True) or {}
+    dow = body.get('day_of_week')
+    start = body.get('start_time')
+    end = body.get('end_time')
+    if dow is None or not start or not end:
+        return fail('day_of_week, start_time and end_time required', 400)
+    if _use_db():
+        r = query('UPDATE doctor_schedules SET day_of_week=%s,start_time=%s,end_time=%s WHERE id=%s RETURNING id, doctor_id, day_of_week, start_time, end_time',
+                  (dow, start, end, sid))
+        if not r:
+            return fail('not found', 404)
+        return ok(r[0])
+    else:
+        return fail('not available without DB', 404)
+
+
+@app.route('/schedules/<int:sid>', methods=['DELETE'])
+def delete_schedule(sid):
+    if _use_db():
+        r = query('DELETE FROM doctor_schedules WHERE id=%s RETURNING id', (sid,))
+        if not r:
+            return fail('not found', 404)
+        return ok({'deleted': r[0]['id']})
+    else:
+        return fail('not available without DB', 404)
+
+
+# --- Availability and booking -----------------------------------------------
+def _time_to_minutes(tstr):
+    h, m, *rest = (tstr or '').split(':')
+    return int(h) * 60 + int(m)
+
+
+@app.route('/doctors/<int:did>/available_slots', methods=['GET'])
+def available_slots(did):
+    # params: date=YYYY-MM-DD, slot=minutes (default 10)
+    date_str = request.args.get('date')
+    slot = int(request.args.get('slot', '10'))
+    if not date_str:
+        return fail('date is required', 400)
+    if not _use_db():
+        return ok([])
+    try:
+        dt = datetime.fromisoformat(date_str)
+    except Exception:
+        return fail('invalid date', 400)
+    dow = dt.weekday()  # 0=Monday
+    # get schedules for that doctor and day
+    schedules = query('SELECT id, start_time, end_time FROM doctor_schedules WHERE doctor_id=%s AND day_of_week=%s ORDER BY start_time', (did, dow))
+    # get existing appointments for that date
+    appts = query('SELECT start_time, end_time FROM appointments WHERE doctor_id=%s AND appointment_date=%s', (did, date_str))
+    used = []
+    for a in appts:
+        used.append((a['start_time'], a['end_time']))
+    slots = []
+    for s in schedules:
+        start_min = _time_to_minutes(s['start_time'])
+        end_min = _time_to_minutes(s['end_time'])
+        cur = start_min
+        while cur + slot <= end_min:
+            st = f"{cur//60:02d}:{cur%60:02d}:00"
+            en = f"{(cur+slot)//60:02d}:{(cur+slot)%60:02d}:00"
+            # check overlap with existing appts
+            conflict = False
+            for ustart, uend in used:
+                um = _time_to_minutes(ustart)
+                ue = _time_to_minutes(uend)
+                if not (cur+slot <= um or cur >= ue):
+                    conflict = True
+                    break
+            if not conflict:
+                slots.append({'start_time': st, 'end_time': en})
+            cur += slot
+    return ok(slots)
+
+
+@app.route('/appointments', methods=['POST'])
+def create_appointment():
+    body = request.get_json(force=True, silent=True) or {}
+    doctor_id = body.get('doctor_id')
+    patient_id = body.get('patient_id')
+    date_str = body.get('appointment_date')
+    start_time = body.get('start_time')
+    slot = int(body.get('slot_minutes', 10))
+    if not doctor_id or not patient_id or not date_str or not start_time:
+        return fail('doctor_id, patient_id, appointment_date and start_time are required', 400)
+    if not _use_db():
+        return fail('not available without DB', 400)
+    # compute end_time
+    sm = _time_to_minutes(start_time)
+    em = sm + slot
+    end_time = f"{em//60:02d}:{em%60:02d}:00"
+    # check doctor schedule for that date
+    try:
+        dt = datetime.fromisoformat(date_str)
+    except Exception:
+        return fail('invalid appointment_date', 400)
+    dow = dt.weekday()
+    schedules = query('SELECT start_time, end_time FROM doctor_schedules WHERE doctor_id=%s AND day_of_week=%s', (doctor_id, dow))
+    ok_slot = False
+    for s in schedules:
+        if _time_to_minutes(s['start_time']) <= sm and em <= _time_to_minutes(s['end_time']):
+            ok_slot = True
+            break
+    if not ok_slot:
+        return fail('slot not within doctor schedule', 400)
+    # check overlapping appointments
+    others = query('SELECT start_time, end_time FROM appointments WHERE doctor_id=%s AND appointment_date=%s', (doctor_id, date_str))
+    for o in others:
+        if not (em <= _time_to_minutes(o['start_time']) or sm >= _time_to_minutes(o['end_time'])):
+            return fail('conflict with existing appointment', 400)
+    # insert
+    r = query('INSERT INTO appointments (doctor_id, patient_id, appointment_date, start_time, end_time, status) VALUES (%s,%s,%s,%s,%s,%s) RETURNING id, doctor_id, patient_id, appointment_date, start_time, end_time, status',
+              (doctor_id, patient_id, date_str, start_time, end_time, 'booked'))
+    return ok(r[0], 201)
 
 
 # --- Run block -----------------------------------------------------------------
