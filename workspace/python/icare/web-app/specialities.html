@@ -1,23 +1,46 @@
 {% extends "base.html" %}
 {% block title %}iCare+ — Specialities{% endblock %}
 {% block content %}
-<div class="page-head"><div class="page-head-text"><h1>Specialities</h1><p>Medical specialities offered.</p></div></div>
-<div class="container">
-  <ul id="specList">
+<div class="flex items-center justify-between mb-4">
+  <div>
+    <h1 class="text-2xl font-semibold">Specialities</h1>
+    <p class="text-sm text-slate-500">Medical specialities offered.</p>
+  </div>
+  <div>
+    <a href="/specialities/new" class="px-3 py-2 bg-sky-600 text-white rounded shadow">New Speciality</a>
+  </div>
+</div>
+
+<div class="bg-white dark:bg-slate-800 shadow rounded p-4">
+  <ul class="space-y-2" id="specList">
     {% if specialities %}
       {% for s in specialities %}
-        <li>{{ s.name }}</li>
+        <li class="flex items-center justify-between p-2 border rounded border-slate-100 dark:border-slate-700">
+          <div>{{ s.name }}</div>
+          <div class="space-x-2">
+            <a class="text-sky-600 hover:underline" href="/specialities/{{ s.id }}/edit">Edit</a>
+            <form method="post" action="/specialities/{{ s.id }}/delete" class="inline">
+              <button type="submit" class="text-red-600 hover:underline">Delete</button>
+            </form>
+          </div>
+        </li>
       {% endfor %}
+    {% else %}
+      <li class="text-slate-500">No specialities found.</li>
     {% endif %}
   </ul>
 </div>
+
 {% endblock %}
+
 {% block scripts %}
 <script>
+// progressive enhancement: ensure client fills in list if server didn't
 fetch('{{ api_url }}/specialities').then(r=>r.json()).then(data=>{
   const ul = document.getElementById('specList');
-  if (!ul.querySelector('li')) {
-    data.forEach(s=>{ const li=document.createElement('li'); li.textContent = s.name; ul.appendChild(li); });
+  if (!ul.querySelector('li') || ul.querySelector('li').textContent.trim()==='No specialities found.'){
+    ul.innerHTML = '';
+    data.forEach(s=>{ const li=document.createElement('li'); li.className='flex items-center justify-between p-2 border rounded border-slate-100 dark:border-slate-700'; li.innerHTML = `<div>${s.name}</div><div class="space-x-2"><a class="text-sky-600 hover:underline" href="/specialities/${s.id}/edit">Edit</a><form method="post" action="/specialities/${s.id}/delete" class="inline"><button type="submit" class="text-red-600 hover:underline">Delete</button></form></div>`; ul.appendChild(li); });
   }
 })
 </script>

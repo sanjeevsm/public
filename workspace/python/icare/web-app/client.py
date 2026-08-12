@@ -1,7 +1,7 @@
 """Minimal Flask web frontend for iCare+ (serves templates and proxies simple API calls).
 Uses `API_URL` environment variable (default http://localhost:8004).
 """
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, redirect, url_for
 import os
 import requests
 
@@ -23,6 +23,51 @@ def index():
 def specialities():
     r = requests.get(f'{API_URL}/specialities', timeout=5)
     return render_template('specialities.html', specialities=r.json())
+
+
+@app.route('/specialities/new')
+def new_speciality():
+    return render_template('specialities_edit.html', speciality=None, action=url_for('create_speciality'))
+
+
+@app.route('/specialities', methods=['POST'])
+def create_speciality():
+    name = request.form.get('name')
+    if not name:
+        return redirect(url_for('specialities'))
+    try:
+        requests.post(f'{API_URL}/specialities', json={'name': name}, timeout=5)
+    except Exception:
+        pass
+    return redirect(url_for('specialities'))
+
+
+@app.route('/specialities/<int:sid>/edit')
+def edit_speciality(sid):
+    r = requests.get(f'{API_URL}/specialities/{sid}', timeout=5)
+    if r.status_code != 200:
+        return redirect(url_for('specialities'))
+    return render_template('specialities_edit.html', speciality=r.json(), action=url_for('update_speciality', sid=sid))
+
+
+@app.route('/specialities/<int:sid>', methods=['POST'])
+def update_speciality(sid):
+    name = request.form.get('name')
+    if name:
+        try:
+            requests.put(f'{API_URL}/specialities/{sid}', json={'name': name}, timeout=5)
+        except Exception:
+            pass
+    return redirect(url_for('specialities'))
+
+
+@app.route('/specialities/<int:sid>/delete', methods=['POST'])
+def delete_speciality(sid):
+    try:
+        requests.delete(f'{API_URL}/specialities/{sid}', timeout=5)
+    except Exception:
+        pass
+    return redirect(url_for('specialities'))
 
 
 @app.route('/patients')
