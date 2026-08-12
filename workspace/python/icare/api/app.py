@@ -70,4 +70,105 @@ def fail(msg, code=400):
 def handle_exception(e):
     return fail(str(e), 500)
 
-# (rest identical to original app.py)
+# Minimal API routes for local development and tests.
+# The code prefers the PostgreSQL database but falls back to an
+# in-memory sample dataset when a DB connection cannot be established.
+
+# In-memory fallback data and helpers ------------------------------------------------
+_FALLBACK = {
+    'specialities': [
+        {'id': 1, 'name': 'General Practice'},
+        {'id': 2, 'name': 'Cardiology'},
+        {'id': 3, 'name': 'Dermatology'},
+    ],
+}
+
+def _use_db():
+    try:
+        # quick test connection
+        conn = get_conn()
+        conn.close()
+        return True
+    except Exception:
+        return False
+
+# --- Specialities endpoints -----------------------------------------------------
+@app.route('/specialities', methods=['GET'])
+def list_specialities():
+    if _use_db():
+        rows = query('SELECT id, name FROM specialities ORDER BY id')
+        return ok(rows)
+    else:
+        return ok(_FALLBACK['specialities'])
+
+
+@app.route('/specialities/<int:sid>', methods=['GET'])
+def get_speciality(sid):
+    if _use_db():
+        rows = query('SELECT id, name FROM specialities WHERE id=%s', (sid,))
+        if not rows:
+            return fail('not found', 404)
+        return ok(rows[0])
+    else:
+        for s in _FALLBACK['specialities']:
+            if s['id'] == sid:
+                return ok(s)
+        return fail('not found', 404)
+
+
+@app.route('/specialities', methods=['POST'])
+def create_speciality():
+    body = request.get_json(force=True, silent=True) or {}
+    name = body.get('name')
+    if not name:
+        return fail('name is required', 400)
+    if _use_db():
+        r = query('INSERT INTO specialities (name) VALUES (%s) RETURNING id, name', (name,))
+        return ok(r[0], 201)
+    else:
+        new_id = max([s['id'] for s in _FALLBACK['specialities']] or [0]) + 1
+        s = {'id': new_id, 'name': name}
+        _FALLBACK['specialities'].append(s)
+        return ok(s, 201)
+
+
+@app.route('/specialities/<int:sid>', methods=['PUT'])
+def update_speciality(sid):
+    body = request.get_json(force=True, silent=True) or {}
+    name = body.get('name')
+    if not name:
+        return fail('name is required', 400)
+    if _use_db():
+        r = query('UPDATE specialities SET name=%s WHERE id=%s RETURNING id, name', (name, sid))
+        if not r:
+            return fail('not found', 404)
+        return ok(r[0])
+    else:
+        for s in _FALLBACK['specialities']:
+            if s['id'] == sid:
+                s['name'] = name
+                return ok(s)
+        return fail('not found', 404)
+
+
+@app.route('/specialities/<int:sid>', methods=['DELETE'])
+def delete_speciality(sid):
+    if _use_db():
+        r = query('DELETE FROM specialities WHERE id=%s RETURNING id', (sid,))
+        if not r:
+            return fail('not found', 404)
+        return ok({'deleted': r[0]['id']})
+    else:
+        for i, s in enumerate(_FALLBACK['specialities']):
+            if s['id'] == sid:
+                _FALLBACK['specialities'].pop(i)
+                return ok({'deleted': sid})
+        return fail('not found', 404)
+
+
+# --- Run block -----------------------------------------------------------------
+if __name__ == '__main__':
+    port = int(os.getenv('API_PORT', '8004'))
+    host = os.getenv('API_HOST', '0.0.0.0')
+    # Use threaded server for simple dev concurrency
+    app.run(host=host, port=port, threaded=True)
