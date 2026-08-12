@@ -36,8 +36,8 @@ cd public/workspace/python/itransit/scripts
 
 ## Runtime layout
 
-- Backend: `backend/` — FastAPI app listening on port `9100` by default.
-- Frontend: `frontend/` — Vite + React app (dev port `3002`).
+- Backend: `backend/` — FastAPI app listening on port `8003` by default.
+-- Frontend: `frontend/` — Vite + React app (dev port `3001`).
 - Scripts: `scripts/` — centralized cross-platform helpers: `start-all.*`, `stop-all.*`, `start-backend.*`, `start-frontend.*`.
 - Env: `.env.example` contains placeholders; copy to `.env` locally.
 
@@ -47,13 +47,13 @@ cd public/workspace/python/itransit/scripts
 - GET `/api/stops/nearby?lat={lat}&lon={lon}&radius={m}&country={country}` — returns nearby stops from provider(s) or mock data. Example query:
 
   ```bash
-  curl 'http://127.0.0.1:9100/api/stops/nearby?lat=51.5074&lon=-0.1278&country=England'
+  curl 'http://127.0.0.1:8003/api/stops/nearby?lat=51.5074&lon=-0.1278&country=England'
   ```
 
 - GET `/api/stops/{stop_id}/departures?country={country}` — returns departures for a `stop_id`. Example:
 
   ```bash
-  curl 'http://127.0.0.1:9100/api/stops/490014585N/departures?country=England'
+  curl 'http://127.0.0.1:8003/api/stops/490014585N/departures?country=England'
   ```
 
 - WebSocket `/ws` — simple pub/sub channel. Client messages:
@@ -64,7 +64,7 @@ cd public/workspace/python/itransit/scripts
 
 ## Environment variables (in `.env`)
 
-- `VITE_API_URL` — frontend uses this to locate the backend (default `http://localhost:9100`).
+-- `VITE_API_URL` — frontend uses this to locate the backend (default `http://localhost:8003`).
 - `ENABLE_SCRAPING` — if `true`, allows scraping fallback (disabled by default).
 - `TFL_APP_KEY` — TfL API key (optional: many TfL endpoints work without a key but keys increase rate limits).
 - `TRANSPORTAPI_APP_ID` / `TRANSPORTAPI_APP_KEY` — TransportAPI credentials (UK-wide aggregator).
@@ -81,80 +81,72 @@ Keys left blank will cause the backend to fall back to `mock_*` providers so the
 - Simple curl to list countries:
 
 ```bash
-curl 'http://127.0.0.1:9100/api/countries'
+curl 'http://127.0.0.1:8003/api/countries'
 ```
 
 - Fetch nearby stops and show names (jq required):
 
 ```bash
-curl 'http://127.0.0.1:9100/api/stops/nearby?lat=51.5074&lon=-0.1278&country=England' | jq -r '.[].name'
+curl 'http://127.0.0.1:8003/api/stops/nearby?lat=51.5074&lon=-0.1278&country=England' | jq -r '.[].name'
 ```
 
 - Subscribe via WebSocket (using `websocat`):
 
 ```bash
 # install websocat and run
-websocat ws://127.0.0.1:9100/ws
+websocat ws://127.0.0.1:8003/ws
 # then send: {"action":"subscribe","stop_id":"490014585N"}
 ```
 
 - Quick JS fetch example (browser console):
 
 ```js
-fetch('http://127.0.0.1:9100/api/stops/nearby?lat=51.5074&lon=-0.1278&country=England')
+fetch('http://127.0.0.1:8003/api/stops/nearby?lat=51.5074&lon=-0.1278&country=England')
   .then(r => r.json()).then(stops => console.log(stops[0]))
 ```
 
 ## Troubleshooting
 
-- If the frontend fails to start on port `3000`, it will default to `3002` — open `http://localhost:3002/`.
+-- If the frontend fails to start on port `3001`, check the dev server output for the bound port (open `http://localhost:3001/`).
 - If provider calls return empty arrays and you expect live data, confirm keys are set in `.env` and restart the backend so environment variables are reloaded.
 - To inspect whether the backend attached a TfL key to outgoing requests, check the backend console logs — the TfL adapter logs request params (keys are masked).
 
 ## Contributing
 
-- Add provider adapters or improve parsing under `backend/app/transport_providers.py`.
-- Keep secrets out of git; only store keys in local `.env`.
+ Backend: `backend/` — FastAPI app listening on port `8003` by default.
+ Frontend: `frontend/` — Vite + React app (dev port `3001`).
 
 ---
-
-This README gives the basic runtime and developer usage. For architecture notes, provider-specific parsing details and further tests, see the `backend/` and `frontend/` folders.
 # iTransit+
 
-Lightweight, stateless transit arrivals viewer. Server provides mock data and WebSocket updates. Favourites are stored in the browser localStorage only — no server-side persistence.
+  curl 'http://127.0.0.1:8003/api/stops/nearby?lat=51.5074&lon=-0.1278&country=England'
 
 Quick start (backend):
-
 - create a Python virtualenv and install:
   - `python -m venv .venv`
-  - `.venv\Scripts\pip.exe install -r backend/requirements.txt`
-- run backend: `python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 9100 --app-dir backend`
+    curl 'http://127.0.0.1:8003/api/stops/490014585N/departures?country=England'
+- run backend: `python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8003 --app-dir backend`
 
 Frontend (dev):
 
-- `cd frontend`
+- `VITE_API_URL` — frontend uses this to locate the backend (default `http://localhost:8003`).
 - `npm install`
-- `npm run dev` (serves on http://localhost:3000)
+ If the frontend fails to start on port `3001`, check the dev server output for the bound port (open `http://localhost:3001/`).
 
 Notes:
 - This scaffold uses mock data; later phases can swap in real transport APIs.
-- Favourites live in `localStorage` under key `itransit:favourites`.
-# iTransit+
-
-Lightweight, cross-platform transit arrivals app (stateless server). Favourites are stored client-side (localStorage); backend does not persist data.
+ run backend: `python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8003 --app-dir backend`
 
 Folders:
 - `backend/` — FastAPI mock proxy and WebSocket server (no DB)
-- `frontend/` — React + Vite SPA that stores favourites in `localStorage`
-
-Quick start (backend):
+ `npm run dev` (serves on http://localhost:3001)
 
 Windows PowerShell:
 ```powershell
 cd public\workspace\python\itransit\backend
 .\venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 9100
+python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8003
 ```
 
 Frontend (dev):

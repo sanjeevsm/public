@@ -129,7 +129,7 @@ if (-not (Test-Path ".env")) {
 # Create frontend .env file
 if (-not (Test-Path "frontend/.env")) {
     Write-Host "📝 Creating frontend .env file..." -ForegroundColor Yellow
-    Set-Content "frontend/.env" "VITE_API_URL=http://localhost:8000"
+    Set-Content "frontend/.env" "VITE_API_URL=http://localhost:8002"
     Write-Host "✅ Frontend .env file created" -ForegroundColor Green
 } else {
     Write-Host "✅ Frontend .env file already exists" -ForegroundColor Green
@@ -150,6 +150,6 @@ Write-Host "   .\scripts\start-local.ps1" -ForegroundColor Yellow
 Write-Host ""
 Write-Host "3. Access the application:" -ForegroundColor White
 Write-Host "   Frontend: http://localhost:3000" -ForegroundColor Cyan
-Write-Host "   Backend:  http://localhost:8000" -ForegroundColor Cyan
-Write-Host "   API Docs: http://localhost:8000/docs" -ForegroundColor Cyan
+Write-Host "   Backend:  http://localhost:8002" -ForegroundColor Cyan
+Write-Host "   API Docs: http://localhost:8002/docs" -ForegroundColor Cyan
 Write-Host ""

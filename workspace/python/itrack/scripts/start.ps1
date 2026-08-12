@@ -46,8 +46,8 @@ if ($running) {
     Write-Host "✅ iTrack+ is now running!" -ForegroundColor Green
     Write-Host "";
     Write-Host "📱 Frontend: http://localhost:3000" -ForegroundColor Cyan
-    Write-Host "🔧 Backend API: http://localhost:8000" -ForegroundColor Cyan
-    Write-Host "📚 API Docs: http://localhost:8000/docs" -ForegroundColor Cyan
+    Write-Host "🔧 Backend API: http://localhost:8002" -ForegroundColor Cyan
+    Write-Host "📚 API Docs: http://localhost:8002/docs" -ForegroundColor Cyan
     Write-Host "";
     Write-Host "To stop the application, run: .\scripts\stop.ps1" -ForegroundColor Yellow
     Write-Host "To view logs, run: docker-compose logs -f" -ForegroundColor Yellow

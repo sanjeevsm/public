@@ -1,20 +1,20 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Starts PrimeCare+ API and web app as native Windows background processes.
+    Starts iCare+ API and web app as native Windows background processes.
     Automatically runs setup if virtual environments are not found.
 #>
 $ErrorActionPreference = "Stop"
 $ROOT = Split-Path -Parent $PSScriptRoot
 Set-Location $ROOT
 
-function Write-Info { param($msg) Write-Host "[PRIMECARE] $msg" -ForegroundColor Cyan }
+function Write-Info { param($msg) Write-Host "[ICARE] $msg" -ForegroundColor Cyan }
 function Write-Ok   { param($msg) Write-Host "[OK]        $msg" -ForegroundColor Green }
 function Write-Warn { param($msg) Write-Host "[WARN]      $msg" -ForegroundColor Yellow }
 function Write-Err  { param($msg) Write-Host "[ERROR]     $msg" -ForegroundColor Red; exit 1 }
 
 Write-Host ""
-Write-Host "  PrimeCare+"
+Write-Host "  iCare+"
 Write-Host ""
 
 # -- Load .env -------------------------------------------------------------------
@@ -28,8 +28,8 @@ Get-Content ".env" | Where-Object { $_ -notmatch "^\s*#" -and $_ -match "=" } | 
     [System.Environment]::SetEnvironmentVariable($parts[0].Trim(), $parts[1].Trim(), "Process")
 }
 
-$ApiPort    = if ($env:API_PORT)     { $env:API_PORT }     else { "5000" }
-$WebPort    = if ($env:WEB_PORT)     { $env:WEB_PORT }     else { "5001" }
+$ApiPort    = if ($env:API_PORT)     { $env:API_PORT }     else { "8004" }
+$WebPort    = if ($env:WEB_PORT)     { $env:WEB_PORT }     else { "3003" }
 $ApiUrl     = if ($env:API_URL)      { $env:API_URL }      else { "http://localhost:$ApiPort" }
 $DbHost     = if ($env:DB_HOST)      { $env:DB_HOST }      else { "localhost" }
 $DbPort     = if ($env:DB_PORT)      { $env:DB_PORT }      else { "5432" }
@@ -61,6 +61,21 @@ foreach ($dir in @(".pids", "data")) {
     $null = New-Item -ItemType Directory -Force -Path $dir
 }
 
+function Get-ListenersByPort { param([int]$Port) Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique }
+
+function Ensure-PortFree {
+    param([int]$Port)
+    $pids = Get-ListenersByPort -Port $Port
+    if ($pids) {
+        foreach ($thePid in $pids) {
+            $cmdline = ""
+            try { $cmdline = (Get-CimInstance Win32_Process -Filter "ProcessId=$thePid" | Select-Object -ExpandProperty CommandLine) } catch {}
+            Write-Err "Port $Port is in use by PID $thePid (cmd: $cmdline). Please stop it and retry."
+        }
+        exit 1
+    }
+}
+
 # -- Clear stale PIDs ------------------------------------------------------------
 foreach ($svc in @("api", "web")) {
     $pidFile = ".pids\$svc.pid"
@@ -80,7 +95,8 @@ foreach ($svc in @("api", "web")) {
 [System.Environment]::SetEnvironmentVariable("API_PORT",    $ApiPort,    "Process")
 
 # -- Start API -------------------------------------------------------------------
-Write-Info "Starting PrimeCare+ API on port $ApiPort..."
+Write-Info "Starting iCare+ API on port $ApiPort..."
+Ensure-PortFree -Port $ApiPort
 $apiProc = Start-Process -FilePath "api\venv\Scripts\python.exe" `
     -ArgumentList "api\app.py" `
     -WorkingDirectory $ROOT `
@@ -109,7 +125,8 @@ if ($ready) { Write-Ok "API is ready" } else { Write-Err "API did not start afte
 [System.Environment]::SetEnvironmentVariable("WEB_PORT", $WebPort, "Process")
 
 # -- Start web app ---------------------------------------------------------------
-Write-Info "Starting PrimeCare+ web app on port $WebPort..."
+Write-Info "Starting iCare+ web app on port $WebPort..."
+Ensure-PortFree -Port $WebPort
 $webProc = Start-Process -FilePath "web-app\venv\Scripts\python.exe" `
     -ArgumentList "web-app\client.py" `
     -WorkingDirectory $ROOT `
@@ -133,7 +150,7 @@ for ($i = 1; $i -le 15; $i++) {
 if ($ready) { Write-Ok "Web app is ready" } else { Write-Warn "Web app health check timed out -- check data\web-error.log" }
 
 Write-Host ""
-Write-Host "PrimeCare+ is running!" -ForegroundColor Green
+Write-Host "iCare+ is running!" -ForegroundColor Green
 Write-Host ""
 Write-Host "  Web app  ->  http://localhost:$WebPort"  -ForegroundColor Green
 Write-Host "  Reports  ->  http://localhost:$WebPort/reports" -ForegroundColor Green

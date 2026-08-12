@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Stops PrimeCare+ servers by reading PIDs written by start.sh.
+# Stops iCare+ servers by reading PIDs written by start.sh.
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -33,7 +33,7 @@ stop_pid web
 stop_pid api
 
 # Flask debug mode spawns a reloader child that survives parent termination.
-# Sweep for any orphaned primecare processes by matching the venv paths.
+# Sweep for any orphaned icare processes by matching the venv paths.
 sweep_orphans() {
     local pattern="$1"
     local found=false
@@ -49,8 +49,8 @@ sweep_orphans() {
     $found || true
 }
 
-sweep_orphans "primecare/api/venv"
-sweep_orphans "primecare/web-app/venv"
+sweep_orphans "icare/api/venv"
+sweep_orphans "icare/web-app/venv"
 
 echo ""
 echo "Done."

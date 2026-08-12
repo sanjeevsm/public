@@ -26,9 +26,9 @@ while IFS='=' read -r key val; do
     export "${key// }"="${val}"
 done < .env
 
-API_PORT="${APP_PORT:-8090}"
-PROM_PORT="${PROMETHEUS_PORT:-9091}"
-GRAF_PORT="${GRAFANA_PORT:-3001}"
+API_PORT="${APP_PORT:-8000}"
+PROM_PORT="${PROMETHEUS_PORT:-9000}"
+GRAF_PORT="${GRAFANA_PORT:-9001}"
 LOG_LEVEL="${LOG_LEVEL:-info}"
 PROM_RETAIN="${PROMETHEUS_RETENTION:-30d}"
 
@@ -56,8 +56,26 @@ UVICORN="$ROOT/dashboard_api/.venv/bin/uvicorn"
 # -- Create runtime directories
 mkdir -p .pids exports data/prometheus data/grafana-logs
 
+check_and_free_port() {
+    local port="$1"
+    if command -v lsof >/dev/null 2>&1; then
+        pids=$(lsof -t -iTCP:"$port" -sTCP:LISTEN 2>/dev/null || true)
+    else
+        pids=$(netstat -aon 2>/dev/null | grep ":$port " | sed -n 's/.* \([0-9]*\)$/\1/p' || true)
+    fi
+    if [ -n "$pids" ]; then
+        for pid in $pids; do
+            cmd=$(ps -p "$pid" -o args= 2>/dev/null || true)
+            echo "Port $port is in use by PID $pid -> $cmd"
+        done
+        echo "Please stop the above process(es) and retry." >&2
+        exit 1
+    fi
+}
+
 # -- Start Prometheus
 info "Starting Prometheus on port $PROM_PORT ..."
+check_and_free_port "$PROM_PORT"
 "$PROMETHEUS_EXE" \
     --config.file="$ROOT/prometheus/prometheus.yml" \
     --storage.tsdb.path="$ROOT/data/prometheus" \
@@ -69,6 +87,7 @@ ok "Prometheus started (PID $(cat .pids/prometheus.pid))"
 
 # -- Start Grafana
 info "Starting Grafana on port $GRAF_PORT ..."
+check_and_free_port "$GRAF_PORT"
 GRAFANA_ADMIN_USER="${GRAFANA_ADMIN_USER:-admin}"
 GRAFANA_ADMIN_PASSWORD="${GRAFANA_ADMIN_PASSWORD:-admin123}"
 
@@ -87,6 +106,7 @@ ok "Grafana started (PID $(cat .pids/grafana.pid))"
 
 # -- Start FastAPI
 info "Starting CI/CD Dashboard API on port $API_PORT ..."
+check_and_free_port "$API_PORT"
 EXPORT_DIR="$ROOT/exports" \
 APP_PORT="$API_PORT" \
 LOG_LEVEL="$LOG_LEVEL" \

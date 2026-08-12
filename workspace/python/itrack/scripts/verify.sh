@@ -69,7 +69,7 @@ check_port() {
 
 PORTS_OK=true
 check_port 3000 || PORTS_OK=false
-check_port 8000 || PORTS_OK=false
+check_port 8002 || PORTS_OK=false
 check_port 27017 || PORTS_OK=false
 echo ""
 

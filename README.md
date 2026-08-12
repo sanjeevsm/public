@@ -12,7 +12,18 @@ Use the links below to open a project README and follow its Quick Start section 
 | iLab+ — AI Interview Simulator | AI-powered interview question generator and quiz platform (desktop + web modes). | [workspace/python/ilab/README.md](workspace/python/ilab/README.md)
 | iTrack+ — Personal Finance Tracker | Personal finance tracker with multi-user collaboration and reporting. | [workspace/python/itrack/README.md](workspace/python/itrack/README.md)
 | iTransit+ — Public Transport Viewer | Stateless frontend + FastAPI backend integrating TfL and other UK transport APIs with client-side favourites and mock fallback. | [workspace/python/itransit/README.md](workspace/python/itransit/README.md)
-| PrimeCare+ — Clinic Management System | Clinic management system with REST API and reporting features. | [workspace/python/primecare/README.md](workspace/python/primecare/README.md)
+| iCare+ — Clinic Management System | Clinic management system with REST API and reporting features. | [workspace/python/icare/README.md](workspace/python/icare/README.md)
+
+**Default Ports**
+
+| Project | Backend | Frontend | Other / System |
+|---|---:|---:|---|
+| CI/CD Dashboard | 8000 | — | Prometheus 9000, Grafana 9001 |
+| iLab+ | 8001 (web) | — | — |
+| iTrack+ | 8002 | 3000 | MongoDB 27017 |
+| iTransit+ | 8003 | 3001 | — |
+| iCare+ | 8004 | 3003 | Postgres 5432 |
+| System services | Postgres 5432 | — | MongoDB 27017, Prometheus 9000, Grafana 9001 |
 
 ## Quick start — view any project
 

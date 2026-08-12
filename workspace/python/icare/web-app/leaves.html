@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}iCare+ — Doctor Leaves{% endblock %}
+{% block content %}
+<div class="page-head"><div class="page-head-text"><h1>Doctor Leaves</h1><p>Upcoming leaves and reasons.</p></div></div>
+<div class="container"><div id="leaves"></div></div>
+{% endblock %}
+{% block scripts %}
+<script>
+fetch('{{ api_url }}/leaves').then(r=>r.json()).then(data=>{
+  const root = document.getElementById('leaves');
+  data.forEach(l=>{ const d=document.createElement('div'); d.textContent = `${l.doctor_id}: ${l.leave_date} — ${l.reason||''}`; root.appendChild(d); })
+})
+</script>
+{% endblock %}

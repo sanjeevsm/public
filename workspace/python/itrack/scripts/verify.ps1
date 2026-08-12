@@ -51,17 +51,17 @@ function Test-Port {
     
     $connection = Get-NetTCPConnection -LocalPort $Port -ErrorAction SilentlyContinue
     if ($connection) {
-        Write-Host "  Port $Port: ✗ In use" -ForegroundColor Red
+        Write-Host "  Port ${Port}: ✗ In use" -ForegroundColor Red
         return $false
     } else {
-        Write-Host "  Port $Port: ✓ Available" -ForegroundColor Green
+        Write-Host "  Port ${Port}: ✓ Available" -ForegroundColor Green
         return $true
     }
 }
 
 $portsOk = $true
 $portsOk = (Test-Port 3000) -and $portsOk
-$portsOk = (Test-Port 8000) -and $portsOk
+$portsOk = (Test-Port 8002) -and $portsOk
 $portsOk = (Test-Port 27017) -and $portsOk
 Write-Host ""
 
@@ -75,30 +75,30 @@ if (-not $portsOk) {
 # Check project structure
 Write-Host "Checking project structure..." -ForegroundColor Cyan
 
-function Check-Directory {
+function Test-Directory {
     param($Path)
-    
+
     if (Test-Path -Path $Path -PathType Container) {
-        Write-Host "  $Path: ✓" -ForegroundColor Green
+        Write-Host "  ${Path}: ✓" -ForegroundColor Green
     } else {
-        Write-Host "  $Path: ✗ Missing" -ForegroundColor Red
+        Write-Host "  ${Path}: ✗ Missing" -ForegroundColor Red
     }
 }
 
-function Check-File {
+function Test-File {
     param($Path)
-    
+
     if (Test-Path -Path $Path -PathType Leaf) {
-        Write-Host "  $Path: ✓" -ForegroundColor Green
+        Write-Host "  ${Path}: ✓" -ForegroundColor Green
     } else {
-        Write-Host "  $Path: ✗ Missing" -ForegroundColor Red
+        Write-Host "  ${Path}: ✗ Missing" -ForegroundColor Red
     }
 }
 
-Check-Directory "backend"
-Check-Directory "frontend"
-Check-File "docker-compose.yml"
-Check-File ".env"
+Test-Directory "backend"
+Test-Directory "frontend"
+Test-File "docker-compose.yml"
+Test-File ".env"
 Write-Host ""
 
 # Summary

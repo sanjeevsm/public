@@ -1,18 +1,17 @@
 #!/usr/bin/env bash
-# Starts PrimeCare+ API and web app on macOS / Linux / Windows (Git Bash / WSL).
-# Automatically runs setup if virtual environments are not found.
+# Starts iCare+ API and web app on macOS / Linux / Windows (Git Bash / WSL).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-info() { echo "[PRIMECARE] $*"; }
+info() { echo "[ICARE] $*"; }
 ok()   { echo "[OK]        $*"; }
 warn() { echo "[WARN]      $*"; }
 err()  { echo "[ERROR]     $*" >&2; exit 1; }
 
 echo ""
-echo "  PrimeCare+"
+echo "  iCare+"
 echo ""
 
 # -- Load .env -------------------------------------------------------------------
@@ -27,8 +26,8 @@ while IFS='=' read -r key val; do
     export "${key// }"="${val}"
 done < .env
 
-API_PORT="${API_PORT:-5000}"
-WEB_PORT="${WEB_PORT:-5001}"
+API_PORT="${API_PORT:-8004}"
+WEB_PORT="${WEB_PORT:-3003}"
 API_URL="${API_URL:-http://localhost:$API_PORT}"
 DB_HOST="${DB_HOST:-localhost}"
 DB_PORT="${DB_PORT:-5432}"
@@ -71,11 +70,29 @@ for svc in api web; do
 done
 
 # -- Start API -------------------------------------------------------------------
-info "Starting PrimeCare+ API on port $API_PORT..."
+check_and_free_port() {
+    local port="$1"
+    if command -v lsof >/dev/null 2>&1; then
+        pids=$(lsof -t -iTCP:"$port" -sTCP:LISTEN 2>/dev/null || true)
+    else
+        pids=$(netstat -aon 2>/dev/null | grep ":$port " | sed -n 's/.* \([0-9]*\)$/\1/p' || true)
+    fi
+    if [ -n "$pids" ]; then
+        for pid in $pids; do
+            cmd=$(ps -p "$pid" -o args= 2>/dev/null || true)
+            echo "Port $port is in use by PID $pid -> $cmd"
+        done
+        echo "Please stop the above process(es) and retry." >&2
+        exit 1
+    fi
+}
+
+info "Starting iCare+ API on port $API_PORT..."
+check_and_free_port "$API_PORT"
 DB_HOST="$DB_HOST" DB_PORT="$DB_PORT" DB_NAME="$DB_NAME" \
-  DB_USER="$DB_USER" DB_PASSWORD="$DB_PASSWORD" API_PORT="$API_PORT" \
-  nohup api/venv/bin/python api/app.py \
-    >"$ROOT/data/api.log" 2>"$ROOT/data/api-error.log" &
+    DB_USER="$DB_USER" DB_PASSWORD="$DB_PASSWORD" API_PORT="$API_PORT" \
+    nohup api/venv/bin/python api/app.py \
+        >"$ROOT/data/api.log" 2>"$ROOT/data/api-error.log" &
 echo $! > .pids/api.pid
 ok "API started (PID $(cat .pids/api.pid))"
 
@@ -92,7 +109,8 @@ for i in $(seq 1 20); do
 done
 
 # -- Start web app ---------------------------------------------------------------
-info "Starting PrimeCare+ web app on port $WEB_PORT..."
+info "Starting iCare+ web app on port $WEB_PORT..."
+check_and_free_port "$WEB_PORT"
 API_URL="$API_URL" WEB_PORT="$WEB_PORT" \
   nohup web-app/venv/bin/python web-app/client.py \
     >"$ROOT/data/web.log" 2>"$ROOT/data/web-error.log" &
@@ -111,7 +129,7 @@ for i in $(seq 1 15); do
 done
 
 echo ""
-echo "PrimeCare+ is running!"
+echo "iCare+ is running!"
 echo ""
 echo "  Web app  ->  http://localhost:$WEB_PORT"
 echo "  Reports  ->  http://localhost:$WEB_PORT/reports"

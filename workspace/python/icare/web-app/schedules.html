@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}iCare+ — Schedules{% endblock %}
+{% block content %}
+<div class="page-head"><div class="page-head-text"><h1>Schedules</h1><p>Doctor weekly schedules.</p></div></div>
+<div class="container"><div id="schedules"></div></div>
+{% endblock %}
+{% block scripts %}
+<script>
+fetch('{{ api_url }}/schedules').then(r=>r.json()).then(data=>{
+  const root = document.getElementById('schedules');
+  data.forEach(s=>{ const p=document.createElement('p'); p.textContent = `${s.doctor_id}: ${s.day_of_week} ${s.start_time}-${s.end_time}`; root.appendChild(p); })
+})
+</script>
+{% endblock %}

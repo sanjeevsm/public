@@ -166,18 +166,33 @@ if ($Mode -eq "desktop") {
         Write-Warn ".env not found -- copy .env.example to .env to configure ILAB_SECRET and PORT"
     }
 
-    # Resolve port: -Port parameter > .env PORT > default 8000
+    # Resolve port: -Port parameter > .env PORT > default 8001
     if ($Port -gt 0) {
         # -Port flag wins
     } elseif ([System.Environment]::GetEnvironmentVariable("PORT")) {
         $Port = [int][System.Environment]::GetEnvironmentVariable("PORT")
     } else {
-        $Port = 8000
+        $Port = 8001
     }
 
     # Resolve bind host: .env HOST > default 0.0.0.0 (all interfaces = LAN accessible)
     $BindHost = [System.Environment]::GetEnvironmentVariable("HOST")
     if (-not $BindHost) { $BindHost = "0.0.0.0" }
+
+    function Get-ListenersByPort { param([int]$Port) Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique }
+
+    function Ensure-PortFree {
+        param([int]$Port)
+        $pids = Get-ListenersByPort -Port $Port
+        if ($pids) {
+            foreach ($thePid in $pids) {
+                $cmdline = ""
+                try { $cmdline = (Get-CimInstance Win32_Process -Filter "ProcessId=$thePid" | Select-Object -ExpandProperty CommandLine) } catch {}
+                Write-Err "Port $Port is in use by PID $thePid (cmd: $cmdline). Please stop it and retry."
+            }
+            exit 1
+        }
+    }
 
     # Warn if session secret is unset
     if (-not [System.Environment]::GetEnvironmentVariable("ILAB_SECRET")) {
