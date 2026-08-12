@@ -41,20 +41,39 @@ if (-not $DbPassword) { Write-Warn "DB_PASSWORD is not set in .env -- database c
 
 # -- Auto-setup if venvs are missing ---------------------------------------------
 if (-not (Test-Path "api\venv") -or -not (Test-Path "web-app\venv")) {
-    Write-Info "Virtual environments not found -- running setup first..."
-    & "$ROOT\scripts\setup.ps1"
+    Write-Err "Virtual environments not found. Please run scripts/setup.ps1 first to create venvs and install dependencies."
 }
 
 # -- Auto-install if deps are stale ----------------------------------------------
-$flaskCheck = & "api\venv\Scripts\python.exe" -c "import flask, psycopg2" 2>&1
+$flaskCheck = $null
+try {
+    $flaskCheck = & "api\venv\Scripts\python.exe" -c "import flask, psycopg2" 2>&1
+} catch {
+    $flaskCheck = $_.Exception.Message
+    $LASTEXITCODE = 1
+}
 if ($LASTEXITCODE -ne 0) {
     Write-Info "Installing API dependencies..."
-    & "api\venv\Scripts\pip.exe" install --quiet -r "api\requirements.txt"
+    if (Test-Path "api\requirements.txt") {
+        & "api\venv\Scripts\pip.exe" install --quiet -r "api\requirements.txt"
+    } else {
+        Write-Warn "api\requirements.txt missing; please install API dependencies manually."
+    }
 }
-$webCheck = & "web-app\venv\Scripts\python.exe" -c "import flask, requests" 2>&1
+$webCheck = $null
+try {
+    $webCheck = & "web-app\venv\Scripts\python.exe" -c "import flask, requests" 2>&1
+} catch {
+    $webCheck = $_.Exception.Message
+    $LASTEXITCODE = 1
+}
 if ($LASTEXITCODE -ne 0) {
     Write-Info "Installing web-app dependencies..."
-    & "web-app\venv\Scripts\pip.exe" install --quiet -r "web-app\requirements.txt"
+    if (Test-Path "web-app\requirements.txt") {
+        & "web-app\venv\Scripts\pip.exe" install --quiet -r "web-app\requirements.txt"
+    } else {
+        Write-Warn "web-app\requirements.txt missing; please install web-app dependencies manually."
+    }
 }
 
 foreach ($dir in @(".pids", "data")) {
