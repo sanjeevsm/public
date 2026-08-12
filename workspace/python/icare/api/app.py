@@ -259,6 +259,10 @@ def update_doctor(did):
 @app.route('/doctors/<int:did>', methods=['DELETE'])
 def delete_doctor(did):
     if _use_db():
+        # prevent deletion if doctor has pending appointments
+        rows = query("SELECT count(*) as cnt FROM appointments WHERE doctor_id=%s AND status!='completed'", (did,))
+        if rows and int(rows[0].get('cnt',0))>0:
+            return fail('doctor has pending appointments', 400)
         r = query('DELETE FROM doctors WHERE id=%s RETURNING id', (did,))
         if not r:
             return fail('not found', 404)
@@ -401,6 +405,166 @@ def create_appointment():
               (doctor_id, patient_id, date_str, start_time, end_time, 'booked'))
     return ok(r[0], 201)
 
+
+# --- Patients CRUD ----------------------------------------------------------
+@app.route('/patients/<int:pid>', methods=['GET'])
+def get_patient(pid):
+    if _use_db():
+        rows = query('SELECT id, first_name, last_name, email, phone FROM patients WHERE id=%s', (pid,))
+        if not rows:
+            return fail('not found', 404)
+        return ok(rows[0])
+    else:
+        return fail('not available without DB', 404)
+
+
+@app.route('/patients', methods=['POST'])
+def create_patient():
+    body = request.get_json(force=True, silent=True) or {}
+    if not body.get('first_name') or not body.get('last_name'):
+        return fail('first_name and last_name required', 400)
+    if _use_db():
+        r = query('INSERT INTO patients (first_name,last_name,email,phone) VALUES (%s,%s,%s,%s) RETURNING id, first_name, last_name, email, phone',
+                  (body.get('first_name'), body.get('last_name'), body.get('email'), body.get('phone')))
+        return ok(r[0], 201)
+    else:
+        return fail('not available without DB', 400)
+
+
+@app.route('/patients/<int:pid>', methods=['PUT'])
+def update_patient(pid):
+    body = request.get_json(force=True, silent=True) or {}
+    if _use_db():
+        r = query('UPDATE patients SET first_name=%s,last_name=%s,email=%s,phone=%s WHERE id=%s RETURNING id, first_name, last_name, email, phone',
+                  (body.get('first_name'), body.get('last_name'), body.get('email'), body.get('phone'), pid))
+        if not r:
+            return fail('not found', 404)
+        return ok(r[0])
+    else:
+        return fail('not available without DB', 404)
+
+
+@app.route('/patients/<int:pid>', methods=['DELETE'])
+def delete_patient(pid):
+    if _use_db():
+        rows = query("SELECT count(*) as cnt FROM appointments WHERE patient_id=%s AND status!='completed'", (pid,))
+        if rows and int(rows[0].get('cnt',0))>0:
+            return fail('patient has pending appointments', 400)
+        r = query('DELETE FROM patients WHERE id=%s RETURNING id', (pid,))
+        if not r:
+            return fail('not found', 404)
+        return ok({'deleted': r[0]['id']})
+    else:
+        return fail('not available without DB', 404)
+
+
+# --- Schedules list across doctors -----------------------------------------
+@app.route('/schedules', methods=['GET'])
+def list_schedules():
+    if _use_db():
+        rows = query('SELECT id, doctor_id, day_of_week, start_time, end_time FROM doctor_schedules ORDER BY doctor_id, day_of_week, start_time')
+        return ok(rows)
+    else:
+        return ok([])
+
+
+# --- Leaves (doctor leaves) -------------------------------------------------
+@app.route('/leaves', methods=['GET'])
+def list_leaves():
+    if _use_db():
+        rows = query('SELECT id, doctor_id, leave_date, reason FROM doctor_leaves ORDER BY leave_date DESC')
+        return ok(rows)
+    else:
+        return ok([])
+
+
+@app.route('/leaves', methods=['POST'])
+def create_leave():
+    body = request.get_json(force=True, silent=True) or {}
+    if not body.get('doctor_id') or not body.get('leave_date'):
+        return fail('doctor_id and leave_date required', 400)
+    if _use_db():
+        r = query('INSERT INTO doctor_leaves (doctor_id, leave_date, reason) VALUES (%s,%s,%s) RETURNING id, doctor_id, leave_date, reason',
+                  (body.get('doctor_id'), body.get('leave_date'), body.get('reason')))
+        return ok(r[0], 201)
+    else:
+        return fail('not available without DB', 400)
+
+
+@app.route('/leaves/<int:lid>', methods=['DELETE'])
+def delete_leave(lid):
+    if _use_db():
+        r = query('DELETE FROM doctor_leaves WHERE id=%s RETURNING id', (lid,))
+        if not r:
+            return fail('not found', 404)
+        return ok({'deleted': r[0]['id']})
+    else:
+        return fail('not available without DB', 404)
+
+
+# --- Case history for patients ---------------------------------------------
+@app.route('/case_histories', methods=['GET'])
+def list_case_histories():
+    pid = request.args.get('patient_id')
+    if _use_db():
+        if pid:
+            rows = query('SELECT id, patient_id, notes, created_at FROM case_histories WHERE patient_id=%s ORDER BY created_at DESC', (pid,))
+        else:
+            rows = query('SELECT id, patient_id, notes, created_at FROM case_histories ORDER BY created_at DESC LIMIT 500')
+        return ok(rows)
+    else:
+        return ok([])
+
+
+@app.route('/case_histories', methods=['POST'])
+def create_case_history():
+    body = request.get_json(force=True, silent=True) or {}
+    if not body.get('patient_id') or not body.get('notes'):
+        return fail('patient_id and notes required', 400)
+    if _use_db():
+        r = query('INSERT INTO case_histories (patient_id, notes, created_at) VALUES (%s,%s,now()) RETURNING id, patient_id, notes, created_at',
+                  (body.get('patient_id'), body.get('notes')))
+        return ok(r[0], 201)
+    else:
+        return fail('not available without DB', 400)
+
+
+@app.route('/case_histories/<int:cid>', methods=['DELETE'])
+def delete_case_history(cid):
+    if _use_db():
+        r = query('DELETE FROM case_histories WHERE id=%s RETURNING id', (cid,))
+        if not r:
+            return fail('not found', 404)
+        return ok({'deleted': r[0]['id']})
+    else:
+        return fail('not available without DB', 404)
+
+
+# --- Reports: simple financial summary -------------------------------------
+@app.route('/reports/financial', methods=['GET'])
+def financial_report():
+    # month in YYYY-MM
+    month = request.args.get('month')
+    fee = float(os.getenv('APPT_FEE', '100'))
+    cost_pct = float(os.getenv('COST_PCT', '0.3'))
+    if not _use_db():
+        return ok({'month': month, 'revenue': 0.0, 'costs': 0.0, 'profit': 0.0})
+    if not month:
+        return fail('month is required (YYYY-MM)', 400)
+    try:
+        y, m = month.split('-')
+        y = int(y); m = int(m)
+    except Exception:
+        return fail('invalid month', 400)
+    start = f"{y:04d}-{m:02d}-01"
+    # naive month end (not handling month lengths specially, use SQL date_trunc)
+    sql = "SELECT count(*) as cnt FROM appointments WHERE to_char(appointment_date,'YYYY-MM')=%s"
+    rows = query(sql, (month,))
+    cnt = int(rows[0]['cnt']) if rows else 0
+    revenue = cnt * fee
+    costs = revenue * cost_pct
+    profit = revenue - costs
+    return ok({'month': month, 'appointments': cnt, 'revenue': revenue, 'costs': costs, 'profit': profit})
 
 # --- Run block -----------------------------------------------------------------
 if __name__ == '__main__':

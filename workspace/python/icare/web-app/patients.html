@@ -3,16 +3,29 @@
 {% block content %}
 <div class="page-head"><div class="page-head-text"><h1>Patients</h1><p>Patient records and contact details.</p></div></div>
 <div class="container">
-  <table>
-    <thead><tr><th>#</th><th>Name</th><th>Phone</th><th>Email</th></tr></thead>
-    <tbody id="patientsBody">
-      {% if patients %}
-        {% for p in patients %}
-          <tr><td>{{ p.id }}</td><td>{{ p.first_name }} {{ p.last_name }}</td><td>{{ p.phone }}</td><td>{{ p.email or '' }}</td></tr>
-        {% endfor %}
-      {% endif %}
-    </tbody>
-  </table>
+  <div class="mb-4"><a href="/patients/new" class="px-3 py-1 bg-[var(--brand)] text-white rounded">New patient</a></div>
+  <div class="card p-4">
+    <table class="min-w-full">
+      <thead>
+        <tr>
+          <th class="text-left p-2">#</th>
+          <th class="text-left p-2">Name</th>
+          <th class="text-left p-2">Phone</th>
+          <th class="text-left p-2">Email</th>
+          <th class="text-left p-2">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="patientsBody">
+        {% if patients %}
+          {% for p in patients %}
+            <tr class="border-t"><td class="p-2">{{ p.id }}</td><td class="p-2">{{ p.first_name }} {{ p.last_name }}</td><td class="p-2">{{ p.phone }}</td><td class="p-2">{{ p.email or '' }}</td><td class="p-2"><a href="/patients/{{ p.id }}/edit" style="color:var(--brand)">Edit</a> <button onclick="deletePatient({{ p.id }})" class="text-red-600 ml-2">Delete</button></td></tr>
+          {% endfor %}
+        {% else %}
+          <tr><td class="p-2" colspan="5">No patients</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
 </div>
 {% endblock %}
 
@@ -23,10 +36,19 @@ fetch('{{ api_url }}/patients').then(r=>r.json()).then(data=>{
   if (!body.querySelector('tr')) {
     data.forEach(p=>{
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${p.id}</td><td>${p.first_name} ${p.last_name}</td><td>${p.phone}</td><td>${p.email||''}</td>`;
+      tr.className='border-t';
+      tr.innerHTML = `<td class="p-2">${p.id}</td><td class="p-2">${p.first_name} ${p.last_name}</td><td class="p-2">${p.phone}</td><td class="p-2">${p.email||''}</td><td class="p-2"><a href="/patients/${p.id}/edit" style="color:var(--brand)">Edit</a> <button onclick="deletePatient(${p.id})" class="text-red-600 ml-2">Delete</button></td>`;
       body.appendChild(tr);
     })
   }
 })
+
+function deletePatient(id){
+  if (!confirm('Delete patient? This will fail if patient has pending appointments.')) return;
+  fetch('{{ api_url }}/patients/' + id, { method: 'DELETE' }).then(r=>r.json().then(j=>({ok:r.ok, body:j}))).then(res=>{
+    if (!res.ok) return alert(res.body.error || 'delete failed');
+    window.location.reload();
+  }).catch(()=>alert('delete failed'));
+}
 </script>
 {% endblock %}

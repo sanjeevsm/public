@@ -76,6 +76,104 @@ def patients():
     return render_template('patients.html', patients=r.json())
 
 
+@app.route('/patients/new')
+def new_patient():
+    return render_template('patients_edit.html', patient=None, action=url_for('create_patient'))
+
+
+@app.route('/patients', methods=['POST'])
+def create_patient():
+    data = {k: request.form.get(k) for k in ('first_name','last_name','email','phone')}
+    try:
+        requests.post(f'{API_URL}/patients', json=data, timeout=5)
+    except Exception:
+        pass
+    return redirect(url_for('patients'))
+
+
+@app.route('/patients/<int:pid>/edit')
+def edit_patient(pid):
+    r = requests.get(f'{API_URL}/patients/{pid}', timeout=5)
+    if r.status_code != 200:
+        return redirect(url_for('patients'))
+    return render_template('patients_edit.html', patient=r.json(), action=url_for('update_patient', pid=pid))
+
+
+@app.route('/patients/<int:pid>', methods=['POST'])
+def update_patient(pid):
+    data = {k: request.form.get(k) for k in ('first_name','last_name','email','phone')}
+    try:
+        requests.put(f'{API_URL}/patients/{pid}', json=data, timeout=5)
+    except Exception:
+        pass
+    return redirect(url_for('patients'))
+
+
+@app.route('/patients/<int:pid>/delete', methods=['POST'])
+def delete_patient(pid):
+    try:
+        requests.delete(f'{API_URL}/patients/{pid}', timeout=5)
+    except Exception:
+        pass
+    return redirect(url_for('patients'))
+
+
+@app.route('/schedules')
+def schedules():
+    return render_template('schedules.html')
+
+
+@app.route('/leaves')
+def leaves():
+    return render_template('leaves.html')
+
+
+@app.route('/leaves/new', methods=['POST'])
+def create_leave_route():
+    data = { 'doctor_id': int(request.form.get('doctor_id')), 'leave_date': request.form.get('leave_date'), 'reason': request.form.get('reason') }
+    try:
+        requests.post(f'{API_URL}/leaves', json=data, timeout=5)
+    except Exception:
+        pass
+    return redirect(url_for('leaves'))
+
+
+@app.route('/leaves/<int:lid>/delete', methods=['POST'])
+def delete_leave_route(lid):
+    try:
+        requests.delete(f'{API_URL}/leaves/{lid}', timeout=5)
+    except Exception:
+        pass
+    return redirect(url_for('leaves'))
+
+
+@app.route('/case_history')
+def case_history():
+    return render_template('case_history.html')
+
+
+@app.route('/case_histories/new', methods=['POST'])
+def create_case_history_route():
+    data = { 'patient_id': int(request.form.get('patient_id')), 'notes': request.form.get('notes') }
+    try:
+        requests.post(f'{API_URL}/case_histories', json=data, timeout=5)
+    except Exception:
+        pass
+    return redirect(url_for('case_history'))
+
+
+@app.route('/case_histories/<int:cid>/delete', methods=['POST'])
+def delete_case_history_route(cid):
+    try:
+        requests.delete(f'{API_URL}/case_histories/{cid}', timeout=5)
+    except Exception:
+        pass
+    return redirect(url_for('case_history'))
+
+
+
+
+
 @app.route('/doctors')
 def doctors():
     r = requests.get(f'{API_URL}/doctors', timeout=5)
@@ -89,9 +187,31 @@ def new_doctor():
 
 @app.route('/doctors', methods=['POST'])
 def create_doctor():
+    # create doctor then optional schedules
     data = {k: request.form.get(k) for k in ('first_name','last_name','email','phone','speciality_id')}
     try:
-        requests.post(f'{API_URL}/doctors', json=data, timeout=5)
+        r = requests.post(f'{API_URL}/doctors', json=data, timeout=5)
+        if r.status_code == 201:
+            doc = r.json()
+            # collect schedules from form arrays
+            days = request.form.getlist('schedule_day[]') if 'schedule_day[]' in request.form else request.form.getlist('schedule_day')
+            starts = request.form.getlist('schedule_start[]') if 'schedule_start[]' in request.form else request.form.getlist('schedule_start')
+            ends = request.form.getlist('schedule_end[]') if 'schedule_end[]' in request.form else request.form.getlist('schedule_end')
+            for i in range(len(days)):
+                try:
+                    dow = int(days[i])
+                except Exception:
+                    continue
+                st = starts[i] if i < len(starts) else ''
+                en = ends[i] if i < len(ends) else ''
+                if st and en:
+                    # ensure seconds
+                    if len(st.split(':'))==2: st = st + ':00'
+                    if len(en.split(':'))==2: en = en + ':00'
+                    try:
+                        requests.post(f"{API_URL}/doctors/{doc['id']}/schedules", json={'day_of_week': dow, 'start_time': st, 'end_time': en}, timeout=5)
+                    except Exception:
+                        pass
     except Exception:
         pass
     return redirect(url_for('doctors'))

@@ -12,19 +12,21 @@
       <label>Date<input type="date" id="apptDate" name="appointment_date" class="p-2 border" /></label>
       <label>Slot Minutes<select id="slotMinutes" name="slot_minutes" class="p-2 border"><option value="10">10</option><option value="15">15</option><option value="30">30</option></select></label>
       <label class="col-span-2">Time<select id="slotSelect" name="start_time" class="p-2 border w-full"></select></label>
-      <div><button class="px-3 py-1 bg-emerald-600 text-white rounded">Book</button></div>
+      <div><button class="px-3 py-1 bg-[var(--brand)] text-white rounded">Book</button></div>
     </form>
   </div>
-  <table>
-    <thead><tr><th>#</th><th>Date</th><th>Time</th><th>Doctor</th><th>Patient</th><th>Status</th></tr></thead>
-    <tbody id="appointmentsBody">
-      {% if appointments %}
-        {% for a in appointments %}
-          <tr><td>{{ a.id }}</td><td>{{ a.appointment_date }}</td><td>{{ a.start_time }} - {{ a.end_time }}</td><td>{{ a.doctor_name }}</td><td>{{ a.patient_name }}</td><td>{{ a.status }}</td></tr>
-        {% endfor %}
-      {% endif %}
-    </tbody>
-  </table>
+    <table class="min-w-full">
+      <thead><tr><th class="p-2 text-left">#</th><th class="p-2 text-left">Date</th><th class="p-2 text-left">Time</th><th class="p-2 text-left">Doctor</th><th class="p-2 text-left">Patient</th><th class="p-2 text-left">Status</th></tr></thead>
+      <tbody id="appointmentsBody">
+        {% if appointments %}
+          {% for a in appointments %}
+            <tr class="border-t"><td class="p-2">{{ a.id }}</td><td class="p-2">{{ a.appointment_date }}</td><td class="p-2">{{ a.start_time }} - {{ a.end_time }}</td><td class="p-2">{{ a.doctor_name }}</td><td class="p-2">{{ a.patient_name }}</td><td class="p-2">{{ a.status }}</td></tr>
+          {% endfor %}
+        {% else %}
+          <tr><td class="p-2" colspan="6">No appointments</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
 </div>
 {% endblock %}
 

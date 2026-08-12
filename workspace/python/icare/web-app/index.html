@@ -4,3 +4,72 @@
   <div class="page-head"><div class="page-head-text"><h1>iCare+ Clinic Dashboard</h1><p>Manage doctors, patients and appointments.</p></div></div>
   <p><a href="/reports">Reports</a> | <a href="/specialities">Specialities</a></p>
 {% endblock %}
+{% block scripts %}
+<script>
+// Dashboard: fetch doctors, specialities, schedules and render grid with filter
+const container = document.createElement('div'); container.className='mt-4';
+const filterRow = document.createElement('div'); filterRow.className='flex items-center gap-2 mb-4';
+filterRow.innerHTML = `<label class="text-sm text-slate-600 mr-2">Filter by speciality:</label><div id="specButtons" class="flex gap-2 overflow-auto"></div>`;
+container.appendChild(filterRow);
+const grid = document.createElement('div'); grid.className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4'; container.appendChild(grid);
+document.querySelector('main').appendChild(container);
+
+let doctors = [];
+let specs = [];
+let schedules = [];
+Promise.all([fetch('{{ api_url }}/doctors').then(r=>r.json()), fetch('{{ api_url }}/specialities').then(r=>r.json()), fetch('{{ api_url }}/schedules').then(r=>r.json())]).then(([d, sp, sc])=>{
+  doctors = d; specs = sp; schedules = sc;
+  // create option buttons: All + one per speciality
+  const btns = document.getElementById('specButtons');
+  const makeBtn = (id, label)=>{
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'px-3 py-1 rounded border text-sm';
+    b.dataset.specId = id;
+    b.textContent = label;
+    b.addEventListener('click', ()=>{ window.setSelectedSpec(id); });
+    return b;
+  };
+  btns.appendChild(makeBtn('', 'All'));
+  specs.forEach(s=> btns.appendChild(makeBtn(s.id, s.name)));
+  // track selection
+  window._selectedSpecId = '';
+  window.setSelectedSpec = function(id){
+    window._selectedSpecId = id;
+    // update active styles
+    Array.from(btns.children).forEach(b=>{
+      if ((b.dataset.specId||'')+'' === (id||'')+ ''){ b.classList.add('bg-[var(--brand)]','text-white'); b.classList.remove('border'); }
+      else { b.classList.remove('bg-[var(--brand)]','text-white'); b.classList.add('border'); }
+    });
+    renderGrid();
+  }
+  window.setSelectedSpec('');
+})
+
+function renderGrid(){
+  const selId = window._selectedSpecId || '';
+  grid.innerHTML='';
+  doctors.filter(doc=>!selId || (doc.speciality_id && doc.speciality_id.toString()===selId.toString())).forEach(doc=>{
+    const card = document.createElement('div'); card.className='card p-4 flex gap-4 items-start';
+    const img = document.createElement('img'); img.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(doc.first_name+' '+doc.last_name)}&size=128&background=cccccc&color=000000`; img.className='w-20 h-20 rounded-full';
+    const right = document.createElement('div'); right.className='flex-1';
+    const title = document.createElement('div'); title.innerHTML = `<div class="font-semibold">${doc.first_name} ${doc.last_name}</div><div class="text-sm text-slate-500">${getSpecName(doc.speciality_id)}</div>`;
+    const schedDiv = document.createElement('div'); schedDiv.className='mt-2 text-sm';
+    const docSched = schedules.filter(s=>s.doctor_id==doc.id);
+    if (docSched.length===0) schedDiv.textContent='No schedules'; else {
+      const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+      const parts = docSched.map(s=>`${days[s.day_of_week]} ${s.start_time.slice(0,5)}-${s.end_time.slice(0,5)}`);
+      schedDiv.innerHTML = parts.join('<br/>');
+    }
+    right.appendChild(title); right.appendChild(schedDiv);
+    card.appendChild(img); card.appendChild(right);
+    // clicking the card filters by that doctor's speciality (toggle)
+    card.style.cursor = 'pointer';
+    card.addEventListener('click', ()=>{ if (doc.speciality_id) window.setSelectedSpec(doc.speciality_id); else window.setSelectedSpec(''); });
+    grid.appendChild(card);
+  })
+}
+
+function getSpecName(id){ const s = specs.find(x=>x.id==id); return s? s.name : '' }
+</script>
+{% endblock %}
