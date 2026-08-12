@@ -3,14 +3,22 @@
 {% block content %}
 <div class="page-head"><div class="page-head-text"><h1>Specialities</h1><p>Medical specialities offered.</p></div></div>
 <div class="container">
-  <ul id="specList"></ul>
+  <ul id="specList">
+    {% if specialities %}
+      {% for s in specialities %}
+        <li>{{ s.name }}</li>
+      {% endfor %}
+    {% endif %}
+  </ul>
 </div>
 {% endblock %}
 {% block scripts %}
 <script>
 fetch('{{ api_url }}/specialities').then(r=>r.json()).then(data=>{
   const ul = document.getElementById('specList');
-  data.forEach(s=>{ const li=document.createElement('li'); li.textContent = s.name; ul.appendChild(li); });
+  if (!ul.querySelector('li')) {
+    data.forEach(s=>{ const li=document.createElement('li'); li.textContent = s.name; ul.appendChild(li); });
+  }
 })
 </script>
 {% endblock %}

@@ -5,7 +5,13 @@
 <div class="container">
   <table>
     <thead><tr><th>#</th><th>Name</th><th>Phone</th><th>Email</th></tr></thead>
-    <tbody id="patientsBody"></tbody>
+    <tbody id="patientsBody">
+      {% if patients %}
+        {% for p in patients %}
+          <tr><td>{{ p.id }}</td><td>{{ p.first_name }} {{ p.last_name }}</td><td>{{ p.phone }}</td><td>{{ p.email or '' }}</td></tr>
+        {% endfor %}
+      {% endif %}
+    </tbody>
   </table>
 </div>
 {% endblock %}
@@ -14,11 +20,13 @@
 <script>
 fetch('{{ api_url }}/patients').then(r=>r.json()).then(data=>{
   const body = document.getElementById('patientsBody');
-  data.forEach(p=>{
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${p.id}</td><td>${p.first_name} ${p.last_name}</td><td>${p.phone}</td><td>${p.email||''}</td>`;
-    body.appendChild(tr);
-  })
+  if (!body.querySelector('tr')) {
+    data.forEach(p=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${p.id}</td><td>${p.first_name} ${p.last_name}</td><td>${p.phone}</td><td>${p.email||''}</td>`;
+      body.appendChild(tr);
+    })
+  }
 })
 </script>
 {% endblock %}

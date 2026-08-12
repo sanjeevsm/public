@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}iCare+ — Appointments{% endblock %}
+{% block content %}
+<div class="page-head"><div class="page-head-text"><h1>Appointments</h1><p>Upcoming appointments and status.</p></div></div>
+<div class="container">
+  <div id="stats">{% if appointments %}Total appointments: {{ appointments|length }}{% endif %}</div>
+  <table>
+    <thead><tr><th>#</th><th>Date</th><th>Time</th><th>Doctor</th><th>Patient</th><th>Status</th></tr></thead>
+    <tbody id="appointmentsBody">
+      {% if appointments %}
+        {% for a in appointments %}
+          <tr><td>{{ a.id }}</td><td>{{ a.appointment_date }}</td><td>{{ a.start_time }} - {{ a.end_time }}</td><td>{{ a.doctor_name }}</td><td>{{ a.patient_name }}</td><td>{{ a.status }}</td></tr>
+        {% endfor %}
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+fetch('{{ api_url }}/appointments').then(r=>r.json()).then(data=>{
+  const body = document.getElementById('appointmentsBody');
+  const stats = document.getElementById('stats');
+  if (!body.querySelector('tr')) {
+    stats.textContent = `Total appointments: ${data.length}`;
+    data.forEach((a, idx)=>{
+      const tr = document.createElement('tr');
+      const date = a.appointment_date || '';
+      const time = a.start_time ? `${a.start_time} - ${a.end_time||''}` : '';
+      tr.innerHTML = `<td>${a.id}</td><td>${date}</td><td>${time}</td><td>${a.doctor_name||''}</td><td>${a.patient_name||''}</td><td>${a.status||''}</td>`;
+      body.appendChild(tr);
+    })
+  }
+}).catch(e=>{ document.getElementById('appointmentsBody').innerHTML = '<tr><td colspan="6">Could not load appointments</td></tr>'; console.error(e)});
+</script>
+{% endblock %}
