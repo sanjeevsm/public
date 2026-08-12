@@ -3,12 +3,30 @@
 {% block content %}
 <div class="page-head"><div class="page-head-text"><h1>Doctor Leaves</h1><p>Upcoming leaves and reasons.</p></div></div>
 <div class="container"><div id="leaves"></div></div>
+<div class="container mt-4">
+  <h3 class="font-semibold mb-2">Add leave</h3>
+  <div class="card p-4">
+    <table class="min-w-full">
+      <thead><tr><th class="p-2 text-left">#</th><th class="p-2 text-left">Doctor</th><th class="p-2 text-left">Date</th><th class="p-2 text-left">Reason</th><th class="p-2 text-left">Actions</th></tr></thead>
+      <tbody id="leaves"></tbody>
+    </table>
+  </div>
+  <div class="mt-4 card p-4">
+    <h3 class="font-semibold">Add leave</h3>
+    <form id="leaveForm" method="post" action="/leaves/new" class="grid grid-cols-3 gap-2 mt-2">
+      <input type="number" name="doctor_id" placeholder="Doctor ID" class="p-2 border" />
+      <input type="date" name="leave_date" class="p-2 border" />
+      <input type="text" name="reason" placeholder="Reason" class="p-2 border" />
+      <div><button class="px-3 py-1 bg-[var(--brand)] text-white rounded">Add</button></div>
+    </form>
+  </div>
+</div>
 {% endblock %}
 {% block scripts %}
 <script>
 fetch('{{ api_url }}/leaves').then(r=>r.json()).then(data=>{
   const root = document.getElementById('leaves');
-  data.forEach(l=>{ const d=document.createElement('div'); d.textContent = `${l.doctor_id}: ${l.leave_date} — ${l.reason||''}`; root.appendChild(d); })
+  data.forEach((l, idx)=>{ const tr=document.createElement('tr'); tr.className='border-t'; tr.innerHTML = `<td class="p-2">${l.id||idx+1}</td><td class="p-2">${l.doctor_id}</td><td class="p-2">${l.leave_date}</td><td class="p-2">${l.reason||''}</td><td class="p-2"><form method="post" action="/leaves/${l.id}/delete" style="display:inline"><button class="text-red-600">Delete</button></form></td>`; root.appendChild(tr); })
 })
 </script>
 {% endblock %}

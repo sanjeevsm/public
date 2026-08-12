@@ -7,41 +7,47 @@
     <p class="text-sm text-slate-500">Medical specialities offered.</p>
   </div>
   <div>
-    <a href="/specialities/new" class="px-3 py-2 bg-sky-600 text-white rounded shadow">New Speciality</a>
+    <a href="/specialities/new" class="px-3 py-2 bg-[var(--brand)] text-white rounded shadow">New Speciality</a>
   </div>
 </div>
 
-<div class="bg-white dark:bg-slate-800 shadow rounded p-4">
-  <ul class="space-y-2" id="specList">
-    {% if specialities %}
-      {% for s in specialities %}
-        <li class="flex items-center justify-between p-2 border rounded border-slate-100 dark:border-slate-700">
-          <div>{{ s.name }}</div>
-          <div class="space-x-2">
-            <a class="text-sky-600 hover:underline" href="/specialities/{{ s.id }}/edit">Edit</a>
-            <form method="post" action="/specialities/{{ s.id }}/delete" class="inline">
-              <button type="submit" class="text-red-600 hover:underline">Delete</button>
-            </form>
-          </div>
-        </li>
-      {% endfor %}
-    {% else %}
-      <li class="text-slate-500">No specialities found.</li>
-    {% endif %}
-  </ul>
+<div class="card p-4">
+  <table class="min-w-full">
+    <thead>
+      <tr><th class="p-2 text-left">#</th><th class="p-2 text-left">Name</th><th class="p-2 text-left">Actions</th></tr>
+    </thead>
+    <tbody id="specList">
+      {% if specialities %}
+        {% for s in specialities %}
+          <tr class="border-t"><td class="p-2">{{ s.id }}</td><td class="p-2">{{ s.name }}</td><td class="p-2"><a style="color:var(--brand)" class="hover:underline" href="/specialities/{{ s.id }}/edit">Edit</a> <form method="post" action="/specialities/{{ s.id }}/delete" class="inline"><button type="submit" class="text-red-600 hover:underline">Delete</button></form></td></tr>
+        {% endfor %}
+      {% else %}
+        <tr><td class="p-2" colspan="3">No specialities found.</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
 </div>
 
 {% endblock %}
 
 {% block scripts %}
 <script>
-// progressive enhancement: ensure client fills in list if server didn't
+// progressive enhancement: ensure client fills in table if server didn't
 fetch('{{ api_url }}/specialities').then(r=>r.json()).then(data=>{
-  const ul = document.getElementById('specList');
-  if (!ul.querySelector('li') || ul.querySelector('li').textContent.trim()==='No specialities found.'){
-    ul.innerHTML = '';
-    data.forEach(s=>{ const li=document.createElement('li'); li.className='flex items-center justify-between p-2 border rounded border-slate-100 dark:border-slate-700'; li.innerHTML = `<div>${s.name}</div><div class="space-x-2"><a class="text-sky-600 hover:underline" href="/specialities/${s.id}/edit">Edit</a><form method="post" action="/specialities/${s.id}/delete" class="inline"><button type="submit" class="text-red-600 hover:underline">Delete</button></form></div>`; ul.appendChild(li); });
+  const tbody = document.getElementById('specList');
+  // if server-side didn't render rows, populate as table rows
+  if (!tbody.querySelector('tr')){
+    tbody.innerHTML = '';
+    data.forEach(s=>{ const tr=document.createElement('tr'); tr.className='border-t'; tr.innerHTML = `<td class="p-2">${s.id}</td><td class="p-2">${s.name}</td><td class="p-2"><a style="color:var(--brand)" class="hover:underline" href="/specialities/${s.id}/edit">Edit</a> <button onclick="deleteSpeciality(${s.id})" class="text-red-600 ml-2">Delete</button></td>`; tbody.appendChild(tr); });
   }
 })
+
+function deleteSpeciality(id){
+  if (!confirm('Delete speciality?')) return;
+  fetch('{{ api_url }}/specialities/' + id, { method: 'DELETE' }).then(r=>r.json().then(j=>({ok:r.ok, body:j}))).then(res=>{
+    if (!res.ok) return alert(res.body.error || 'delete failed');
+    window.location.reload();
+  }).catch(()=>alert('delete failed'));
+}
 </script>
 {% endblock %}

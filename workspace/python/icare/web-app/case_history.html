@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}iCare+ — Case History{% endblock %}
+{% block content %}
+<div class="page-head"><div class="page-head-text"><h1>Case History</h1><p>Patient case histories.</p></div></div>
+<div class="container">
+  <div class="mb-4"><label>Patient ID <input id="patientId" type="number" class="p-2 border" /></label> <button id="loadBtn" class="px-3 py-1 bg-[var(--brand)] text-white rounded">Load</button></div>
+  <div class="card p-4">
+    <table class="min-w-full">
+      <thead><tr><th class="p-2 text-left">#</th><th class="p-2 text-left">Created</th><th class="p-2 text-left">Notes</th><th class="p-2 text-left">Actions</th></tr></thead>
+      <tbody id="history"></tbody>
+    </table>
+  </div>
+  <h3 class="mt-4">Add note</h3>
+  <form id="noteForm" method="post" action="/case_histories/new">
+    <input type="hidden" name="patient_id" id="patient_id_input" />
+    <textarea name="notes" class="w-full p-2 border" rows="4"></textarea>
+    <div class="mt-2"><button class="px-3 py-1 bg-[var(--brand)] text-white rounded">Add Note</button></div>
+  </form>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  document.getElementById('loadBtn').addEventListener('click', e=>{
+  e.preventDefault(); const pid = document.getElementById('patientId').value; if (!pid) return;
+  document.getElementById('patient_id_input').value = pid;
+  fetch(`{{ api_url }}/case_histories?patient_id=${pid}`).then(r=>r.json()).then(data=>{
+    const root = document.getElementById('history'); root.innerHTML='';
+    data.forEach((h, idx)=>{ const tr=document.createElement('tr'); tr.className='border-t'; tr.innerHTML = `<td class="p-2">${h.id||idx+1}</td><td class="p-2">${h.created_at}</td><td class="p-2">${h.notes}</td><td class="p-2"><form method="post" action="/case_histories/${h.id}/delete"><button class="text-red-600">Delete</button></form></td>`; root.appendChild(tr); })
+  })
+})
+</script>
+{% endblock %}

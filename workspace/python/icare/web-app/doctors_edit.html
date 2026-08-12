@@ -10,17 +10,28 @@
       <input type="text" name="email" placeholder="Email" value="{{ doctor.email if doctor }}" class="p-2 border" />
       <input type="text" name="phone" placeholder="Phone" value="{{ doctor.phone if doctor }}" class="p-2 border" />
     </div>
-    <div class="mt-4"><button class="px-3 py-1 bg-emerald-600 text-white rounded">Save</button></div>
+    {% if not doctor %}
+    <div class="mt-4 card p-3">
+      <h4 class="font-semibold mb-2">Schedules (optional)</h4>
+      <div id="newSchedules">
+        <!-- dynamic schedule rows inserted here -->
+      </div>
+      <div class="mt-2"><button type="button" id="addScheduleRow" class="px-2 py-1 rounded border">Add schedule row</button></div>
+      <small class="text-sm text-slate-500">Add one or more weekly schedule rows for this doctor; they will be created after the doctor is saved.</small>
+    </div>
+    {% endif %}
+    <div class="mt-4"><button class="px-3 py-1 bg-[var(--brand)] text-white rounded">Save</button></div>
   </form>
 
-  {% if doctor and doctor.schedules %}
-  <div class="mb-4">
+  {% if doctor %}
+  <div class="mb-4 card p-4">
     <h3 class="text-lg font-semibold">Schedules</h3>
-    <table class="w-full border-collapse"><thead><tr><th>Day</th><th>Start</th><th>End</th><th></th></tr></thead>
+    <table class="min-w-full mt-2"><thead><tr><th class="p-2 text-left">#</th><th class="p-2 text-left">Day</th><th class="p-2 text-left">Start</th><th class="p-2 text-left">End</th><th class="p-2 text-left">Actions</th></tr></thead>
       <tbody>
         {% for s in doctor.schedules %}
-          <tr class="border-t"><td>{{ s.day_of_week }}</td><td>{{ s.start_time }}</td><td>{{ s.end_time }}</td><td>
-            <form method="post" action="/schedules/{{ s.id }}/delete" style="display:inline">
+          <tr class="border-t"><td class="p-2">{{ s.id }}</td><td class="p-2">{{ s.day_of_week }}</td><td class="p-2">{{ s.start_time }}</td><td class="p-2">{{ s.end_time }}</td><td class="p-2">
+            <a href="#" class="text-sky-600 hover:underline" onclick="openEditSchedule({{ s.id }}, {{ s.day_of_week }}, '{{ s.start_time }}', '{{ s.end_time }}')">Edit</a>
+            <form method="post" action="/schedules/{{ s.id }}/delete" style="display:inline;margin-left:8px">
               <button class="text-red-600">Delete</button>
             </form>
           </td></tr>
@@ -41,9 +52,52 @@
       </label>
       <label>Start <input type="time" name="start_time" class="p-2 border" /></label>
       <label>End <input type="time" name="end_time" class="p-2 border" /></label>
-      <div><button class="px-3 py-1 bg-sky-600 text-white rounded">Add</button></div>
+      <div><button class="px-3 py-1 bg-[var(--brand)] text-white rounded">Add</button></div>
     </form>
   </div>
+  {% endif %}
+
+  <!-- Edit schedule modal (simple) -->
+  <div id="editScheduleModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);align-items:center;justify-content:center">
+    <div class="card p-4" style="max-width:500px;margin:auto">
+      <h4 class="font-semibold">Edit schedule</h4>
+      <form id="editScheduleForm" method="post" action="/schedules/0">
+        <input type="hidden" name="_method" value="put" />
+        <input type="hidden" id="editScheduleId" name="id" />
+        <div class="grid grid-cols-4 gap-2 items-end mt-2">
+          <label>Day
+            <select id="editDay" name="day_of_week" class="p-2 border">
+              <option value="0">Mon</option><option value="1">Tue</option><option value="2">Wed</option><option value="3">Thu</option><option value="4">Fri</option><option value="5">Sat</option><option value="6">Sun</option>
+            </select>
+          </label>
+          <label>Start <input id="editStart" type="time" name="start_time" class="p-2 border" /></label>
+          <label>End <input id="editEnd" type="time" name="end_time" class="p-2 border" /></label>
+          <div><button class="px-3 py-1 bg-[var(--brand)] text-white rounded">Save</button></div>
+        </div>
+      </form>
+      <div class="mt-2"><button onclick="closeEditSchedule()" class="px-2 py-1">Close</button></div>
+    </div>
+  </div>
+  {% if doctor %}
+    <div class="mb-6 card p-4">
+      <h3 class="text-lg font-semibold">Appointments</h3>
+      <div class="flex items-center gap-2 my-2">
+        <input id="doctorApptSearch" placeholder="Filter appointments (patient, date, status)" class="p-2 border flex-1" />
+        <select id="doctorApptStatus" class="p-2 border"><option value="">All status</option><option>booked</option><option>completed</option><option>cancelled</option></select>
+      </div>
+      <table class="min-w-full">
+        <thead>
+          <tr>
+            <th class="p-2 text-left sortable" data-col="id">#</th>
+            <th class="p-2 text-left sortable" data-col="appointment_date">Date</th>
+            <th class="p-2 text-left sortable" data-col="start_time">Time</th>
+            <th class="p-2 text-left sortable" data-col="patient_name">Patient</th>
+            <th class="p-2 text-left sortable" data-col="status">Status</th>
+          </tr>
+        </thead>
+        <tbody id="doctorApptsBody"></tbody>
+      </table>
+    </div>
   {% endif %}
 
 </div>
@@ -54,5 +108,81 @@
 document.querySelectorAll('form').forEach(f=>f.addEventListener('submit', e=>{
   f.querySelectorAll('input[type=time]').forEach(inp=>{ if (inp.value && inp.name) inp.value = inp.value + ':00'; })
 }))
+
+// dynamic schedule rows for new doctor creation
+const newSchedulesRoot = document.getElementById('newSchedules');
+if (newSchedulesRoot){
+  document.getElementById('addScheduleRow').addEventListener('click', ()=>{
+    const idx = newSchedulesRoot.querySelectorAll('.sched-row').length;
+    const wrapper = document.createElement('div'); wrapper.className='sched-row grid grid-cols-4 gap-2 items-end mb-2';
+    wrapper.innerHTML = `
+      <label>Day
+        <select name="schedule_day[]" class="p-2 border">
+          <option value="0">Mon</option><option value="1">Tue</option><option value="2">Wed</option><option value="3">Thu</option><option value="4">Fri</option><option value="5">Sat</option><option value="6">Sun</option>
+        </select>
+      </label>
+      <label>Start <input type="time" name="schedule_start[]" class="p-2 border" /></label>
+      <label>End <input type="time" name="schedule_end[]" class="p-2 border" /></label>
+      <div><button type="button" class="remove-sched px-2 py-1">Remove</button></div>`;
+    newSchedulesRoot.appendChild(wrapper);
+    wrapper.querySelector('.remove-sched').addEventListener('click', ()=>wrapper.remove());
+  })
+}
+
+function openEditSchedule(id, day, start, end){
+  document.getElementById('editScheduleId').value = id;
+  document.getElementById('editDay').value = day;
+  // strip seconds for time inputs
+  document.getElementById('editStart').value = start ? start.slice(0,5) : '';
+  document.getElementById('editEnd').value = end ? end.slice(0,5) : '';
+  document.getElementById('editScheduleForm').action = '/schedules/' + id;
+  document.getElementById('editScheduleModal').style.display = 'flex';
+}
+function closeEditSchedule(){ document.getElementById('editScheduleModal').style.display='none'; }
+
+// handle edit form as PUT via fetch to API then reload
+document.getElementById('editScheduleForm').addEventListener('submit', e=>{
+  e.preventDefault();
+  const id = document.getElementById('editScheduleId').value;
+  const dow = document.getElementById('editDay').value;
+  const start = document.getElementById('editStart').value + ':00';
+  const end = document.getElementById('editEnd').value + ':00';
+  fetch('{{ api_url }}' + '/schedules/' + id, { method: 'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({day_of_week: parseInt(dow), start_time: start, end_time: end}) })
+    .then(r=>{ if (r.ok) window.location.reload(); else r.json().then(j=>alert(j.error||'failed')) })
+    .catch(err=>alert('failed'));
+})
+
+// Appointments table: fetch and render for this doctor with filter+sort
+if ({{ doctor.id if doctor else 'null' }} ){
+  const docId = {{ doctor.id }};
+  let appts = [];
+  let sortCol = 'appointment_date'; let sortDir = -1;
+  function loadDoctorAppts(){
+    fetch('{{ api_url }}/appointments').then(r=>r.json()).then(data=>{
+      appts = data.filter(a=>a.doctor_id==docId);
+      renderAppts();
+    })
+  }
+  function renderAppts(){
+    const q = document.getElementById('doctorApptSearch').value.toLowerCase();
+    const status = document.getElementById('doctorApptStatus').value;
+    let rows = appts.filter(a=>{
+      if (status && a.status!==status) return false;
+      if (!q) return true;
+      return (a.patient_name||'').toLowerCase().includes(q) || (a.appointment_date||'').toLowerCase().includes(q) || (a.status||'').toLowerCase().includes(q);
+    });
+    rows.sort((x,y)=>{
+      const a = (x[sortCol]||''); const b = (y[sortCol]||'');
+      if (a<b) return -1*sortDir; if (a>b) return 1*sortDir; return 0;
+    });
+    const body = document.getElementById('doctorApptsBody'); body.innerHTML='';
+    rows.forEach(r=>{ const tr=document.createElement('tr'); tr.className='border-t'; tr.innerHTML = `<td class="p-2">${r.id}</td><td class="p-2">${r.appointment_date}</td><td class="p-2">${r.start_time} - ${r.end_time}</td><td class="p-2">${r.patient_name||''}</td><td class="p-2">${r.status||''}</td>`; body.appendChild(tr); })
+  }
+  document.getElementById('doctorApptSearch').addEventListener('input', renderAppts);
+  document.getElementById('doctorApptStatus').addEventListener('change', renderAppts);
+  // sortable headers
+  document.querySelectorAll('th.sortable').forEach(h=>h.addEventListener('click', ()=>{ const col = h.dataset.col; if (sortCol===col) sortDir = -sortDir; else { sortCol = col; sortDir = -1 } renderAppts(); }))
+  loadDoctorAppts();
+}
 </script>
 {% endblock %}
