@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}iCare+ — Edit Speciality{% endblock %}
+{% block content %}
+<div class="mb-4">
+  <h1 class="text-2xl font-semibold">{{ 'Edit' if speciality else 'New' }} Speciality</h1>
+  <p class="text-sm text-slate-500">Create or update a medical speciality.</p>
+</div>
+
+<div class="bg-white dark:bg-slate-800 shadow rounded p-6 max-w-xl">
+  <form method="post" action="{{ action }}">
+    <label class="block mb-2 text-sm">Name</label>
+    <input name="name" value="{{ speciality.name if speciality else '' }}" class="w-full mb-4 px-3 py-2 border rounded bg-slate-50 dark:bg-slate-900" />
+    <div class="flex gap-3">
+      <button class="px-4 py-2 bg-sky-600 text-white rounded">Save</button>
+      <a href="/specialities" class="px-4 py-2 border rounded">Cancel</a>
+    </div>
+  </form>
+</div>
+
+{% endblock %}

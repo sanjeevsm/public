@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}iCare+ — Doctors{% endblock %}
+{% block content %}
+<div class="page-head"><div class="page-head-text"><h1>Doctors</h1><p>Manage doctors and their schedules.</p></div></div>
+<div class="container">
+  <div class="mb-4"><a href="/doctors/new" class="px-3 py-1 bg-sky-600 text-white rounded">New doctor</a></div>
+  <table class="w-full border-collapse">
+    <thead><tr class="text-left"><th>#</th><th>Name</th><th>Speciality</th><th>Contact</th><th></th></tr></thead>
+    <tbody>
+      {% if doctors %}
+        {% for d in doctors %}
+          <tr class="border-t"><td class="py-2">{{ d.id }}</td><td>{{ d.first_name }} {{ d.last_name }}</td><td>{{ d.speciality_id or '' }}</td><td>{{ d.phone or '' }} {{ d.email or '' }}</td><td><a href="/doctors/{{ d.id }}/edit" class="text-sky-600">Edit</a></td></tr>
+        {% endfor %}
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+// nothing for now
+</script>
+{% endblock %}

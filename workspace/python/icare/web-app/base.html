@@ -1,14 +1,62 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{% block title %}iCare+{% endblock %}</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <style>body{font-family:Inter, sans-serif;background:#f5f7ff;color:#111827;margin:0;padding:0}</style>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>{% block title %}iCare+{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      // Theme presets and applying selection via localStorage
+      const THEMES = {
+        light: {dark:false, brand:'#2563eb'},
+        dark: {dark:true, brand:'#60a5fa'},
+        solar: {dark:false, brand:'#b58900'},
+        green: {dark:false, brand:'#10b981'},
+        slate: {dark:false, brand:'#334155'}
+      };
+      function applyTheme(name){
+        const t = THEMES[name] || THEMES.light;
+        localStorage.setItem('icare:theme', name);
+        if (t.dark) document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark');
+        document.documentElement.style.setProperty('--brand', t.brand);
+        // mark selected button
+        document.querySelectorAll('[data-theme-btn]').forEach(b=>b.classList.remove('ring-2','ring-sky-400'));
+        const el = document.querySelector(`[data-theme-btn="${name}"]`);
+        if (el) el.classList.add('ring-2','ring-sky-400');
+      }
+      // initialize
+      const saved = localStorage.getItem('icare:theme') || 'light';
+      applyTheme(saved);
+    </script>
+    <style>
+      :root{--brand:#2563eb}
+    </style>
 </head>
-<body>
-  <nav class="nav"><div class="nav-brand"><span class="brand-text">iCare+</span></div></nav>
-  <main class="container">{% block content %}{% endblock %}</main>
-</body>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 min-h-screen">
+    <header class="bg-white dark:bg-slate-800 shadow-sm">
+      <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <div class="text-2xl font-semibold text-sky-600">iCare+</div>
+          <nav class="space-x-3 text-sm">
+            <a class="text-slate-600 hover:text-slate-900" href="/">Home</a>
+            <a class="text-slate-600 hover:text-slate-900" href="/specialities">Specialities</a>
+            <a class="text-slate-600 hover:text-slate-900" href="/doctors">Doctors</a>
+            <a class="text-slate-600 hover:text-slate-900" href="/patients">Patients</a>
+            <a class="text-slate-600 hover:text-slate-900" href="/appointments">Appointments</a>
+          </nav>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="flex items-center gap-2">
+            <button data-theme-btn="light" onclick="applyTheme('light')" class="px-2 py-1 rounded bg-white">Light</button>
+            <button data-theme-btn="dark" onclick="applyTheme('dark')" class="px-2 py-1 rounded bg-slate-700 text-white">Dark</button>
+            <button data-theme-btn="solar" onclick="applyTheme('solar')" class="px-2 py-1 rounded bg-yellow-600 text-white">Solar</button>
+            <button data-theme-btn="green" onclick="applyTheme('green')" class="px-2 py-1 rounded bg-emerald-600 text-white">Green</button>
+            <button data-theme-btn="slate" onclick="applyTheme('slate')" class="px-2 py-1 rounded bg-slate-500 text-white">Slate</button>
+          </div>
+        </div>
+      </div>
+    </header>
+    <main class="max-w-6xl mx-auto p-6">{% block content %}{% endblock %}</main>
+    {% block scripts %}{% endblock %}
+  </body>
 </html>

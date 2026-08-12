@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}iCare+ — Appointments{% endblock %}
+{% block content %}
+<div class="page-head"><div class="page-head-text"><h1>Appointments</h1><p>Upcoming appointments and status.</p></div></div>
+<div class="container">
+  <div id="stats">{% if appointments %}Total appointments: {{ appointments|length }}{% endif %}</div>
+  <div class="mb-6 p-4 bg-white dark:bg-slate-800 rounded shadow">
+    <h3 class="font-semibold mb-2">Book appointment</h3>
+    <form id="bookForm" method="post" action="/appointments/book" class="grid grid-cols-4 gap-2 items-end">
+      <label>Doctor<select id="doctorSelect" name="doctor_id" class="p-2 border"></select></label>
+      <label>Patient<select id="patientSelect" name="patient_id" class="p-2 border"></select></label>
+      <label>Date<input type="date" id="apptDate" name="appointment_date" class="p-2 border" /></label>
+      <label>Slot Minutes<select id="slotMinutes" name="slot_minutes" class="p-2 border"><option value="10">10</option><option value="15">15</option><option value="30">30</option></select></label>
+      <label class="col-span-2">Time<select id="slotSelect" name="start_time" class="p-2 border w-full"></select></label>
+      <div><button class="px-3 py-1 bg-emerald-600 text-white rounded">Book</button></div>
+    </form>
+  </div>
+  <table>
+    <thead><tr><th>#</th><th>Date</th><th>Time</th><th>Doctor</th><th>Patient</th><th>Status</th></tr></thead>
+    <tbody id="appointmentsBody">
+      {% if appointments %}
+        {% for a in appointments %}
+          <tr><td>{{ a.id }}</td><td>{{ a.appointment_date }}</td><td>{{ a.start_time }} - {{ a.end_time }}</td><td>{{ a.doctor_name }}</td><td>{{ a.patient_name }}</td><td>{{ a.status }}</td></tr>
+        {% endfor %}
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+fetch('{{ api_url }}/appointments').then(r=>r.json()).then(data=>{
+  const body = document.getElementById('appointmentsBody');
+  const stats = document.getElementById('stats');
+  if (!body.querySelector('tr')) {
+    stats.textContent = `Total appointments: ${data.length}`;
+    data.forEach((a, idx)=>{
+      const tr = document.createElement('tr');
+      const date = a.appointment_date || '';
+      const time = a.start_time ? `${a.start_time} - ${a.end_time||''}` : '';
+      tr.innerHTML = `<td>${a.id}</td><td>${date}</td><td>${time}</td><td>${a.doctor_name||''}</td><td>${a.patient_name||''}</td><td>${a.status||''}</td>`;
+      body.appendChild(tr);
+    })
+  }
+}).catch(e=>{ document.getElementById('appointmentsBody').innerHTML = '<tr><td colspan="6">Could not load appointments</td></tr>'; console.error(e)});
+// populate doctors and patients for booking
+Promise.all([fetch('{{ api_url }}/doctors').then(r=>r.json()), fetch('{{ api_url }}/patients').then(r=>r.json())]).then(([doctors, patients])=>{
+  const dsel = document.getElementById('doctorSelect');
+  doctors.forEach(d=>{ const o=document.createElement('option'); o.value=d.id; o.textContent = d.first_name + ' ' + d.last_name; dsel.appendChild(o); })
+  const psel = document.getElementById('patientSelect');
+  patients.forEach(p=>{ const o=document.createElement('option'); o.value=p.id; o.textContent = p.first_name + ' ' + p.last_name; psel.appendChild(o); })
+  function loadSlots(){
+    const did = dsel.value; const date = document.getElementById('apptDate').value; const slot = document.getElementById('slotMinutes').value;
+    const sselect = document.getElementById('slotSelect'); sselect.innerHTML='';
+    if (!did || !date) return;
+    fetch(`${'{{ api_url }}'}/doctors/${did}/available_slots?date=${date}&slot=${slot}`).then(r=>r.json()).then(slots=>{
+      slots.forEach(s=>{ const o=document.createElement('option'); o.value=s.start_time; o.textContent = s.start_time.slice(0,5); sselect.appendChild(o); })
+    }).catch(()=>{});
+  }
+  dsel.addEventListener('change', loadSlots);
+  document.getElementById('apptDate').addEventListener('change', loadSlots);
+  document.getElementById('slotMinutes').addEventListener('change', loadSlots);
+});
+
+</script>
+{% endblock %}
