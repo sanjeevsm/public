@@ -6,13 +6,13 @@ Use the links below to open a project README and follow its Quick Start section 
 
 ## Projects
 
-| Project | Description | README |
-|---|---|---|
-| CI/CD Dashboard | Real-time CI/CD metrics dashboard with multi-provider support. | [workspace/python/cicd/README.md](workspace/python/cicd/README.md)
-| iLab+ — AI Interview Simulator | AI-powered interview question generator and quiz platform (desktop + web modes). | [workspace/python/ilab/README.md](workspace/python/ilab/README.md)
-| iTrack+ — Personal Finance Tracker | Personal finance tracker with multi-user collaboration and reporting. | [workspace/python/itrack/README.md](workspace/python/itrack/README.md)
-| iTransit+ — Public Transport Viewer | Stateless frontend + FastAPI backend integrating TfL and other UK transport APIs with client-side favourites and mock fallback. | [workspace/python/itransit/README.md](workspace/python/itransit/README.md)
-| iCare+ — Clinic Management System | Clinic management system with REST API and reporting features. | [workspace/python/icare/README.md](workspace/python/icare/README.md)
+| Project | Description | Technologies | README |
+|---|---|---|---|
+| CI/CD Dashboard | Real-time CI/CD metrics dashboard with multi-provider support. | Frontend: Vanilla JS (SPA) · Backend: FastAPI · Monitoring: Prometheus, Grafana | [workspace/python/cicd/README.md](workspace/python/cicd/README.md)
+| iLab+ — AI Interview Simulator | AI-powered interview question generator and quiz platform (desktop + web modes). | Frontend: Jinja2 + Vanilla JS · Backend: Flask · Desktop GUI: Tkinter | [workspace/python/ilab/README.md](workspace/python/ilab/README.md)
+| iTrack+ — Personal Finance Tracker | Personal finance tracker with multi-user collaboration and reporting. | Frontend: React + TypeScript · Backend: FastAPI · Database: MongoDB | [workspace/python/itrack/README.md](workspace/python/itrack/README.md)
+| iTransit+ — Public Transport Viewer | Stateless frontend + FastAPI backend integrating TfL and other UK transport APIs with client-side favourites and mock fallback. | Frontend: React (Vite) · Backend: FastAPI · DB: None (mock providers) | [workspace/python/itransit/README.md](workspace/python/itransit/README.md)
+| iCare+ — Clinic Management System | Clinic management system with REST API and reporting features. | Frontend: Flask (Jinja2) · Backend: Flask REST API · Database: PostgreSQL | [workspace/python/icare/README.md](workspace/python/icare/README.md)
 
 **Default Ports**
 
