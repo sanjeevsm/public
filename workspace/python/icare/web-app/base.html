@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>{% block title %}iCare+{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      // Theme presets and applying selection via localStorage
+      const THEMES = {
+        light: {dark:false, vars:{'brand':'#2563eb','bg':'#f8fafc','card':'#ffffff','table-head':'#f1f5f9','table-row':'#ffffff','text':'#0f172a','muted':'#64748b'}},
+        dark: {dark:true, vars:{'brand':'#60a5fa','bg':'#0f172a','card':'#0b1220','table-head':'#081026','table-row':'#07101e','text':'#e6eef8','muted':'#9fb4d6'}},
+        solar: {dark:false, vars:{'brand':'#b58900','bg':'#fff7e6','card':'#fff8ec','table-head':'#fff4d9','table-row':'#fffaf0','text':'#3b2f00','muted':'#7a6534'}},
+        green: {dark:false, vars:{'brand':'#10b981','bg':'#f0fdf4','card':'#ecfdf0','table-head':'#e6f9ea','table-row':'#f7fff6','text':'#042e20','muted':'#276749'}},
+        slate: {dark:false, vars:{'brand':'#334155','bg':'#f8fafc','card':'#ffffff','table-head':'#f1f5f9','table-row':'#ffffff','text':'#0f172a','muted':'#64748b'}},
+        midnight: {dark:true, vars:{'brand':'#7c3aed','bg':'#030712','card':'#071029','table-head':'#0b1630','table-row':'#07101e','text':'#dfe7ff','muted':'#99a6d1'}},
+        rose: {dark:false, vars:{'brand':'#fb7185','bg':'#fff5f7','card':'#fff7f9','table-head':'#fff0f3','table-row':'#fffafc','text':'#3b0f12','muted':'#8b444f'}}
+      };
+      function applyTheme(name){
+        const t = THEMES[name] || THEMES.light;
+        localStorage.setItem('icare:theme', name);
+        if (t.dark) document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark');
+        const vars = t.vars || {};
+        Object.keys(vars).forEach(k=>document.documentElement.style.setProperty('--'+k, vars[k]));
+        // mark selected button
+        document.querySelectorAll('[data-theme-btn]').forEach(b=>b.classList.remove('ring-2','ring-sky-400'));
+        const el = document.querySelector(`[data-theme-btn="${name}"]`);
+        if (el) el.classList.add('ring-2','ring-sky-400');
+      }
+      // initialize
+      const saved = localStorage.getItem('icare:theme') || 'light';
+      applyTheme(saved);
+    </script>
+    <style>
+      :root{
+        --brand:#2563eb;
+        --bg:#f8fafc;
+        --card:#ffffff;
+        --text:#0f172a;
+        --muted:#64748b;
+        --header:#ffffff;
+        --table-head:#f1f5f9;
+        --table-row:#ffffff;
+        --table-border:rgba(15,23,42,0.06);
+      }
+      /* apply variables to core elements so theme affects entire UI */
+      html, body { background-color: var(--bg) !important; color: var(--text) !important; }
+      header { background-color: var(--header) !important; }
+      main { background-color: transparent !important; }
+      .card { background-color: var(--card); border: 1px solid var(--table-border); border-radius: 6px; }
+      /* table theming */
+      table thead th { background-color: var(--table-head) !important; color: var(--text) !important; }
+      table tbody tr { background-color: var(--table-row) !important; }
+      table, th, td { border-color: var(--table-border) !important; }
+      /* override common Tailwind color utilities used in templates */
+      .bg-white { background-color: var(--card) !important; }
+      .bg-slate-50 { background-color: var(--bg) !important; }
+      .text-slate-900 { color: var(--text) !important; }
+      .text-slate-500 { color: var(--muted) !important; }
+      .border-slate-100 { border-color: var(--table-border) !important; }
+      .dark\:bg-slate-800 { background-color: var(--card) !important; }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 min-h-screen">
+    <header class="bg-white dark:bg-slate-800 shadow-sm">
+      <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <div class="text-2xl font-semibold" style="color:var(--brand)">iCare+</div>
+              <nav class="flex items-center gap-4 text-sm">
+                <a href="/" class="flex items-center gap-2 text-slate-600 hover:text-slate-900" aria-label="Home">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="color:var(--brand)">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9.75L12 3l9 6.75V21a.75.75 0 01-.75.75H3.75A.75.75 0 013 21V9.75z" />
+                  </svg>
+                </a>
+                <a class="text-slate-600 hover:text-slate-900" href="/appointments">Appointments</a>
+                <a class="text-slate-600 hover:text-slate-900" href="/patients">Patients</a>
+                <a class="text-slate-600 hover:text-slate-900" href="/doctors">Doctors</a>
+                <a class="text-slate-600 hover:text-slate-900" href="/specialities">Specialities</a>
+              </nav>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="flex items-center gap-2">
+            <button data-theme-btn="light" onclick="applyTheme('light')" class="px-2 py-1 rounded bg-white">Light</button>
+            <button data-theme-btn="dark" onclick="applyTheme('dark')" class="px-2 py-1 rounded bg-slate-700 text-white">Dark</button>
+            <button data-theme-btn="solar" onclick="applyTheme('solar')" class="px-2 py-1 rounded bg-yellow-600 text-white">Solar</button>
+            <button data-theme-btn="green" onclick="applyTheme('green')" class="px-2 py-1 rounded bg-emerald-600 text-white">Green</button>
+            <button data-theme-btn="slate" onclick="applyTheme('slate')" class="px-2 py-1 rounded bg-slate-500 text-white">Slate</button>
+            <button data-theme-btn="midnight" onclick="applyTheme('midnight')" class="px-2 py-1 rounded bg-indigo-800 text-white">Midnight</button>
+            <button data-theme-btn="rose" onclick="applyTheme('rose')" class="px-2 py-1 rounded bg-pink-400 text-white">Rose</button>
+          </div>
+        </div>
+      </div>
+    </header>
+    <main class="max-w-6xl mx-auto p-6">{% block content %}{% endblock %}</main>
+    {% block scripts %}{% endblock %}
+  </body>
+</html>

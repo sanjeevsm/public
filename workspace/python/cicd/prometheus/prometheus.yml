@@ -1,0 +1,25 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: "cicd-dashboard"
+
+rule_files: []
+
+alerting:
+  alertmanagers: []
+
+scrape_configs:
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9091"]
+
+  - job_name: "cicd-dashboard"
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["localhost:8090"]
+        labels:
+          app: "cicd-dashboard"
+          env: "production"

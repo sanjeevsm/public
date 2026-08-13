@@ -1,0 +1,24 @@
+# Secrets
+.env
+
+# Python
+*.pyc
+*.pyo
+__pycache__/
+.pytest_cache/
+*.egg-info/
+
+# Runtime directories
+data/
+.pids/
+exports/
+dashboard_api/.venv/
+
+# Export artefacts
+*.xlsx
+*.pdf
+*.csv
+
+# OS
+.DS_Store
+Thumbs.db

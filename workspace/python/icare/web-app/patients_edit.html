@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}iCare+ — Patient{% endblock %}
+{% block content %}
+<div class="page-head"><div class="page-head-text"><h1>Patient</h1><p>Create or edit patient.</p></div></div>
+<div class="container">
+  <form method="post" action="{{ action }}">
+    <div class="grid grid-cols-2 gap-4">
+      <input type="text" name="first_name" placeholder="First name" value="{{ patient.first_name if patient }}" class="p-2 border" />
+      <input type="text" name="last_name" placeholder="Last name" value="{{ patient.last_name if patient }}" class="p-2 border" />
+      <input type="email" name="email" placeholder="Email" value="{{ patient.email if patient }}" class="p-2 border" />
+      <input type="text" name="phone" placeholder="Phone" value="{{ patient.phone if patient }}" class="p-2 border" />
+    </div>
+    <div class="mt-4"><button class="px-3 py-1 bg-[var(--brand)] text-white rounded">Save</button></div>
+  </form>
+    {% if patient %}
+    <div class="mt-6 card p-4">
+      <h3 class="text-lg font-semibold">Appointments</h3>
+      <div class="flex items-center gap-2 my-2">
+        <input id="patientApptSearch" placeholder="Filter appointments (doctor, date, status)" class="p-2 border flex-1" />
+        <select id="patientApptStatus" class="p-2 border"><option value="">All status</option><option>booked</option><option>completed</option><option>cancelled</option></select>
+      </div>
+      <table class="min-w-full">
+        <thead>
+          <tr>
+            <th class="p-2 text-left sortable" data-col="id">#</th>
+            <th class="p-2 text-left sortable" data-col="appointment_date">Date</th>
+            <th class="p-2 text-left sortable" data-col="start_time">Time</th>
+            <th class="p-2 text-left sortable" data-col="doctor_name">Doctor</th>
+            <th class="p-2 text-left sortable" data-col="status">Status</th>
+          </tr>
+        </thead>
+        <tbody id="patientApptsBody"></tbody>
+      </table>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+if ({{ patient.id if patient else 'null' }}){
+  const pid = {{ patient.id }};
+  let appts = []; let sortCol='appointment_date', sortDir=-1;
+  function loadPatientAppts(){ fetch('{{ api_url }}/appointments').then(r=>r.json()).then(data=>{ appts = data.filter(a=>a.patient_id==pid); renderAppts(); }) }
+  function renderAppts(){
+    const q = document.getElementById('patientApptSearch').value.toLowerCase();
+    const status = document.getElementById('patientApptStatus').value;
+    let rows = appts.filter(a=>{ if (status && a.status!==status) return false; if (!q) return true; return (a.doctor_name||'').toLowerCase().includes(q) || (a.appointment_date||'').toLowerCase().includes(q) || (a.status||'').toLowerCase().includes(q); });
+    rows.sort((x,y)=>{ const a=(x[sortCol]||''), b=(y[sortCol]||''); if (a<b) return -1*sortDir; if (a>b) return 1*sortDir; return 0; });
+    const body = document.getElementById('patientApptsBody'); body.innerHTML=''; rows.forEach(r=>{ const tr=document.createElement('tr'); tr.className='border-t'; tr.innerHTML = `<td class="p-2">${r.id}</td><td class="p-2">${r.appointment_date}</td><td class="p-2">${r.start_time} - ${r.end_time}</td><td class="p-2">${r.doctor_name||''}</td><td class="p-2">${r.status||''}</td>`; body.appendChild(tr); }) }
+  document.getElementById('patientApptSearch').addEventListener('input', renderAppts);
+  document.getElementById('patientApptStatus').addEventListener('change', renderAppts);
+  document.querySelectorAll('th.sortable').forEach(h=>h.addEventListener('click', ()=>{ const col=h.dataset.col; if (sortCol===col) sortDir=-sortDir; else { sortCol=col; sortDir=-1 } renderAppts(); }))
+  loadPatientAppts();
+}
+</script>
+{% endblock %}

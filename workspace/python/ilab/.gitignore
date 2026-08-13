@@ -1,0 +1,16 @@
+config.json
+.venv/
+__pycache__/
+*.pyc
+.pids/
+
+# Secrets — commit .env.example, never .env
+.env
+
+# Runtime logs
+*.log
+data/logs/
+
+# OS metadata
+.DS_Store
+Thumbs.db

@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Generating{% endblock %}
+
+{% block head %}
+{#
+  Guaranteed fallback: browser reloads /loading/<job_id> every 3 s.
+  Once the job is done, that route returns a 302 straight to the quiz page.
+  This fires only if JavaScript navigation fails completely.
+#}
+<meta http-equiv="refresh" content="3;url={{ url_for('main.loading', job_id=job_id) }}">
+{% endblock %}
+
+{% block content %}
+<div class="loading-layout">
+
+  <!-- Brand -->
+  <div class="loading-logo">iLab<span style="-webkit-text-fill-color:var(--accent)">+</span></div>
+
+  <!-- Spinner dots -->
+  <div class="spinner">
+    <div class="spinner-dot"></div>
+    <div class="spinner-dot"></div>
+    <div class="spinner-dot"></div>
+  </div>
+
+  <!-- Progress bar + live status -->
+  <div class="loading-progress">
+    <div class="progress-outer">
+      <div id="progress-bar" class="progress-inner-anim"></div>
+    </div>
+    <p id="status-text" class="status-text-main">Connecting to AI provider…</p>
+  </div>
+
+  <!-- Step checklist -->
+  <div class="steps-list">
+    <div class="gen-step" id="step-connect">
+      <span class="step-icon">○</span>
+      <span class="step-label">Connecting to AI provider</span>
+    </div>
+    <div class="gen-step" id="step-analyze">
+      <span class="step-icon">○</span>
+      <span class="step-label">Analysing your input</span>
+    </div>
+    <div class="gen-step" id="step-generate">
+      <span class="step-icon">○</span>
+      <span class="step-label">Generating questions &amp; explanations</span>
+    </div>
+    <div class="gen-step" id="step-finalize">
+      <span class="step-icon">○</span>
+      <span class="step-label">Preparing your quiz</span>
+    </div>
+  </div>
+
+  <!-- Elapsed time + contextual tip -->
+  <div class="loading-meta">
+    <span id="elapsed-text" class="elapsed-text">0s</span>
+    <span id="tip-text"     class="tip-text"></span>
+  </div>
+
+  <!-- Error display -->
+  <p id="error-msg"></p>
+
+  <!-- Back / cancel -->
+  <a id="back-link" href="{{ url_for('main.home') }}" class="btn btn-ghost" style="display:none;">← Back</a>
+  <a id="cancel-btn" href="{{ url_for('main.home') }}" class="btn btn-ghost" style="font-size:13px;">Cancel</a>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/loading.js') }}"></script>
+<script>startLoading("{{ job_id }}");</script>
+{% endblock %}

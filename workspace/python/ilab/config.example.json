@@ -1,0 +1,39 @@
+{
+  "ai_provider": "claude",
+  "providers": {
+    "claude": {
+      "api_key": "",
+      "model": "claude-opus-4-7",
+      "base_url": ""
+    },
+    "openai": {
+      "api_key": "",
+      "model": "gpt-4o-mini",
+      "base_url": ""
+    },
+    "gemini": {
+      "api_key": "",
+      "model": "gemini-1.5-pro",
+      "base_url": ""
+    },
+    "groq": {
+      "api_key": "",
+      "model": "llama-3.3-70b-versatile",
+      "base_url": "https://api.groq.com/openai/v1"
+    },
+    "ollama": {
+      "api_key": "",
+      "model": "llama3.2",
+      "base_url": "http://localhost:11434/v1"
+    },
+    "xai": {
+      "api_key": "",
+      "model": "grok-3-mini",
+      "base_url": "https://api.x.ai/v1"
+    }
+  },
+  "timer_seconds": 0,
+  "num_questions": 10,
+  "experience_level": "mid",
+  "appearance_mode": "dark"
+}
