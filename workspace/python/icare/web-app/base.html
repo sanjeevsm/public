@@ -14,7 +14,12 @@
         green: {dark:false, vars:{'brand':'#10b981','bg':'#f0fdf4','card':'#ecfdf0','table-head':'#e6f9ea','table-row':'#f7fff6','text':'#042e20','muted':'#276749'}},
         slate: {dark:false, vars:{'brand':'#334155','bg':'#f8fafc','card':'#ffffff','table-head':'#f1f5f9','table-row':'#ffffff','text':'#0f172a','muted':'#64748b'}},
         midnight: {dark:true, vars:{'brand':'#7c3aed','bg':'#030712','card':'#071029','table-head':'#0b1630','table-row':'#07101e','text':'#dfe7ff','muted':'#99a6d1'}},
-        rose: {dark:false, vars:{'brand':'#fb7185','bg':'#fff5f7','card':'#fff7f9','table-head':'#fff0f3','table-row':'#fffafc','text':'#3b0f12','muted':'#8b444f'}}
+        rose: {dark:false, vars:{'brand':'#fb7185','bg':'#fff5f7','card':'#fff7f9','table-head':'#fff0f3','table-row':'#fffafc','text':'#3b0f12','muted':'#8b444f'}},
+        ocean: {dark:false, vars:{'brand':'#0ea5e9','bg':'#f0fbff','card':'#f8feff','table-head':'#e6f9ff','table-row':'#ffffff','text':'#042e3a','muted':'#2b8aa6'}},
+        sunset: {dark:false, vars:{'brand':'#fb923c','bg':'#fff7f0','card':'#fff6f2','table-head':'#fff1e8','table-row':'#fffaf7','text':'#3a1600','muted':'#7a4a22'}},
+        violet: {dark:true, vars:{'brand':'#8b5cf6','bg':'#0b0216','card':'#0f0520','table-head':'#0d0830','table-row':'#0b0a1a','text':'#f0eefe','muted':'#9b8fd6'}},
+        teal: {dark:false, vars:{'brand':'#14b8a6','bg':'#f2fdfc','card':'#ecfffb','table-head':'#e8fffb','table-row':'#f9fffe','text':'#033033','muted':'#2c7a76'}},
+        charcoal: {dark:true, vars:{'brand':'#475569','bg':'#020305','card':'#081015','table-head':'#0b1016','table-row':'#07090c','text':'#dbe8ef','muted':'#97a6b3'}}
       };
       function applyTheme(name){
         const t = THEMES[name] || THEMES.light;
@@ -47,6 +52,38 @@
       html, body { background-color: var(--bg) !important; color: var(--text) !important; }
       header { background-color: var(--header) !important; }
       main { background-color: transparent !important; }
+      /* subtle background image (hospital) behind the UI; low opacity so it never hides content
+         Add the image both as a pseudo-element and as a direct body background as a fallback
+         (some browsers or CSP may prevent pseudo-element rendering of external images). */
+      body {
+        /* use local static image with a translucent overlay so the image is a faint hint
+           for light themes we make the overlay slightly less opaque so the image shows more */
+        background-image:
+          linear-gradient(rgba(255,255,255,0.84), rgba(255,255,255,0.84)),
+          url('/static/hospital.jpg');
+        background-size: cover;
+        background-position: center center;
+        background-attachment: fixed;
+        background-repeat: no-repeat;
+      }
+      /* darker overlay for dark theme so the image remains subtle there too */
+      .dark body {
+        /* keep dark overlay strong so the image stays very subtle in dark mode */
+        background-image:
+          linear-gradient(rgba(0,0,0,0.92), rgba(0,0,0,0.92)),
+          url('/static/hospital.jpg');
+      }
+      /* keep pseudo-element but disable its own image so overlay is controlled by body backgrounds */
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        pointer-events: none;
+        background: transparent;
+      }
+      /* ensure main UI sits above the background image */
+      header, main, .card, nav, footer { position: relative; z-index: 1; }
       .card { background-color: var(--card); border: 1px solid var(--table-border); border-radius: 6px; }
       /* table theming */
       table thead th { background-color: var(--table-head) !important; color: var(--text) !important; }
@@ -56,9 +93,21 @@
       .bg-white { background-color: var(--card) !important; }
       .bg-slate-50 { background-color: var(--bg) !important; }
       .text-slate-900 { color: var(--text) !important; }
+      /* ensure medium-weight slate text also follows theme (fixes invisible menu labels) */
+      .text-slate-600 { color: var(--text) !important; }
       .text-slate-500 { color: var(--muted) !important; }
       .border-slate-100 { border-color: var(--table-border) !important; }
       .dark\:bg-slate-800 { background-color: var(--card) !important; }
+      /* menu link styling: always visible across themes */
+      nav a.menu-link { color: var(--text) !important; font-weight: 600 !important; padding: .25rem .5rem; border-radius: .375rem; }
+      nav a.menu-link:hover { color: var(--brand) !important; background-color: rgba(0,0,0,0.03); }
+      nav a.menu-link:focus { box-shadow: 0 0 0 3px rgba(37,99,235,0.15); outline: none; }
+      /* theme swatch buttons */
+      .theme-btn { width: 28px; height: 28px; border-radius: 9999px; border: 2px solid rgba(15,23,42,0.08); display: inline-block; cursor: pointer; }
+      .theme-btn:hover { transform: translateY(-1px); }
+      .theme-btn:focus { outline: none; box-shadow: 0 0 0 3px rgba(37,99,235,0.18); }
+      /* support Tailwind ring class used by applyTheme() */
+      .theme-btn.ring-2 { box-shadow: 0 0 0 3px rgba(37,99,235,0.25); }
     </style>
 </head>
 <body class="bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 min-h-screen">
@@ -67,26 +116,31 @@
         <div class="flex items-center gap-4">
           <div class="text-2xl font-semibold" style="color:var(--brand)">iCare+</div>
               <nav class="flex items-center gap-4 text-sm">
-                <a href="/" class="flex items-center gap-2 text-slate-600 hover:text-slate-900" aria-label="Home">
+                <a href="/" class="flex items-center gap-2 menu-link" aria-label="Home">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="color:var(--brand)">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9.75L12 3l9 6.75V21a.75.75 0 01-.75.75H3.75A.75.75 0 013 21V9.75z" />
                   </svg>
                 </a>
-                <a class="text-slate-600 hover:text-slate-900" href="/appointments">Appointments</a>
-                <a class="text-slate-600 hover:text-slate-900" href="/patients">Patients</a>
-                <a class="text-slate-600 hover:text-slate-900" href="/doctors">Doctors</a>
-                <a class="text-slate-600 hover:text-slate-900" href="/specialities">Specialities</a>
+                <a class="menu-link" href="/appointments">Appointments</a>
+                <a class="menu-link" href="/patients">Patients</a>
+                <a class="menu-link" href="/doctors">Doctors</a>
+                <a class="menu-link" href="/specialities">Specialities</a>
               </nav>
         </div>
         <div class="flex items-center gap-3">
           <div class="flex items-center gap-2">
-            <button data-theme-btn="light" onclick="applyTheme('light')" class="px-2 py-1 rounded bg-white">Light</button>
-            <button data-theme-btn="dark" onclick="applyTheme('dark')" class="px-2 py-1 rounded bg-slate-700 text-white">Dark</button>
-            <button data-theme-btn="solar" onclick="applyTheme('solar')" class="px-2 py-1 rounded bg-yellow-600 text-white">Solar</button>
-            <button data-theme-btn="green" onclick="applyTheme('green')" class="px-2 py-1 rounded bg-emerald-600 text-white">Green</button>
-            <button data-theme-btn="slate" onclick="applyTheme('slate')" class="px-2 py-1 rounded bg-slate-500 text-white">Slate</button>
-            <button data-theme-btn="midnight" onclick="applyTheme('midnight')" class="px-2 py-1 rounded bg-indigo-800 text-white">Midnight</button>
-            <button data-theme-btn="rose" onclick="applyTheme('rose')" class="px-2 py-1 rounded bg-pink-400 text-white">Rose</button>
+            <button data-theme-btn="light" onclick="applyTheme('light')" aria-label="light theme" class="theme-btn" style="background:#ffffff; border-color:rgba(15,23,42,0.08)"></button>
+            <button data-theme-btn="dark" onclick="applyTheme('dark')" aria-label="dark theme" class="theme-btn" style="background:#0b1220; border-color:#0b1220"></button>
+            <button data-theme-btn="solar" onclick="applyTheme('solar')" aria-label="solar theme" class="theme-btn" style="background:#fff0b3; border-color:#f5d38a"></button>
+            <button data-theme-btn="green" onclick="applyTheme('green')" aria-label="green theme" class="theme-btn" style="background:#10b981; border-color:#10b981"></button>
+            <button data-theme-btn="slate" onclick="applyTheme('slate')" aria-label="slate theme" class="theme-btn" style="background:#475569; border-color:#475569"></button>
+            <button data-theme-btn="midnight" onclick="applyTheme('midnight')" aria-label="midnight theme" class="theme-btn" style="background:#1e293b; border-color:#1e293b"></button>
+            <button data-theme-btn="rose" onclick="applyTheme('rose')" aria-label="rose theme" class="theme-btn" style="background:#fb7185; border-color:#fb7185"></button>
+            <button data-theme-btn="ocean" onclick="applyTheme('ocean')" aria-label="ocean theme" class="theme-btn" style="background:#0ea5e9; border-color:#0ea5e9"></button>
+            <button data-theme-btn="sunset" onclick="applyTheme('sunset')" aria-label="sunset theme" class="theme-btn" style="background:#fb923c; border-color:#fb923c"></button>
+            <button data-theme-btn="violet" onclick="applyTheme('violet')" aria-label="violet theme" class="theme-btn" style="background:#8b5cf6; border-color:#8b5cf6"></button>
+            <button data-theme-btn="teal" onclick="applyTheme('teal')" aria-label="teal theme" class="theme-btn" style="background:#14b8a6; border-color:#14b8a6"></button>
+            <button data-theme-btn="charcoal" onclick="applyTheme('charcoal')" aria-label="charcoal theme" class="theme-btn" style="background:#475569; border-color:#101217"></button>
           </div>
         </div>
       </div>
