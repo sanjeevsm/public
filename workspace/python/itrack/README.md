@@ -117,7 +117,7 @@ These endpoints are available to the superadmin for promotion/demotion and user 
 
 ---
 
-## ⚡ Quick Start
+## Quick Start
 
 > **Choose Your Setup Method:**
 > - **🐳 Docker Setup** (Recommended): Easiest setup with Docker

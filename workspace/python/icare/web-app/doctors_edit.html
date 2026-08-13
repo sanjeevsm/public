@@ -9,10 +9,16 @@
       <input type="text" name="last_name" placeholder="Last name" value="{{ doctor.last_name if doctor }}" class="p-2 border" />
       <input type="text" name="email" placeholder="Email" value="{{ doctor.email if doctor }}" class="p-2 border" />
       <input type="text" name="phone" placeholder="Phone" value="{{ doctor.phone if doctor }}" class="p-2 border" />
+      <input type="text" name="registration_number" placeholder="Registration #" value="{{ doctor.registration_number if doctor }}" class="p-2 border" />
+      <label>Speciality
+        <select id="specialitySelect" name="speciality_id" class="p-2 border">
+          <option value="">Select speciality</option>
+        </select>
+      </label>
     </div>
     {% if not doctor %}
     <div class="mt-4 card p-3">
-      <h4 class="font-semibold mb-2">Schedules (optional)</h4>
+      <h4 class="font-semibold mb-2">Schedules (required)</h4>
       <div id="newSchedules">
         <!-- dynamic schedule rows inserted here -->
       </div>
@@ -26,10 +32,11 @@
   {% if doctor %}
   <div class="mb-4 card p-4">
     <h3 class="text-lg font-semibold">Schedules</h3>
+    {% set weekdays = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'] %}
     <table class="min-w-full mt-2"><thead><tr><th class="p-2 text-left">#</th><th class="p-2 text-left">Day</th><th class="p-2 text-left">Start</th><th class="p-2 text-left">End</th><th class="p-2 text-left">Actions</th></tr></thead>
       <tbody>
         {% for s in doctor.schedules %}
-          <tr class="border-t"><td class="p-2">{{ s.id }}</td><td class="p-2">{{ s.day_of_week }}</td><td class="p-2">{{ s.start_time }}</td><td class="p-2">{{ s.end_time }}</td><td class="p-2">
+          <tr class="border-t"><td class="p-2">{{ s.id }}</td><td class="p-2">{{ weekdays[s.day_of_week] if s.day_of_week is not none and s.day_of_week < weekdays|length else s.day_of_week }}</td><td class="p-2">{{ s.start_time }}</td><td class="p-2">{{ s.end_time }}</td><td class="p-2">
             <a href="#" class="text-sky-600 hover:underline" onclick="openEditSchedule({{ s.id }}, {{ s.day_of_week }}, '{{ s.start_time }}', '{{ s.end_time }}')">Edit</a>
             <form method="post" action="/schedules/{{ s.id }}/delete" style="display:inline;margin-left:8px">
               <button class="text-red-600">Delete</button>
@@ -87,13 +94,14 @@
       </div>
       <table class="min-w-full">
         <thead>
-          <tr>
-            <th class="p-2 text-left sortable" data-col="id">#</th>
-            <th class="p-2 text-left sortable" data-col="appointment_date">Date</th>
-            <th class="p-2 text-left sortable" data-col="start_time">Time</th>
-            <th class="p-2 text-left sortable" data-col="patient_name">Patient</th>
-            <th class="p-2 text-left sortable" data-col="status">Status</th>
-          </tr>
+            <tr>
+              <th class="p-2 text-left sortable" data-col="id">#</th>
+              <th class="p-2 text-left sortable" data-col="appointment_date">Date</th>
+              <th class="p-2 text-left sortable" data-col="start_time">Time</th>
+              <th class="p-2 text-left sortable" data-col="patient_name">Patient</th>
+              <th class="p-2 text-left sortable" data-col="status">Status</th>
+              <th class="p-2 text-left">Actions</th>
+            </tr>
         </thead>
         <tbody id="doctorApptsBody"></tbody>
       </table>
@@ -111,8 +119,8 @@ document.querySelectorAll('form').forEach(f=>f.addEventListener('submit', e=>{
 
 // dynamic schedule rows for new doctor creation
 const newSchedulesRoot = document.getElementById('newSchedules');
-if (newSchedulesRoot){
-  document.getElementById('addScheduleRow').addEventListener('click', ()=>{
+  function addScheduleRow(){
+    if (!newSchedulesRoot) return;
     const idx = newSchedulesRoot.querySelectorAll('.sched-row').length;
     const wrapper = document.createElement('div'); wrapper.className='sched-row grid grid-cols-4 gap-2 items-end mb-2';
     wrapper.innerHTML = `
@@ -126,7 +134,38 @@ if (newSchedulesRoot){
       <div><button type="button" class="remove-sched px-2 py-1">Remove</button></div>`;
     newSchedulesRoot.appendChild(wrapper);
     wrapper.querySelector('.remove-sched').addEventListener('click', ()=>wrapper.remove());
-  })
+  }
+  // attach to button if present
+  const addBtn = document.getElementById('addScheduleRow');
+  if (addBtn) addBtn.addEventListener('click', addScheduleRow);
+
+// require at least one schedule row when creating a new doctor
+if (newSchedulesRoot){
+  const form = document.querySelector('form');
+  if (form){
+    form.addEventListener('submit', e=>{
+      const rows = newSchedulesRoot.querySelectorAll('.sched-row');
+      let ok = false;
+      rows.forEach(r=>{
+        const st = r.querySelector('input[name="schedule_start[]"]');
+        const en = r.querySelector('input[name="schedule_end[]"]');
+        if (st && en && st.value && en.value) ok = true;
+      });
+      if (!ok){
+        e.preventDefault();
+        alert('Please add at least one schedule row for the new doctor. You can edit schedules later.');
+        return;
+      }
+      // require a speciality selection as well
+      const spec = document.getElementById('specialitySelect');
+      if (spec && !spec.value){
+        e.preventDefault();
+        alert('Please select a speciality for the doctor.');
+        spec.focus();
+        return;
+      }
+    })
+  }
 }
 
 function openEditSchedule(id, day, start, end){
@@ -153,36 +192,57 @@ document.getElementById('editScheduleForm').addEventListener('submit', e=>{
 })
 
 // Appointments table: fetch and render for this doctor with filter+sort
-if ({{ doctor.id if doctor else 'null' }} ){
-  const docId = {{ doctor.id }};
-  let appts = [];
-  let sortCol = 'appointment_date'; let sortDir = -1;
-  function loadDoctorAppts(){
-    fetch('{{ api_url }}/appointments').then(r=>r.json()).then(data=>{
-      appts = data.filter(a=>a.doctor_id==docId);
-      renderAppts();
-    })
+{% if doctor %}
+  (function(){
+    const docId = {{ doctor.id }};
+    let appts = [];
+    let sortCol = 'appointment_date'; let sortDir = -1;
+    function loadDoctorAppts(){
+      fetch('{{ api_url }}/appointments').then(r=>r.json()).then(data=>{
+        appts = data.filter(a=>a.doctor_id==docId);
+        renderAppts();
+      })
+    }
+    function renderAppts(){
+      const q = document.getElementById('doctorApptSearch').value.toLowerCase();
+      const status = document.getElementById('doctorApptStatus').value;
+      let rows = appts.filter(a=>{
+        if (status && a.status!==status) return false;
+        if (!q) return true;
+        return (a.patient_name||'').toLowerCase().includes(q) || (a.appointment_date||'').toLowerCase().includes(q) || (a.status||'').toLowerCase().includes(q);
+      });
+      rows.sort((x,y)=>{
+        const a = (x[sortCol]||''); const b = (y[sortCol]||'');
+        if (a<b) return -1*sortDir; if (a>b) return 1*sortDir; return 0;
+      });
+      const body = document.getElementById('doctorApptsBody'); body.innerHTML='';
+      rows.forEach(r=>{ const tr=document.createElement('tr'); tr.className='border-t'; tr.innerHTML = `<td class="p-2">${r.id}</td><td class="p-2">${r.appointment_date}</td><td class="p-2">${r.start_time} - ${r.end_time}</td><td class="p-2">${r.patient_name||''}</td><td class="p-2">${r.status||''}</td><td class="p-2"><button class="text-red-600" onclick="deleteAppointment(${r.id})">Delete</button></td>`; body.appendChild(tr); })
+    }
+    document.getElementById('doctorApptSearch').addEventListener('input', renderAppts);
+    document.getElementById('doctorApptStatus').addEventListener('change', renderAppts);
+    // sortable headers
+    document.querySelectorAll('th.sortable').forEach(h=>h.addEventListener('click', ()=>{ const col = h.dataset.col; if (sortCol===col) sortDir = -sortDir; else { sortCol = col; sortDir = -1 } renderAppts(); }))
+    loadDoctorAppts();
+  })();
+{% endif %}
+// populate speciality select via API
+fetch('{{ api_url }}/specialities').then(r=>r.json()).then(list=>{
+  const sel = document.getElementById('specialitySelect');
+  if (!sel) return;
+  list.forEach(s=>{ const o = document.createElement('option'); o.value = s.id; o.textContent = s.name; sel.appendChild(o); });
+  // pre-select when editing (handled in next then() block)
+}).then(()=>{
+  // pre-select when editing (safe, server-side conditional)
+  {% if doctor %}
+    try{ const sel = document.getElementById('specialitySelect'); if (sel){ const target = '{{ doctor.speciality_id if doctor and doctor.speciality_id else "" }}'; const opt = sel.querySelector(`option[value="${target}"]`); if (opt) opt.selected = true; else sel.value = target; } }catch(e){}
+  {% endif %}
+}).catch(()=>{});
+  function deleteAppointment(id){
+    if (!confirm('Delete appointment?')) return;
+    fetch('{{ api_url }}/appointments/' + id, { method: 'DELETE' }).then(r=>r.json().then(j=>({ok:r.ok, body:j}))).then(res=>{
+      if (!res.ok) return alert(res.body.error || 'delete failed');
+      loadDoctorAppts();
+    }).catch(()=>alert('delete failed'));
   }
-  function renderAppts(){
-    const q = document.getElementById('doctorApptSearch').value.toLowerCase();
-    const status = document.getElementById('doctorApptStatus').value;
-    let rows = appts.filter(a=>{
-      if (status && a.status!==status) return false;
-      if (!q) return true;
-      return (a.patient_name||'').toLowerCase().includes(q) || (a.appointment_date||'').toLowerCase().includes(q) || (a.status||'').toLowerCase().includes(q);
-    });
-    rows.sort((x,y)=>{
-      const a = (x[sortCol]||''); const b = (y[sortCol]||'');
-      if (a<b) return -1*sortDir; if (a>b) return 1*sortDir; return 0;
-    });
-    const body = document.getElementById('doctorApptsBody'); body.innerHTML='';
-    rows.forEach(r=>{ const tr=document.createElement('tr'); tr.className='border-t'; tr.innerHTML = `<td class="p-2">${r.id}</td><td class="p-2">${r.appointment_date}</td><td class="p-2">${r.start_time} - ${r.end_time}</td><td class="p-2">${r.patient_name||''}</td><td class="p-2">${r.status||''}</td>`; body.appendChild(tr); })
-  }
-  document.getElementById('doctorApptSearch').addEventListener('input', renderAppts);
-  document.getElementById('doctorApptStatus').addEventListener('change', renderAppts);
-  // sortable headers
-  document.querySelectorAll('th.sortable').forEach(h=>h.addEventListener('click', ()=>{ const col = h.dataset.col; if (sortCol===col) sortDir = -sortDir; else { sortCol = col; sortDir = -1 } renderAppts(); }))
-  loadDoctorAppts();
-}
 </script>
 {% endblock %}

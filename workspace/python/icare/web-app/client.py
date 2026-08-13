@@ -176,8 +176,16 @@ def delete_case_history_route(cid):
 
 @app.route('/doctors')
 def doctors():
-    r = requests.get(f'{API_URL}/doctors', timeout=5)
-    return render_template('doctors.html', doctors=r.json())
+    try:
+        r = requests.get(f'{API_URL}/doctors', timeout=5)
+        s = requests.get(f'{API_URL}/specialities', timeout=5)
+        spec_map = {}
+        if s.status_code == 200:
+            for item in s.json():
+                spec_map[item.get('id')] = item.get('name')
+        return render_template('doctors.html', doctors=r.json() if r.status_code==200 else [], specialities=spec_map)
+    except Exception:
+        return render_template('doctors.html', doctors=[], specialities={})
 
 
 @app.route('/doctors/new')
@@ -188,7 +196,7 @@ def new_doctor():
 @app.route('/doctors', methods=['POST'])
 def create_doctor():
     # create doctor then optional schedules
-    data = {k: request.form.get(k) for k in ('first_name','last_name','email','phone','speciality_id')}
+    data = {k: request.form.get(k) for k in ('first_name','last_name','email','phone','speciality_id','registration_number')}
     try:
         r = requests.post(f'{API_URL}/doctors', json=data, timeout=5)
         if r.status_code == 201:
@@ -227,7 +235,7 @@ def edit_doctor(did):
 
 @app.route('/doctors/<int:did>', methods=['POST'])
 def update_doctor(did):
-    data = {k: request.form.get(k) for k in ('first_name','last_name','email','phone','speciality_id')}
+    data = {k: request.form.get(k) for k in ('first_name','last_name','email','phone','speciality_id','registration_number')}
     try:
         requests.put(f'{API_URL}/doctors/{did}', json=data, timeout=5)
     except Exception:

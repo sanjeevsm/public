@@ -1,6 +1,12 @@
 # iLab+ — AI Interview Simulator
 
+A short summary of the primary technologies used: Frontend: Jinja2 + Vanilla JS · Backend: Flask · Desktop GUI: Tkinter
+
 iLab+ is an AI-powered technical interview simulator that generates multiple-choice questions from a job description or a list of skills, runs them as a timed quiz, and delivers a scored result with per-question explanations. It supports six AI providers and runs in two modes: a native desktop GUI or a shared web server that any browser on the same network can access.
+
+## Quick Start
+
+See the Installation section below for detailed platform-specific steps (Windows / macOS / Linux).
 
 ---
 

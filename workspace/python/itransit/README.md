@@ -1,9 +1,11 @@
 
 # iTransit+ — Stateless Public Transport Viewer
 
+A short summary of the primary technologies used: Frontend: React (Vite) · Backend: FastAPI · DB: None (mock providers)
+
 Lightweight stateless frontend + FastAPI backend that queries public-transport provider APIs for nearby stops and live departures. The backend prefers live provider adapters (TfL, TransportAPI, Translink, Traveline, Transport Scotland, Transport for Wales) and falls back to generated mock data when provider keys are not configured.
 
-## Quick start (local)
+## Quick Start
 
 1. Create a local `.env` from the example and add any provider keys you have (do NOT commit secrets):
 

@@ -210,7 +210,7 @@ def list_appointments():
 @app.route('/doctors', methods=['GET'])
 def list_doctors():
     if _use_db():
-        rows = query('SELECT id, first_name, last_name, email, phone, speciality_id FROM doctors ORDER BY id')
+        rows = query('SELECT id, first_name, last_name, email, phone, speciality_id, registration_number FROM doctors ORDER BY id')
         return ok(rows)
     else:
         return ok([])
@@ -219,7 +219,7 @@ def list_doctors():
 @app.route('/doctors/<int:did>', methods=['GET'])
 def get_doctor(did):
     if _use_db():
-        rows = query('SELECT id, first_name, last_name, email, phone, speciality_id FROM doctors WHERE id=%s', (did,))
+        rows = query('SELECT id, first_name, last_name, email, phone, speciality_id, registration_number FROM doctors WHERE id=%s', (did,))
         if not rows:
             return fail('not found', 404)
         doctor = rows[0]
@@ -236,8 +236,8 @@ def create_doctor():
     if not body.get('first_name') or not body.get('last_name'):
         return fail('first_name and last_name required', 400)
     if _use_db():
-        r = query('INSERT INTO doctors (first_name, last_name, email, phone, speciality_id) VALUES (%s,%s,%s,%s,%s) RETURNING id, first_name, last_name, email, phone, speciality_id',
-                  (body.get('first_name'), body.get('last_name'), body.get('email'), body.get('phone'), body.get('speciality_id')))
+        r = query('INSERT INTO doctors (first_name, last_name, email, phone, speciality_id, registration_number) VALUES (%s,%s,%s,%s,%s,%s) RETURNING id, first_name, last_name, email, phone, speciality_id, registration_number',
+                  (body.get('first_name'), body.get('last_name'), body.get('email'), body.get('phone'), body.get('speciality_id'), body.get('registration_number')))
         return ok(r[0], 201)
     else:
         return fail('not available without DB', 400)
@@ -247,8 +247,8 @@ def create_doctor():
 def update_doctor(did):
     body = request.get_json(force=True, silent=True) or {}
     if _use_db():
-        r = query('UPDATE doctors SET first_name=%s,last_name=%s,email=%s,phone=%s,speciality_id=%s WHERE id=%s RETURNING id, first_name, last_name, email, phone, speciality_id',
-                  (body.get('first_name'), body.get('last_name'), body.get('email'), body.get('phone'), body.get('speciality_id'), did))
+        r = query('UPDATE doctors SET first_name=%s,last_name=%s,email=%s,phone=%s,speciality_id=%s,registration_number=%s WHERE id=%s RETURNING id, first_name, last_name, email, phone, speciality_id, registration_number',
+                  (body.get('first_name'), body.get('last_name'), body.get('email'), body.get('phone'), body.get('speciality_id'), body.get('registration_number'), did))
         if not r:
             return fail('not found', 404)
         return ok(r[0])
@@ -404,6 +404,17 @@ def create_appointment():
     r = query('INSERT INTO appointments (doctor_id, patient_id, appointment_date, start_time, end_time, status) VALUES (%s,%s,%s,%s,%s,%s) RETURNING id, doctor_id, patient_id, appointment_date, start_time, end_time, status',
               (doctor_id, patient_id, date_str, start_time, end_time, 'booked'))
     return ok(r[0], 201)
+
+
+@app.route('/appointments/<int:aid>', methods=['DELETE'])
+def delete_appointment(aid):
+    if _use_db():
+        r = query('DELETE FROM appointments WHERE id=%s RETURNING id', (aid,))
+        if not r:
+            return fail('not found', 404)
+        return ok({'deleted': r[0]['id']})
+    else:
+        return fail('not available without DB', 400)
 
 
 # --- Patients CRUD ----------------------------------------------------------
