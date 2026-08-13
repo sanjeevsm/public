@@ -1,4 +1,9 @@
 # CI/CD Dashboard
+A short summary of the primary technologies used: Frontend: Vanilla JS (SPA) · Backend: FastAPI · Monitoring: Prometheus, Grafana
+
+## Quick Start
+
+See the **Installation** section below for platform-specific setup and start commands (Windows / macOS / Linux).
 
 A real-time CI/CD metrics dashboard built with **Python FastAPI** and a single-page application frontend. Supports **GitLab**, **GitHub**, **Bitbucket**, and **Gitea** from a single installation. Provider credentials are stored in the browser — no secrets on the server.
 

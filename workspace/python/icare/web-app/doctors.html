@@ -15,7 +15,7 @@
       <tbody>
         {% if doctors %}
           {% for d in doctors %}
-            <tr class="border-t"><td class="p-2">{{ d.id }}</td><td class="p-2">{{ d.first_name }} {{ d.last_name }}</td><td class="p-2">{{ d.speciality_id or '' }}</td><td class="p-2">{{ d.phone or '' }} {{ d.email or '' }}</td><td class="p-2"><a href="/doctors/{{ d.id }}/edit" style="color:var(--brand)">Edit</a> <button onclick="deleteDoctor({{ d.id }})" class="text-red-600 ml-2">Delete</button></td></tr>
+            <tr class="border-t"><td class="p-2">{{ d.id }}</td><td class="p-2">{{ d.first_name }} {{ d.last_name }}</td><td class="p-2">{{ specialities.get(d.speciality_id) if specialities else (d.speciality_id or '') }}</td><td class="p-2">{{ d.phone or '' }} {{ d.email or '' }}</td><td class="p-2"><a href="/doctors/{{ d.id }}/edit" style="color:var(--brand)">Edit</a> <button onclick="deleteDoctor({{ d.id }})" class="text-red-600 ml-2">Delete</button></td></tr>
           {% endfor %}
         {% else %}
           <tr><td class="p-2" colspan="5">No doctors</td></tr>

@@ -1,5 +1,7 @@
 # iCare+
 
+A short summary of the primary technologies used: Frontend: Flask (Jinja2) · Backend: Flask REST API · Database: PostgreSQL
+
 A full-stack medical clinic management system for managing doctors, patients, appointments, schedules, and analytics. Built with Flask and PostgreSQL.
 
 ## Architecture
