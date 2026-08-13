@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{{ theme }}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Results | iLab+</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload" as="style"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"></noscript>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+<div class="results-page">
+
+  <!-- ── Header ── -->
+  <header class="results-header">
+    <span class="brand-logo">iLab<span class="brand-plus">+</span></span>
+    <div style="display:flex;gap:10px;">
+      <a href="{{ url_for('main.setup') }}" class="btn btn-secondary">New Interview</a>
+      <a href="{{ url_for('main.home') }}"  class="btn btn-ghost">Home</a>
+    </div>
+  </header>
+
+  <div class="results-body">
+
+    <!-- ── Score Card ── -->
+    <div class="score-card">
+      <p class="sc-title">Interview Complete</p>
+      <p class="grade-text {{ grade_color }}">{{ grade }}</p>
+
+      <!-- Stat Tiles -->
+      <div class="stat-tiles">
+        <div class="stat-tile st-score">
+          <div class="stat-value">{{ correct }}/{{ total }}</div>
+          <div class="stat-label">Score</div>
+        </div>
+        <div class="stat-tile st-correct">
+          <div class="stat-value">{{ "%.0f"|format(pct) }}%</div>
+          <div class="stat-label">Accuracy</div>
+        </div>
+        <div class="stat-tile st-wrong">
+          <div class="stat-value">{{ wrong }}</div>
+          <div class="stat-label">Incorrect</div>
+        </div>
+        <div class="stat-tile st-skip">
+          <div class="stat-value">{{ skipped }}</div>
+          <div class="stat-label">Skipped</div>
+        </div>
+      </div>
+
+      <!-- Progress Bar -->
+      <div class="pct-bar-wrap">
+        <div class="pct-labels">
+          <span>{{ "%.1f"|format(pct) }}% correct</span>
+          <span>{{ correct }} / {{ total }}</span>
+        </div>
+        <div class="pct-outer">
+          <div class="pct-inner {{ grade_color }}" style="width: {{ pct }}%;"></div>
+        </div>
+      </div>
+
+      <!-- Action buttons -->
+      <div class="action-row">
+        <a href="{{ url_for('main.setup') }}" class="btn btn-primary btn-lg">New Interview</a>
+        <a href="{{ url_for('main.home') }}"  class="btn btn-secondary btn-lg">Home</a>
+      </div>
+    </div>
+
+    <!-- ── Question Review ── -->
+    <p class="review-section-title">Question Review</p>
+
+    {% for q in review %}
+    <div class="review-item">
+
+      <div class="review-item-header">
+        <span class="review-q-num">Q{{ q.num }}</span>
+        <span class="badge" style="{{ q.category | cat_style }}">{{ q.category or "General" }}</span>
+        <span class="badge badge-diff" data-d="{{ q.difficulty }}">{{ q.difficulty }}</span>
+        <span class="review-outcome {{ q.outcome }}">
+          {% if q.outcome == "correct" %}✓ Correct{% elif q.outcome == "incorrect" %}✗ Incorrect{% else %}— Skipped{% endif %}
+        </span>
+      </div>
+
+      <p class="review-q-text">{{ q.text }}</p>
+
+      {% for opt in q.options %}
+      <div class="review-option {{ opt.cls }}">
+        <span class="review-option-letter">{{ opt.letter }}</span>
+        <span>{{ opt.text }}</span>
+      </div>
+      {% endfor %}
+
+      {% if q.explanation %}
+      <div class="review-explanation">
+        <span class="review-icon">💡</span>
+        <span>{{ q.explanation }}</span>
+      </div>
+      {% endif %}
+
+    </div>
+    {% endfor %}
+
+  </div><!-- /results-body -->
+</div><!-- /results-page -->
+
+</body>
+</html>

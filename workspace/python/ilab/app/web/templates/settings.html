@@ -1,0 +1,284 @@
+{% extends "base.html" %}
+{% block title %}Settings{% endblock %}
+
+{% block nav_actions %}
+  <a href="{{ url_for('main.home') }}" class="btn btn-ghost">← Back</a>
+{% endblock %}
+
+{% block content %}
+<div class="settings-layout">
+
+  <div class="page-header" style="margin-bottom:24px;">
+    <div class="page-titles">
+      <div class="page-title">Settings</div>
+      <div class="page-sub">Configure your AI provider, theme, and default quiz options</div>
+    </div>
+  </div>
+
+  {% if request.args.get('saved') %}
+  <div class="model-status ok" style="margin-bottom:20px;">
+    <span class="ms-icon">✅</span>
+    <div class="ms-body"><div class="ms-title">Settings saved successfully</div></div>
+  </div>
+  {% endif %}
+
+  <!-- API key notice: stored in this browser only -->
+  <div class="model-status ok" style="margin-bottom:20px;" id="key-storage-notice">
+    <span class="ms-icon">🔒</span>
+    <div class="ms-body">
+      <div class="ms-title">API keys are stored in your browser only</div>
+      <div class="ms-sub">Keys are saved to this browser's local storage and never sent to the server.
+        Clearing browser data will remove them.</div>
+    </div>
+  </div>
+
+  <form id="settings-form">
+    <input type="hidden" name="appearance_mode" id="appearance_mode" value="{{ theme }}">
+
+    <div class="settings-panel">
+
+      <!-- ── 1. Appearance ── -->
+      <div class="settings-card">
+        <div class="settings-card-header">Appearance &amp; Theme</div>
+        <div class="settings-card-body">
+          <div class="theme-picker">
+            {% for t in THEMES %}
+            <button type="button"
+                    class="theme-swatch {% if theme == t.id %}active{% endif %}"
+                    data-theme-id="{{ t.id }}"
+                    onclick="setTheme('{{ t.id }}')"
+                    title="{{ t.label }}">
+              <div class="swatch-orb"
+                   style="background: conic-gradient({{ t.accent }} 0deg 180deg, {{ t.bg }} 180deg 360deg);"></div>
+              <span class="swatch-name">{{ t.label }}</span>
+            </button>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <!-- ── 2. Active Provider ── -->
+      <div class="settings-card">
+        <div class="settings-card-header">Active AI Provider</div>
+        <div class="settings-card-body">
+          {% set providers = [
+            ("claude", "🤖", "Claude"),
+            ("openai", "🧠", "OpenAI"),
+            ("gemini", "✨", "Gemini"),
+            ("groq",   "⚡", "Groq"),
+            ("ollama", "🦙", "Ollama"),
+            ("xai",    "🚀", "xAI"),
+          ] %}
+          <div class="provider-grid">
+            {% for pid, emoji, label in providers %}
+            <input type="radio" name="ai_provider" id="p_{{ pid }}" value="{{ pid }}" class="provider-radio"
+                   {% if active_provider == pid %}checked{% endif %}>
+            <label for="p_{{ pid }}" class="provider-label" onclick="switchProviderTab('{{ pid }}')">
+              <span class="provider-emoji">{{ emoji }}</span>{{ label }}
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <!-- ── 3. Provider Configuration (API keys stored in browser localStorage) ── -->
+      <div class="settings-card">
+        <div class="settings-card-header">Provider Configuration</div>
+        <div class="settings-card-body">
+          <div class="provider-tabs">
+            {% for pid, emoji, label in providers %}
+            <button type="button" class="ptab-btn {% if active_provider == pid %}active{% endif %}"
+                    data-provider="{{ pid }}" onclick="switchProviderTab('{{ pid }}')">
+              {{ emoji }} {{ label }}
+            </button>
+            {% endfor %}
+          </div>
+
+          {% for pid, emoji, label in providers %}
+          <div class="ptab-pane {% if active_provider == pid %}active{% endif %}" data-provider="{{ pid }}">
+
+            <div class="form-group">
+              <label class="form-label">API Key</label>
+              <input type="password" id="{{ pid }}_api_key" class="form-input"
+                     placeholder="{% if pid == 'ollama' %}Not required (runs locally){% else %}Enter your {{ label }} API key{% endif %}">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Model</label>
+              <select id="{{ pid }}_model" class="form-select">
+                {% for m in models.get(pid, []) %}
+                <option value="{{ m }}">{{ m }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">
+                Base URL
+                <span class="form-hint" style="display:inline;margin-left:6px;">
+                  {% if pid == 'groq' %}Free — console.groq.com{% endif %}
+                  {% if pid == 'ollama' %}Default: http://localhost:11434/v1{% endif %}
+                  {% if pid == 'xai' %}Default: https://api.x.ai/v1{% endif %}
+                </span>
+              </label>
+              <input type="text" id="{{ pid }}_base_url" class="form-input"
+                     placeholder="Leave blank for default endpoint">
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- ── 4. Default Quiz Settings ── -->
+      <div class="settings-card">
+        <div class="settings-card-header">Default Quiz Settings</div>
+        <div class="settings-card-body">
+          <div class="quiz-defaults-grid">
+
+            <div class="slider-group" style="margin-bottom:0;">
+              <div class="slider-header">
+                <label class="form-label">Default Experience Level</label>
+                <span class="slider-badge" id="dexp-display">{{ cfg.experience_level | capitalize }}</span>
+              </div>
+              <input type="range" class="slider" id="dexp-slider" min="0" max="4" step="1"
+                     value="{{ ['junior','mid','senior','lead','architect'].index(cfg.experience_level) if cfg.experience_level in ['junior','mid','senior','lead','architect'] else 1 }}"
+                     oninput="updateDExp(this.value)">
+              <input type="hidden" name="experience_level" id="dexp-hidden" value="{{ cfg.experience_level }}">
+              <div class="slider-ticks">
+                <span>Junior</span><span>Mid</span><span>Senior</span><span>Lead</span><span>Architect</span>
+              </div>
+            </div>
+
+            <div class="slider-group" style="margin-bottom:0;">
+              <div class="slider-header">
+                <label class="form-label">Default Questions</label>
+                <span class="slider-badge" id="dnum-display">{{ cfg.num_questions }}</span>
+              </div>
+              <input type="range" class="slider" id="dnum-slider" min="5" max="50" step="5"
+                     value="{{ cfg.num_questions if cfg.num_questions <= 50 else 50 }}"
+                     oninput="updateDNum(this.value)">
+              <input type="hidden" name="num_questions" id="dnum-hidden" value="{{ cfg.num_questions }}">
+              <div class="slider-ticks">
+                <span>5</span><span></span><span></span><span></span><span>25</span>
+                <span></span><span></span><span></span><span></span><span>50</span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-lg btn-full">Save Settings</button>
+
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const _PROVIDERS = ["claude","openai","gemini","groq","ollama","xai"];
+
+  /* ── localStorage helpers ────────────────────────────── */
+  function loadFromLocalStorage() {
+    const creds = JSON.parse(localStorage.getItem("ilab_credentials") || "{}");
+    const activeProvider = localStorage.getItem("ilab_active_provider") || "claude";
+
+    _PROVIDERS.forEach(p => {
+      const data = creds[p] || {};
+
+      const keyEl = document.getElementById(`${p}_api_key`);
+      if (keyEl) keyEl.value = data.api_key || "";
+
+      const modelEl = document.getElementById(`${p}_model`);
+      if (modelEl && data.model) {
+        // Add custom model option if it's not in the dropdown
+        if (!Array.from(modelEl.options).some(o => o.value === data.model)) {
+          modelEl.add(new Option(data.model, data.model));
+        }
+        modelEl.value = data.model;
+      }
+
+      const urlEl = document.getElementById(`${p}_base_url`);
+      if (urlEl) urlEl.value = data.base_url || "";
+    });
+
+    const radio = document.getElementById(`p_${activeProvider}`);
+    if (radio) radio.checked = true;
+    switchProviderTab(activeProvider);
+  }
+
+  /* ── Form submit: save keys to localStorage, POST only non-sensitive fields ── */
+  document.getElementById("settings-form").addEventListener("submit", function(e) {
+    e.preventDefault();
+
+    // Collect all credentials into localStorage — never sent to server
+    const creds = {};
+    _PROVIDERS.forEach(p => {
+      creds[p] = {
+        api_key:  (document.getElementById(`${p}_api_key`)  || {}).value || "",
+        model:    (document.getElementById(`${p}_model`)    || {}).value || "",
+        base_url: (document.getElementById(`${p}_base_url`) || {}).value || "",
+      };
+    });
+    localStorage.setItem("ilab_credentials", JSON.stringify(creds));
+
+    const activeProvider = (document.querySelector("input[name='ai_provider']:checked") || {}).value || "claude";
+    localStorage.setItem("ilab_active_provider", activeProvider);
+
+    // POST only theme + quiz defaults to server
+    const fd = new FormData();
+    fd.append("appearance_mode", document.getElementById("appearance_mode").value);
+    fd.append("num_questions",   document.getElementById("dnum-hidden").value);
+    fd.append("experience_level", document.getElementById("dexp-hidden").value);
+
+    fetch("/settings", { method: "POST", body: fd })
+      .then(() => { window.location.href = "/settings?saved=1"; });
+  });
+
+  /* ── Provider tabs ───────────────────────────────── */
+  function switchProviderTab(name) {
+    document.querySelectorAll(".ptab-btn").forEach(b =>
+      b.classList.toggle("active", b.dataset.provider === name));
+    document.querySelectorAll(".ptab-pane").forEach(p =>
+      p.classList.toggle("active", p.dataset.provider === name));
+  }
+  document.querySelectorAll("input[name='ai_provider']").forEach(r =>
+    r.addEventListener("change", () => switchProviderTab(r.value)));
+
+  /* ── Theme switching ─────────────────────────────── */
+  function setTheme(id) {
+    document.documentElement.setAttribute("data-theme", id);
+    document.getElementById("appearance_mode").value = id;
+    document.querySelectorAll(".theme-swatch").forEach(s =>
+      s.classList.toggle("active", s.dataset.themeId === id));
+  }
+
+  /* ── Slider helpers ──────────────────────────────── */
+  const EXP_LEVELS = ["junior","mid","senior","lead","architect"];
+  const EXP_LABELS = ["Junior","Mid","Senior","Lead","Architect"];
+
+  function setSliderFill(el) {
+    const pct = ((el.value - el.min) / (el.max - el.min)) * 100;
+    el.style.background = `linear-gradient(to right, var(--accent) ${pct}%, var(--border) ${pct}%)`;
+  }
+
+  function updateDExp(val) {
+    const i = parseInt(val);
+    document.getElementById("dexp-display").textContent = EXP_LABELS[i];
+    document.getElementById("dexp-hidden").value        = EXP_LEVELS[i];
+    setSliderFill(document.getElementById("dexp-slider"));
+  }
+  function updateDNum(val) {
+    document.getElementById("dnum-display").textContent = val;
+    document.getElementById("dnum-hidden").value        = val;
+    setSliderFill(document.getElementById("dnum-slider"));
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    setSliderFill(document.getElementById("dexp-slider"));
+    setSliderFill(document.getElementById("dnum-slider"));
+    loadFromLocalStorage();
+  });
+</script>
+{% endblock %}

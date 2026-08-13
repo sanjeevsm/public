@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}iCare+ — Schedules{% endblock %}
+{% block content %}
+<div class="page-head"><div class="page-head-text"><h1>Schedules</h1><p>Doctor weekly schedules.</p></div></div>
+<div class="container">
+  <div class="card p-4">
+    <h3 class="font-semibold mb-2">Doctor Weekly Schedules</h3>
+    <div class="mb-3">
+      <form id="addScheduleForm" class="grid grid-cols-5 gap-2 items-end">
+        <select id="doctorSelectForSchedule" class="p-2 border" required><option value="">Select doctor</option></select>
+        <select id="daySelect" class="p-2 border"><option value="0">Mon</option><option value="1">Tue</option><option value="2">Wed</option><option value="3">Thu</option><option value="4">Fri</option><option value="5">Sat</option><option value="6">Sun</option></select>
+        <input id="startTime" type="time" class="p-2 border" />
+        <input id="endTime" type="time" class="p-2 border" />
+        <div><button class="px-3 py-1 bg-[var(--brand)] text-white rounded">Add</button></div>
+      </form>
+    </div>
+    <table class="min-w-full">
+      <thead><tr><th class="p-2 text-left">#</th><th class="p-2 text-left">Doctor</th><th class="p-2 text-left">Day</th><th class="p-2 text-left">Start</th><th class="p-2 text-left">End</th><th class="p-2 text-left">Actions</th></tr></thead>
+      <tbody id="schedules"></tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+// populate doctor select for adding schedule
+fetch('{{ api_url }}/doctors').then(r=>r.json()).then(docs=>{
+  const sel = document.getElementById('doctorSelectForSchedule');
+  docs.forEach(d=>{ const opt=document.createElement('option'); opt.value=d.id; opt.textContent = `${d.first_name} ${d.last_name}`; sel.appendChild(opt); })
+})
+document.getElementById('addScheduleForm').addEventListener('submit', e=>{
+  e.preventDefault();
+  const doctor_id = document.getElementById('doctorSelectForSchedule').value;
+  const day_of_week = document.getElementById('daySelect').value;
+  const start_time = document.getElementById('startTime').value + ':00';
+  const end_time = document.getElementById('endTime').value + ':00';
+  if (!doctor_id) return alert('select doctor');
+  fetch('{{ api_url }}/doctors/' + doctor_id + '/schedules', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({day_of_week: parseInt(day_of_week), start_time: start_time, end_time: end_time}) })
+    .then(r=>r.json().then(j=>({ok:r.ok, body:j}))).then(res=>{ if (!res.ok) return alert(res.body.error||'failed'); window.location.reload(); }).catch(()=>alert('failed'));
+})
+
+fetch('{{ api_url }}/schedules').then(r=>r.json()).then(data=>{
+  const root = document.getElementById('schedules');
+  data.forEach((s, idx)=>{ const tr=document.createElement('tr'); tr.className='border-t'; tr.innerHTML = `<td class="p-2">${s.id||idx+1}</td><td class="p-2">${s.doctor_id}</td><td class="p-2">${s.day_of_week}</td><td class="p-2">${s.start_time}</td><td class="p-2">${s.end_time}</td><td class="p-2"><form method="post" action="/schedules/${s.id}/delete" style="display:inline"><button class="text-red-600">Delete</button></form> <a href="/doctors/${s.doctor_id}/edit" style="color:var(--brand)">Edit Doctor</a></td>`; root.appendChild(tr); })
+})
+</script>
+{% endblock %}

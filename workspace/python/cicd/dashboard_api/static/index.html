@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CI/CD Dashboard</title>
+  <link rel="stylesheet" href="/static/css/styles.css" />
+</head>
+<body>
+
+<header class="header">
+  <div class="header-brand">
+    <h1>CI/CD Dashboard</h1>
+    <span class="provider-badge" id="provider-badge">Not configured</span>
+  </div>
+
+  <div class="ws-status">
+    <div class="ws-dot connecting" id="ws-dot"></div>
+    <span id="ws-label">Connecting...</span>
+  </div>
+
+  <div class="filter-wrap">
+    <label class="filter-label">Date Range:</label>
+    <button class="btn filter-btn" id="filter-btn">
+      <span id="filter-text">Last 30 Days</span>
+      <span>&#9660;</span>
+    </button>
+    <div class="dropdown-menu" id="filter-menu">
+      <a data-days="7">Last 7 Days</a>
+      <a data-days="14">Last 14 Days</a>
+      <a data-days="30" class="active">Last 30 Days</a>
+      <a data-days="60">Last 60 Days</a>
+      <a data-days="90">Last 90 Days</a>
+    </div>
+  </div>
+
+  <div class="export-wrap">
+    <button class="btn" id="export-btn">Export &#9660;</button>
+    <div class="dropdown-menu" id="export-menu">
+      <a onclick="doExport('csv')">CSV</a>
+      <a onclick="doExport('json')">JSON</a>
+      <a onclick="doExport('excel')">Excel</a>
+      <a onclick="doExport('pdf')">PDF</a>
+    </div>
+  </div>
+
+  <button class="settings-btn" id="settings-btn" title="Settings">&#9881;</button>
+  <button class="theme-btn" id="theme-btn" title="Toggle theme">&#9788;</button>
+</header>
+
+<nav class="section-nav">
+  <button class="nav-btn active" data-section="overview">Overview</button>
+  <button class="nav-btn" data-section="pipelines">Pipelines</button>
+  <button class="nav-btn" data-section="jobs">Jobs</button>
+</nav>
+
+<div class="content">
+
+  <!-- ── No-credentials banner ────────────────────────────────────────────── -->
+  <div class="setup-banner" id="setup-banner" style="display:none">
+    <div class="setup-banner-content">
+      <span class="setup-icon">&#9881;</span>
+      <div>
+        <strong>Configure your provider</strong>
+        <p>Click <strong>Settings</strong> in the top-right to add your access token and select a provider (GitLab, GitHub, Bitbucket, or Gitea).</p>
+      </div>
+      <button class="btn btn-accent" onclick="openSettings()">Open Settings</button>
+    </div>
+  </div>
+
+  <!-- ── Overview ─────────────────────────────────────────────── -->
+  <section class="section active" id="section-overview">
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-label">Total Pipelines <span id="ov-label-days">(30d)</span></div>
+        <div class="stat-value" id="ov-total">-</div>
+        <div class="stat-sub" id="ov-total-sub">loading...</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Success Rate</div>
+        <div class="stat-value green" id="ov-rate">-</div>
+        <div class="stat-sub" id="ov-rate-sub">-</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Failed</div>
+        <div class="stat-value red" id="ov-failed">-</div>
+        <div class="stat-sub" id="ov-failed-sub">-</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Running Now</div>
+        <div class="stat-value blue" id="ov-running">-</div>
+        <div class="stat-sub" id="ov-running-sub">-</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Avg Duration</div>
+        <div class="stat-value" id="ov-dur">-</div>
+        <div class="stat-sub">per pipeline</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label" id="ov-prs-label">Open PRs / MRs</div>
+        <div class="stat-value" id="ov-mrs">-</div>
+        <div class="stat-sub" id="ov-mrs-sub">-</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Repos</div>
+        <div class="stat-value" id="ov-projects">-</div>
+        <div class="stat-sub">monitored</div>
+      </div>
+    </div>
+
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="chart-title">Pipeline Trend <span id="chart-trend-label">(14 days)</span></div>
+        <div class="chart-wrap"><canvas id="chart-trend"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Pipeline Status Distribution <span id="chart-status-label">(30d)</span></div>
+        <div class="chart-wrap"><canvas id="chart-status"></canvas></div>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-title">PR / MR Activity <span id="chart-mr-label">(30 days)</span></div>
+      <div class="chart-wrap">
+        <canvas id="chart-mr-trend"></canvas>
+        <div id="chart-mr-trend-empty" style="display:none; padding:40px; text-align:center; color:#5d6785;">No PR/MR data available for the selected period</div>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <div class="table-header">
+        <div class="table-title">Branch Overview &amp; Commit Status</div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Repo</th>
+              <th>Branch</th>
+              <th>Latest Commit</th>
+              <th>Author</th>
+              <th>Pipeline</th>
+              <th>Committed</th>
+            </tr>
+          </thead>
+          <tbody id="table-ov-branches">
+            <tr class="loading-row"><td colspan="6">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="chart-grid">
+      <div class="table-card" style="margin-bottom:0">
+        <div class="table-header">
+          <div class="table-title" id="title-recent-mrs">Recent PRs / MRs</div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Repo</th>
+                <th>Title</th>
+                <th>Author</th>
+                <th>State</th>
+                <th>Updated</th>
+              </tr>
+            </thead>
+            <tbody id="table-ov-mrs">
+              <tr class="loading-row"><td colspan="5">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="table-card" style="margin-bottom:0">
+        <div class="table-header">
+          <div class="table-title">Recent Deployments</div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Repo</th>
+                <th>Environment</th>
+                <th>Ref</th>
+                <th>Status</th>
+                <th>Deployed By</th>
+                <th>Updated</th>
+              </tr>
+            </thead>
+            <tbody id="table-ov-deployments">
+              <tr class="loading-row"><td colspan="6">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Pipelines ────────────────────────────────────────────── -->
+  <section class="section" id="section-pipelines">
+    <div class="table-card">
+      <div class="table-header">
+        <div class="table-title" id="title-pipelines">Recent Pipelines / Runs</div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Repo</th>
+              <th>ID</th>
+              <th>Branch / Tag</th>
+              <th>Status</th>
+              <th>Duration</th>
+              <th>Created</th>
+              <th>Commit</th>
+              <th>Triggered By</th>
+            </tr>
+          </thead>
+          <tbody id="table-pipelines">
+            <tr class="loading-row"><td colspan="8">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Jobs ─────────────────────────────────────────────────── -->
+  <section class="section" id="section-jobs">
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="chart-title">Top Failing Jobs</div>
+        <div class="chart-wrap tall"><canvas id="chart-failing"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Failures by Stage</div>
+        <div class="chart-wrap tall"><canvas id="chart-stages"></canvas></div>
+      </div>
+    </div>
+    <div class="table-card">
+      <div class="table-header">
+        <div class="table-title">Recent Jobs</div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Repo</th>
+              <th>Job Name</th>
+              <th>Stage</th>
+              <th>Status</th>
+              <th>Duration</th>
+              <th>Branch</th>
+              <th>Created</th>
+            </tr>
+          </thead>
+          <tbody id="table-jobs">
+            <tr class="loading-row"><td colspan="7">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<!-- ── Settings Modal ─────────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="settings-overlay" onclick="closeSettings(event)">
+  <div class="modal" id="settings-modal">
+    <div class="modal-header">
+      <h2>Settings</h2>
+      <button class="modal-close" onclick="closeSettings()">&times;</button>
+    </div>
+
+    <div class="modal-body">
+
+      <!-- Provider tabs -->
+      <div class="settings-section">
+        <div class="settings-label">Git Provider</div>
+        <div class="provider-tabs" id="provider-tabs">
+          <button class="provider-tab active" data-provider="gitlab">
+            <span class="provider-icon provider-icon-gitlab"></span>GitLab
+          </button>
+          <button class="provider-tab" data-provider="github">
+            <span class="provider-icon provider-icon-github"></span>GitHub
+          </button>
+          <button class="provider-tab" data-provider="bitbucket">
+            <span class="provider-icon provider-icon-bitbucket"></span>Bitbucket
+          </button>
+          <button class="provider-tab" data-provider="gitea">
+            <span class="provider-icon provider-icon-gitea"></span>Gitea
+          </button>
+        </div>
+      </div>
+
+      <!-- Per-provider config panels -->
+      <div id="provider-panels">
+
+        <!-- GitLab -->
+        <div class="provider-panel active" data-panel="gitlab">
+          <div class="field-group">
+            <label>Personal Access Token <span class="field-hint">(scopes: api, read_api)</span></label>
+            <input type="password" id="gitlab_token" placeholder="glpat-xxxxxxxxxxxxxxxxxxxx" autocomplete="off" />
+          </div>
+          <div class="field-group">
+            <label>GitLab URL <span class="field-hint">(leave blank for gitlab.com)</span></label>
+            <input type="url" id="gitlab_url" placeholder="https://gitlab.com" />
+          </div>
+          <div class="field-group">
+            <label>Project IDs <span class="field-hint">(comma-separated, blank = auto-discover)</span></label>
+            <input type="text" id="gitlab_project_ids" placeholder="123,456,789" />
+          </div>
+          <div class="field-group">
+            <label>Max Repos <span class="field-hint">(when auto-discovering)</span></label>
+            <input type="number" id="gitlab_limit" placeholder="20" min="1" max="100" />
+          </div>
+        </div>
+
+        <!-- GitHub -->
+        <div class="provider-panel" data-panel="github">
+          <div class="field-group">
+            <label>Personal Access Token <span class="field-hint">(scopes: repo, read:org)</span></label>
+            <input type="password" id="github_token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off" />
+          </div>
+          <div class="field-group">
+            <label>Organisation / User <span class="field-hint">(blank = your personal repos)</span></label>
+            <input type="text" id="github_username" placeholder="my-org or my-username" />
+          </div>
+          <div class="field-group">
+            <label>GitHub URL <span class="field-hint">(leave blank for github.com)</span></label>
+            <input type="url" id="github_url" placeholder="https://github.com" />
+          </div>
+          <div class="field-group">
+            <label>Repo Full Names <span class="field-hint">(comma-sep, blank = auto-discover)</span></label>
+            <input type="text" id="github_project_ids" placeholder="org/repo-a, org/repo-b" />
+          </div>
+          <div class="field-group">
+            <label>Max Repos</label>
+            <input type="number" id="github_limit" placeholder="20" min="1" max="100" />
+          </div>
+        </div>
+
+        <!-- Bitbucket -->
+        <div class="provider-panel" data-panel="bitbucket">
+          <div class="field-group">
+            <label>App Password <span class="field-hint">(Account → App passwords, scopes: repository, pipelines)</span></label>
+            <input type="password" id="bitbucket_token" placeholder="App password" autocomplete="off" />
+          </div>
+          <div class="field-group">
+            <label>Workspace <span class="field-hint">(required — your Bitbucket workspace slug)</span></label>
+            <input type="text" id="bitbucket_username" placeholder="my-workspace" />
+          </div>
+          <div class="field-group">
+            <label>Bitbucket URL <span class="field-hint">(leave blank for bitbucket.org)</span></label>
+            <input type="url" id="bitbucket_url" placeholder="https://api.bitbucket.org" />
+          </div>
+          <div class="field-group">
+            <label>Repo Slugs <span class="field-hint">(comma-sep workspace/slug, blank = all)</span></label>
+            <input type="text" id="bitbucket_project_ids" placeholder="my-workspace/repo-a" />
+          </div>
+          <div class="field-group">
+            <label>Max Repos</label>
+            <input type="number" id="bitbucket_limit" placeholder="20" min="1" max="100" />
+          </div>
+        </div>
+
+        <!-- Gitea -->
+        <div class="provider-panel" data-panel="gitea">
+          <div class="field-group">
+            <label>Access Token</label>
+            <input type="password" id="gitea_token" placeholder="your-gitea-access-token" autocomplete="off" />
+          </div>
+          <div class="field-group">
+            <label>Gitea URL <span class="field-hint">(required — your self-hosted Gitea URL)</span></label>
+            <input type="url" id="gitea_url" placeholder="https://gitea.example.com" />
+          </div>
+          <div class="field-group">
+            <label>Organisation <span class="field-hint">(blank = your personal repos)</span></label>
+            <input type="text" id="gitea_username" placeholder="my-org" />
+          </div>
+          <div class="field-group">
+            <label>Repo Full Names <span class="field-hint">(comma-sep, blank = auto-discover)</span></label>
+            <input type="text" id="gitea_project_ids" placeholder="org/repo-a, org/repo-b" />
+          </div>
+          <div class="field-group">
+            <label>Max Repos</label>
+            <input type="number" id="gitea_limit" placeholder="20" min="1" max="100" />
+          </div>
+        </div>
+
+      </div><!-- /provider-panels -->
+
+    </div><!-- /modal-body -->
+
+    <div class="modal-footer">
+      <span class="settings-note">&#128274; Credentials are stored in your browser only — never sent to the server as settings.</span>
+      <div class="modal-actions">
+        <button class="btn" onclick="closeSettings()">Cancel</button>
+        <button class="btn btn-accent" onclick="saveSettings()">Save &amp; Refresh</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+<script src="/static/js/app.js"></script>
+</body>
+</html>

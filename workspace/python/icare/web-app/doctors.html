@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}iCare+ — Doctors{% endblock %}
+{% block content %}
+<div class="page-head"><div class="page-head-text"><h1>Doctors</h1><p>Manage doctors and their schedules.</p></div></div>
+<div class="container">
+  <div class="mb-4 flex items-center justify-between">
+    <a href="/doctors/new" class="px-3 py-1 bg-[var(--brand)] text-white rounded">New doctor</a>
+    <div><form method="post" action="/doctors/0/delete" onsubmit="return confirm('Delete all? This is only for UI demo.')"><button class="text-red-600 hidden">Delete</button></form></div>
+  </div>
+  <div class="card p-4">
+    <table class="min-w-full">
+      <thead>
+        <tr><th class="p-2 text-left">#</th><th class="p-2 text-left">Name</th><th class="p-2 text-left">Speciality</th><th class="p-2 text-left">Contact</th><th class="p-2 text-left">Actions</th></tr>
+      </thead>
+      <tbody>
+        {% if doctors %}
+          {% for d in doctors %}
+            <tr class="border-t"><td class="p-2">{{ d.id }}</td><td class="p-2">{{ d.first_name }} {{ d.last_name }}</td><td class="p-2">{{ d.speciality_id or '' }}</td><td class="p-2">{{ d.phone or '' }} {{ d.email or '' }}</td><td class="p-2"><a href="/doctors/{{ d.id }}/edit" style="color:var(--brand)">Edit</a> <button onclick="deleteDoctor({{ d.id }})" class="text-red-600 ml-2">Delete</button></td></tr>
+          {% endfor %}
+        {% else %}
+          <tr><td class="p-2" colspan="5">No doctors</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function deleteDoctor(id){
+  if (!confirm('Delete doctor? This is permanent and will fail if pending appointments exist.')) return;
+  fetch('{{ api_url }}/doctors/' + id, { method: 'DELETE' }).then(r=>r.json().then(j=>({ok:r.ok, body:j}))).then(res=>{
+    if (!res.ok) return alert(res.body.error || 'delete failed');
+    window.location.reload();
+  }).catch(()=>alert('delete failed'));
+}
+</script>
+{% endblock %}

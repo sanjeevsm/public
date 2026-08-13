@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Management Reports — iCare+{% endblock %}
+{% block content %}
+<div class="page-head"><div class="page-head-text"><h1>Reports</h1><p>Clinic analytics and exports.</p></div></div>
+<div class="container">
+  <div class="p-4 bg-white dark:bg-slate-800 rounded shadow">
+    <h3 class="font-semibold mb-2">Financial summary</h3>
+    <form id="finForm" class="flex gap-2 items-center">
+      <label>Month <input type="month" id="month" class="p-2 border" /></label>
+      <button id="run" class="px-3 py-1 bg-[var(--brand)] text-white rounded">Run</button>
+    </form>
+    <div id="report" class="mt-4"></div>
+  </div>
+  <p class="mt-4">Use the API endpoints under <code>{{ api_url }}/reports/*</code> to fetch report data.</p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('run').addEventListener('click', function(e){
+  e.preventDefault(); const m = document.getElementById('month').value; if (!m) return; const month = m;
+  fetch(`{{ api_url }}/reports/financial?month=${month}`).then(r=>r.json()).then(j=>{
+    document.getElementById('report').innerHTML = `<div>Appointments: ${j.appointments}</div><div>Revenue: ${j.revenue}</div><div>Costs: ${j.costs}</div><div>Profit: ${j.profit}</div>`;
+  }).catch(()=>{ document.getElementById('report').textContent='Could not fetch report' })
+})
+</script>
+{% endblock %}
