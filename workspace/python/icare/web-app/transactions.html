@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Billing Transactions{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto mt-6">
+  <div class="flex justify-between items-center mb-4">
+    <h2 class="text-2xl font-bold">Billing Transactions</h2>
+    <a href="{{ url_for('new_billing_transaction') }}" class="btn btn-primary" id="new-transaction-btn">New Transaction</a>
+  </div>
+
+  <div class="mb-4">
+    <label class="text-sm">Filter by Type:</label>
+    <div class="flex gap-2">
+      <a href="{{ url_for('billing_transactions') }}" class="btn {% if not request.args.get('type') %}btn-primary{% else %}border{% endif %}">All</a>
+      <a href="{{ url_for('billing_transactions', type='income') }}" class="btn {% if request.args.get('type') == 'income' %}btn-primary{% else %}border{% endif %}">Income</a>
+      <a href="{{ url_for('billing_transactions', type='expense') }}" class="btn {% if request.args.get('type') == 'expense' %}btn-primary{% else %}border{% endif %}">Expenses</a>
+    </div>
+  </div>
+
+  {% if transactions %}
+  <table class="w-full table-auto">
+    <thead>
+      <tr class="text-left">
+        <th>ID</th>
+        <th>Date</th>
+        <th>Type</th>
+        <th>Amount</th>
+        <th>Category</th>
+        <th>Description</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for tx in transactions %}
+      <tr>
+        <td>{{ tx.id }}</td>
+        <td>{{ tx.trans_date }}</td>
+        <td>
+          <span class="{% if tx.type == 'income' %}text-green-600{% else %}text-red-600{% endif %}">
+            {{ tx.type|title }}
+          </span>
+        </td>
+        <td>{{ "%.2f"|format(tx.amount) }}</td>
+        <td>{{ tx.category_id or '-' }}</td>
+        <td>{{ tx.description or '-' }}</td>
+        <td>
+          <a href="{{ url_for('edit_billing_transaction', tid=tx.id) }}" class="text-blue-600 mr-2 action-btn-edit" data-action="edit">Edit</a>
+          <form method="post" action="{{ url_for('delete_billing_transaction_route', tid=tx.id) }}" style="display:inline" class="action-btn-delete" data-action="delete" onsubmit="return confirm('Delete transaction?');">
+            <button class="text-red-600">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="card p-4 text-center text-slate-600">
+    No transactions found.
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Control visibility of action buttons based on permissions
+document.addEventListener('DOMContentLoaded', function() {
+  const screenName = 'transactions';
+  
+  // Hide "New Transaction" button if no 'add' permission
+  controlActionVisibility(screenName, 'add', '#new-transaction-btn');
+  
+  // Hide Edit buttons if no 'edit' permission
+  controlActionVisibility(screenName, 'edit', '.action-btn-edit');
+  
+  // Hide Delete buttons if no 'delete' permission
+  controlActionVisibility(screenName, 'delete', '.action-btn-delete');
+});
+</script>
+{% endblock %}

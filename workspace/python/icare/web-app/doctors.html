@@ -4,7 +4,7 @@
 <div class="page-head"><div class="page-head-text"><h1>Doctors</h1><p>Manage doctors and their schedules.</p></div></div>
 <div class="container">
   <div class="mb-4 flex items-center justify-between">
-    <a href="/doctors/new" class="px-3 py-1 bg-[var(--brand)] text-white rounded">New doctor</a>
+    <a href="/doctors/new" id="new-doctor-btn" class="px-3 py-1 bg-[var(--brand)] text-white rounded">New doctor</a>
     <div><form method="post" action="/doctors/0/delete" onsubmit="return confirm('Delete all? This is only for UI demo.')"><button class="text-red-600 hidden">Delete</button></form></div>
   </div>
   <div class="card p-4">
@@ -15,7 +15,7 @@
       <tbody>
         {% if doctors %}
           {% for d in doctors %}
-            <tr class="border-t"><td class="p-2">{{ d.id }}</td><td class="p-2">{{ d.first_name }} {{ d.last_name }}</td><td class="p-2">{{ specialities.get(d.speciality_id) if specialities else (d.speciality_id or '') }}</td><td class="p-2">{{ d.phone or '' }} {{ d.email or '' }}</td><td class="p-2"><a href="/doctors/{{ d.id }}/edit" style="color:var(--brand)">Edit</a> <button onclick="deleteDoctor({{ d.id }})" class="text-red-600 ml-2">Delete</button></td></tr>
+            <tr class="border-t"><td class="p-2">{{ d.id }}</td><td class="p-2">{{ d.first_name }} {{ d.last_name }}</td><td class="p-2">{{ specialities.get(d.speciality_id) if specialities else (d.speciality_id or '') }}</td><td class="p-2">{{ d.phone or '' }} {{ d.email or '' }}</td><td class="p-2"><a href="/doctors/{{ d.id }}/edit" style="color:var(--brand)" class="action-btn-edit" data-action="edit">Edit</a> <button onclick="deleteDoctor({{ d.id }})" class="text-red-600 ml-2 action-btn-delete" data-action="delete">Delete</button></td></tr>
           {% endfor %}
         {% else %}
           <tr><td class="p-2" colspan="5">No doctors</td></tr>
@@ -34,5 +34,13 @@ function deleteDoctor(id){
     window.location.reload();
   }).catch(()=>alert('delete failed'));
 }
+
+// Control visibility of action buttons based on permissions
+window.addEventListener('load', function() {
+  const screenName = 'doctors';
+  controlActionVisibility(screenName, 'add', '#new-doctor-btn');
+  controlActionVisibility(screenName, 'edit', '.action-btn-edit');
+  controlActionVisibility(screenName, 'delete', '.action-btn-delete');
+});
 </script>
 {% endblock %}

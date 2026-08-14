@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}Invoice {{ invoice.invoice_no }}{% endblock %}
+{% block content %}
+<div class="max-w-2xl mx-auto mt-6">
+  <div class="flex justify-between items-center mb-4">
+    <h2 class="text-2xl font-bold">{{ invoice.invoice_no }}</h2>
+    <div class="flex gap-2">
+      <a href="{{ url_for('edit_invoice', iid=invoice.id) }}" class="btn">Edit</a>
+      <a href="{{ url_for('export_invoice', iid=invoice.id) }}" class="btn btn-primary">Export PDF</a>
+    </div>
+  </div>
+
+  <div class="card p-4 mb-4">
+    <div class="grid grid-cols-2 gap-4 mb-4">
+      <div>
+        <div class="text-sm text-slate-600">Invoice Date</div>
+        <div class="font-semibold">{{ invoice.invoice_date }}</div>
+      </div>
+      <div>
+        <div class="text-sm text-slate-600">Patient ID</div>
+        <div class="font-semibold">{{ invoice.patient_id }}</div>
+      </div>
+    </div>
+
+    <div class="text-sm text-slate-600 mb-1">Status</div>
+    <span class="inline-block px-3 py-1 rounded {% if invoice.status == 'paid' %}bg-green-100 text-green-800{% elif invoice.status == 'pending' %}bg-yellow-100 text-yellow-800{% else %}bg-red-100 text-red-800{% endif %}">
+      {{ invoice.status|title }}
+    </span>
+  </div>
+
+  <div class="card p-4 mb-4">
+    <h3 class="text-lg font-semibold mb-3">Line Items</h3>
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b">
+          <th class="text-left py-2">Description</th>
+          <th class="text-right py-2">Qty</th>
+          <th class="text-right py-2">Unit Price</th>
+          <th class="text-right py-2">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for line in invoice.lines %}
+        <tr class="border-b">
+          <td class="py-2">{{ line.description }}</td>
+          <td class="text-right">{{ line.qty }}</td>
+          <td class="text-right">{{ "%.2f"|format(line.unit_price) }}</td>
+          <td class="text-right">{{ "%.2f"|format(line.amount) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <div class="text-right mt-4">
+      <div class="text-lg font-semibold">Total: {{ "%.2f"|format(invoice.total) }}</div>
+    </div>
+  </div>
+
+  <div class="card p-4 mb-4">
+    <h3 class="text-lg font-semibold mb-3">Payments</h3>
+    {% if invoice.payments %}
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b">
+          <th class="text-left py-2">Date</th>
+          <th class="text-left py-2">Method</th>
+          <th class="text-right py-2">Amount</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for payment in invoice.payments %}
+        <tr class="border-b">
+          <td class="py-2">{{ payment.payment_date }}</td>
+          <td>{{ payment.method or '-' }}</td>
+          <td class="text-right">{{ "%.2f"|format(payment.amount) }}</td>
+          <td>
+            <form method="post" action="{{ url_for('delete_payment', pid=payment.id) }}" style="display:inline" onsubmit="return confirm('Delete payment?');">
+              <button class="text-red-600 text-sm">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="text-slate-600 text-sm">No payments recorded</div>
+    {% endif %}
+
+    <div class="mt-4 grid grid-cols-3 gap-4 text-sm">
+      <div>
+        <div class="text-slate-600">Paid</div>
+        <div class="font-semibold">{{ "%.2f"|format(invoice.paid) }}</div>
+      </div>
+      <div>
+        <div class="text-slate-600">Outstanding</div>
+        <div class="font-semibold" style="color: {% if invoice.outstanding > 0 %}#dc2626{% else %}#10b981{% endif %}">
+          {{ "%.2f"|format(invoice.outstanding) }}
+        </div>
+      </div>
+      <div>
+        <div class="text-slate-600">Total</div>
+        <div class="font-semibold">{{ "%.2f"|format(invoice.total) }}</div>
+      </div>
+    </div>
+  </div>
+
+  {% if invoice.outstanding > 0 %}
+  <div class="card p-4 mb-4">
+    <h3 class="text-lg font-semibold mb-3">Record Payment</h3>
+    <form method="post" action="{{ url_for('create_invoice_payment', iid=invoice.id) }}" class="flex gap-2 flex-wrap">
+      <input type="hidden" name="invoice_id" value="{{ invoice.id }}">
+      <input type="date" name="payment_date" value="{{ now.strftime('%Y-%m-%d') if now else '' }}" class="border p-2 rounded" required>
+      <input type="number" name="amount" step="0.01" placeholder="Amount" class="border p-2 rounded" required>
+      <input type="text" name="method" placeholder="Method" class="border p-2 rounded">
+      <input type="text" name="reference" placeholder="Reference" class="border p-2 rounded">
+      <button class="btn btn-primary">Record Payment</button>
+    </form>
+  </div>
+  {% endif %}
+
+  <div class="mb-4">
+    <a href="{{ url_for('invoices') }}" class="btn">Back to Invoices</a>
+  </div>
+</div>
+{% endblock %}

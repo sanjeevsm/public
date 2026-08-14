@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-md mx-auto mt-8">
+  <h2 class="text-2xl font-bold mb-4">Login</h2>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for cat, msg in messages %}
+        <div class="mb-2 px-3 py-2 rounded {{ 'bg-green-100 text-green-800' if cat=='success' else 'bg-red-100 text-red-800' }}">{{ msg }}</div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+  <form method="post">
+    <label class="block mb-2">Username<br><input name="username" class="border p-2 w-full"/></label>
+    <label class="block mb-4">Password<br><input type="password" name="password" class="border p-2 w-full"/></label>
+    <button class="btn btn-primary">Login</button>
+  </form>
+</div>
+{% endblock %}

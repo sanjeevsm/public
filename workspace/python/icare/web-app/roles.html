@@ -1,0 +1,354 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-4xl mx-auto mt-6">
+  <div class="flex justify-between items-center mb-4">
+    <h2 class="text-2xl font-bold">Roles</h2>
+    {% if session.get('user') and session.get('user').get('is_admin') %}
+      <button id="new-role-btn" onclick="document.getElementById('new-role').classList.toggle('hidden')" class="btn">New Role</button>
+    {% endif %}
+  </div>
+  <div id="new-role" class="hidden mb-4 card p-4">
+    {% if session.get('user') and session.get('user').get('is_admin') %}
+    <h3 class="font-semibold mb-2">Create New Role</h3>
+    <form method="post" action="{{ url_for('create_role_route') }}" class="flex gap-2">
+      <input name="name" placeholder="role name" class="border p-2" required>
+      <input name="description" placeholder="description" class="border p-2">
+      <button class="btn btn-primary">Create</button>
+      <button type="button" onclick="document.getElementById('new-role').classList.add('hidden')" class="btn">Cancel</button>
+    </form>
+    {% endif %}
+  </div>
+  <table class="w-full table-auto">
+    <thead>
+      <tr class="text-left"><th>Role</th><th>Description</th><th>Actions</th></tr>
+    </thead>
+    <tbody>
+      {% for r in roles %}
+      <tr>
+        {% if r.name %}
+          <td><span class="role-name-{{ loop.index }}">{{ r.name }}</span></td>
+          <td><span class="role-desc-{{ loop.index }}">{{ r.description }}</span></td>
+        {% else %}
+          <td>{{ r }}</td>
+          <td></td>
+        {% endif %}
+        <td>
+          {% if session.get('user') and session.get('user').get('is_admin') and r.name %}
+          <button type="button" onclick="editRole(this, '{{ r.name }}', '{{ r.description }}')" class="action-btn-edit" data-action="edit">Edit</button>
+          <form method="post" action="{{ url_for('delete_role_route', rname=r.name) }}" class="action-btn-delete" data-action="delete" onsubmit="return confirm('Delete role?');" style="display:inline">
+            <button class="text-red-600">Delete</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div id="edit-role-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center overflow-y-auto" style="z-index: 1000;">
+  <div class="bg-white dark:bg-slate-800 rounded shadow-lg p-6 max-w-4xl w-full mx-4 my-8">
+    <h3 class="text-xl font-semibold mb-4">Edit Role</h3>
+    
+    <!-- Tabs for role info and permissions -->
+    <div class="mb-4 flex gap-2 border-b border-gray-300">
+      <button type="button" onclick="switchRoleTab('info')" id="role-tab-info" class="role-tab-btn active px-4 py-2 font-semibold text-blue-600 border-b-2 border-blue-600">
+        Role Info
+      </button>
+      <button type="button" onclick="switchRoleTab('screens')" id="role-tab-screens" class="role-tab-btn px-4 py-2 font-semibold text-gray-600">
+        Screen Access
+      </button>
+      <button type="button" onclick="switchRoleTab('actions')" id="role-tab-actions" class="role-tab-btn px-4 py-2 font-semibold text-gray-600">
+        Action Permissions
+      </button>
+    </div>
+    
+    <!-- Role Info Tab -->
+    <div id="role-info-tab" class="role-tab-content">
+      <form id="edit-role-form">
+        <input type="hidden" id="edit-role-original-name" name="original_name">
+        <label class="block mb-2">Role Name<br><input id="edit-role-name" name="name" class="border p-2 w-full"/></label>
+        <label class="block mb-4">Description<br><input id="edit-role-description" name="description" class="border p-2 w-full"/></label>
+      </form>
+    </div>
+    
+    <!-- Screen Access Tab -->
+    <div id="role-screens-tab" class="role-tab-content hidden">
+      <p class="text-sm text-gray-600 mb-3">Select which screens this role can access:</p>
+      <div class="overflow-x-auto">
+        <table class="w-full border-collapse border border-gray-300 text-sm">
+          <thead class="bg-gray-200">
+            <tr>
+              <th class="border border-gray-300 p-2 text-left">Screen</th>
+              <th class="border border-gray-300 p-2 text-center">Access</th>
+            </tr>
+          </thead>
+          <tbody id="role-screens-tbody">
+            <!-- Populated by JavaScript -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+    
+    <!-- Action Permissions Tab -->
+    <div id="role-actions-tab" class="role-tab-content hidden">
+      <p class="text-sm text-gray-600 mb-3">Configure what actions this role can perform on accessible screens:</p>
+      <div id="role-actions-container" class="space-y-4">
+        <!-- Populated by JavaScript -->
+      </div>
+    </div>
+    
+    <div class="flex gap-2 mt-6">
+      <button type="button" onclick="saveRoleEdit()" class="btn btn-primary">Save All Changes</button>
+      <button type="button" onclick="closeEditRole()" class="btn">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Store all screens and actions for permission management
+let allScreens = [];
+let allActions = ['view', 'add', 'edit', 'delete'];
+let currentEditingRole = null;
+let screenPermissions = new Set(); // screen names that role can access
+let actionPermissions = new Map(); // {screen}:{action} => bool
+
+async function editRole(btn, name, desc) {
+  currentEditingRole = name;
+  document.getElementById('edit-role-original-name').value = name;
+  document.getElementById('edit-role-name').value = name;
+  document.getElementById('edit-role-description').value = desc;
+  
+  // Fetch all screens and permissions from API
+  try {
+    const token = sessionStorage.getItem('token');
+    const apiUrl = '{{ api_url }}'.replace(/\/$/, '');
+    
+    // Get all screens (from the accessible-screens endpoint for all possible screens)
+    allScreens = ['appointments', 'patients', 'doctors', 'specialities', 'invoices', 'transactions', 'dashboard', 'users', 'roles'];
+    
+    // Get all screen permissions and filter for current role
+    const screenResp = await fetch(`${apiUrl}/admin/screen-permissions`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const screenData = await screenResp.json();
+    const screenPerms = Array.isArray(screenData) ? screenData : [];
+    
+    // Load current screen permissions for this role
+    screenPermissions.clear();
+    screenPerms.forEach(p => {
+      if (p.role_name === name) {
+        screenPermissions.add(p.screen_name);
+      }
+    });
+    
+    // Get all action permissions and filter for current role
+    const actionResp = await fetch(`${apiUrl}/admin/action-permissions`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const actionData = await actionResp.json();
+    const actionPerms = Array.isArray(actionData) ? actionData : [];
+    
+    actionPermissions.clear();
+    actionPerms.forEach(a => {
+      if (a.role_name === name) {
+        const key = `${a.screen_name}:${a.action}`;
+        actionPermissions.set(key, true);
+      }
+    });
+    
+    // Populate screens table
+    populateScreensTable();
+    
+    // Populate actions table
+    populateActionsTable();
+    
+    document.getElementById('edit-role-modal').classList.remove('hidden');
+    switchRoleTab('info');
+  } catch (err) {
+    console.error('Error loading permissions:', err);
+    alert('Error loading permissions: ' + err.message);
+  }
+}
+
+function populateScreensTable() {
+  const tbody = document.getElementById('role-screens-tbody');
+  tbody.innerHTML = '';
+  
+  allScreens.forEach(screen => {
+    const isChecked = screenPermissions.has(screen);
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td class="border border-gray-300 p-2">${screen}</td>
+      <td class="border border-gray-300 p-2 text-center">
+        <input type="checkbox" 
+               class="screen-access-cb" 
+               data-screen="${screen}"
+               ${isChecked ? 'checked' : ''}
+               onchange="handleScreenToggle('${screen}', this.checked)" />
+      </td>
+    `;
+    tbody.appendChild(row);
+  });
+}
+
+function handleScreenToggle(screen, isChecked) {
+  if (isChecked) {
+    screenPermissions.add(screen);
+  } else {
+    screenPermissions.delete(screen);
+  }
+}
+
+function populateActionsTable() {
+  const container = document.getElementById('role-actions-container');
+  container.innerHTML = '';
+  
+  allScreens.forEach(screen => {
+    const div = document.createElement('div');
+    div.className = 'border border-gray-300 rounded p-3';
+    
+    let html = `<div class="font-semibold mb-2">${screen}</div>`;
+    html += '<div class="flex flex-wrap gap-3">';
+    
+    allActions.forEach(action => {
+      const key = `${screen}:${action}`;
+      const isChecked = actionPermissions.has(key);
+      const label = action.charAt(0).toUpperCase() + action.slice(1);
+      html += `
+        <label class="flex items-center gap-1">
+          <input type="checkbox" 
+                 class="action-cb" 
+                 data-screen="${screen}"
+                 data-action="${action}"
+                 ${isChecked ? 'checked' : ''}
+                 onchange="handleActionToggle('${screen}', '${action}', this.checked)" />
+          <span>${label}</span>
+        </label>
+      `;
+    });
+    
+    html += '</div>';
+    div.innerHTML = html;
+    container.appendChild(div);
+  });
+}
+
+function handleActionToggle(screen, action, isChecked) {
+  const key = `${screen}:${action}`;
+  if (isChecked) {
+    actionPermissions.set(key, true);
+  } else {
+    actionPermissions.delete(key);
+  }
+}
+
+function switchRoleTab(tabName) {
+  // Hide all tabs
+  document.querySelectorAll('.role-tab-content').forEach(el => el.classList.add('hidden'));
+  document.querySelectorAll('.role-tab-btn').forEach(btn => {
+    btn.classList.remove('text-blue-600', 'border-b-2', 'border-blue-600');
+    btn.classList.add('text-gray-600');
+  });
+  
+  // Show selected tab
+  document.getElementById(`role-${tabName}-tab`).classList.remove('hidden');
+  document.getElementById(`role-tab-${tabName}`).classList.remove('text-gray-600');
+  document.getElementById(`role-tab-${tabName}`).classList.add('text-blue-600', 'border-b-2', 'border-blue-600');
+}
+
+function closeEditRole() {
+  document.getElementById('edit-role-modal').classList.add('hidden');
+}
+
+async function saveRoleEdit() {
+  const originalName = document.getElementById('edit-role-original-name').value;
+  const newName = document.getElementById('edit-role-name').value;
+  const description = document.getElementById('edit-role-description').value;
+  
+  if (!newName) {
+    alert('Role name is required');
+    return;
+  }
+  
+  try {
+    const token = sessionStorage.getItem('token');
+    const apiUrl = '{{ api_url }}'.replace(/\/$/, '');
+    
+    // Update role info
+    const roleResp = await fetch(`${apiUrl}/roles/${originalName}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ name: newName, description: description })
+    });
+    
+    if (!roleResp.ok) {
+      throw new Error(`Failed to update role: ${roleResp.status}`);
+    }
+    
+    // Update screen permissions
+    const screenMappings = [];
+    screenPermissions.forEach(screen => {
+      screenMappings.push({
+        screen_name: screen,
+        role_name: newName  // Use the new name in case it changed
+      });
+    });
+    
+    const screenResp = await fetch(`${apiUrl}/admin/screen-permissions`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ mappings: screenMappings })
+    });
+    
+    if (!screenResp.ok) {
+      throw new Error('Failed to update screen permissions');
+    }
+    
+    // Update action permissions
+    const actionList = [];
+    actionPermissions.forEach((val, key) => {
+      const [screen, action] = key.split(':');
+      actionList.push({
+        role_name: newName,  // Use the new name in case it changed
+        screen_name: screen,
+        action: action
+      });
+    });
+    
+    const actionResp = await fetch(`${apiUrl}/admin/action-permissions`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ permissions: actionList })
+    });
+    
+    if (!actionResp.ok) {
+      throw new Error('Failed to update action permissions');
+    }
+    
+    alert('Role and permissions updated successfully');
+    location.reload();
+  } catch (err) {
+    console.error('Error saving role:', err);
+    alert('Error: ' + err.message);
+  }
+}
+
+// Control visibility of action buttons based on permissions
+document.addEventListener('DOMContentLoaded', function() {
+  const screenName = 'roles';
+  controlActionVisibility(screenName, 'add', '#new-role-btn');
+  controlActionVisibility(screenName, 'edit', '.action-btn-edit');
+  controlActionVisibility(screenName, 'delete', '.action-btn-delete');
+});
+</script>
+{% endblock %}
