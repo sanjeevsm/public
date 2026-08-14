@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+{% block title %}Billing Dashboard{% endblock %}
+{% block content %}
+<div class="max-w-7xl mx-auto mt-6">
+  <h1 class="text-3xl font-bold mb-6">Billing Dashboard</h1>
+  
+  <div class="mb-6 card p-4">
+    <h3 class="font-semibold mb-3">Filters</h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div>
+        <label class="block text-sm mb-1">Period (Month):</label>
+        <div class="flex gap-2">
+          <input type="month" id="period" class="border p-2 rounded flex-1">
+          <button onclick="loadPeriodReport()" class="btn btn-primary px-4">View</button>
+        </div>
+      </div>
+      <div>
+        <label class="block text-sm mb-1">Year:</label>
+        <div class="flex gap-2">
+          <input type="number" id="year" placeholder="YYYY" min="2020" max="2099" class="border p-2 rounded flex-1">
+          <button onclick="loadYearReport()" class="btn btn-primary px-4">View</button>
+        </div>
+      </div>
+      <div>
+        <label class="block text-sm mb-1">Start Date:</label>
+        <input type="date" id="startDate" class="border p-2 rounded w-full">
+      </div>
+      <div>
+        <label class="block text-sm mb-1">End Date:</label>
+        <div class="flex gap-2">
+          <input type="date" id="endDate" class="border p-2 rounded flex-1">
+          <button onclick="loadDateRangeReport()" class="btn btn-primary px-4">View</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% if report %}
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div class="card p-4 text-center">
+      <div class="text-sm text-slate-600">Income</div>
+      <div class="text-2xl font-bold" style="color: var(--brand)">{{ "%.2f"|format(report.get('income', 0)) }}</div>
+    </div>
+    <div class="card p-4 text-center">
+      <div class="text-sm text-slate-600">Expenses</div>
+      <div class="text-2xl font-bold text-red-600">{{ "%.2f"|format(report.get('expenses', 0)) }}</div>
+    </div>
+    <div class="card p-4 text-center">
+      <div class="text-sm text-slate-600">Profit</div>
+      <div class="text-2xl font-bold" style="color: var(--brand)">{{ "%.2f"|format(report.get('profit', 0)) }}</div>
+    </div>
+  </div>
+
+  {% if months %}
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <div class="card p-4">
+      <h3 class="text-xl font-semibold mb-4">Monthly Trend</h3>
+      <canvas id="trendChart"></canvas>
+    </div>
+    
+    <div class="card p-4">
+      <h3 class="text-xl font-semibold mb-4">Expense Breakdown</h3>
+      <canvas id="expenseChart"></canvas>
+    </div>
+  </div>
+
+  <div class="card p-4 mb-6">
+    <h3 class="text-xl font-semibold mb-4">Monthly Breakdown</h3>
+    <div class="overflow-x-auto">
+      <table class="w-full table-auto text-sm">
+        <thead>
+          <tr class="text-left">
+            <th class="px-2 py-2">Month</th>
+            <th class="px-2 py-2 text-right">Income</th>
+            <th class="px-2 py-2 text-right">Expenses</th>
+            <th class="px-2 py-2 text-right">Profit</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for m in months %}
+          <tr class="border-t">
+            <td class="px-2 py-2">{{ m.month }}</td>
+            <td class="px-2 py-2 text-right">{{ "%.2f"|format(m.income) }}</td>
+            <td class="px-2 py-2 text-right text-red-600">{{ "%.2f"|format(m.expenses) }}</td>
+            <td class="px-2 py-2 text-right" style="color: var(--brand)">{{ "%.2f"|format(m.profit) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+  {% else %}
+  <div class="card p-4 text-center text-slate-600">
+    No data available. Select a period or year to view billing data.
+  </div>
+  {% endif %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+let trendChart = null;
+let expenseChart = null;
+
+function loadPeriodReport() {
+  const period = document.getElementById('period').value;
+  if (period) {
+    location.href = `{{ url_for('billing_dashboard') }}?period=${period}`;
+  }
+}
+
+function loadYearReport() {
+  const year = document.getElementById('year').value;
+  if (year) {
+    location.href = `{{ url_for('billing_dashboard') }}?year=${year}`;
+  }
+}
+
+function loadDateRangeReport() {
+  const startDate = document.getElementById('startDate').value;
+  const endDate = document.getElementById('endDate').value;
+  if (startDate && endDate) {
+    location.href = `{{ url_for('billing_dashboard') }}?start_date=${startDate}&end_date=${endDate}`;
+  }
+}
+
+{% if months %}
+const months = {{ months|tojson }};
+
+// Trend Chart (Line Chart)
+const trendCtx = document.getElementById('trendChart');
+const trendData = {
+  labels: months.map(m => m.month),
+  datasets: [
+    {
+      label: 'Income',
+      data: months.map(m => m.income),
+      borderColor: 'var(--brand)',
+      backgroundColor: 'rgba(37, 99, 235, 0.1)',
+      tension: 0.4,
+      fill: true
+    },
+    {
+      label: 'Expenses',
+      data: months.map(m => m.expenses),
+      borderColor: '#dc2626',
+      backgroundColor: 'rgba(220, 38, 38, 0.1)',
+      tension: 0.4,
+      fill: true
+    },
+    {
+      label: 'Profit',
+      data: months.map(m => m.profit),
+      borderColor: '#10b981',
+      backgroundColor: 'rgba(16, 185, 129, 0.1)',
+      tension: 0.4,
+      fill: true
+    }
+  ]
+};
+
+trendChart = new Chart(trendCtx, {
+  type: 'line',
+  data: trendData,
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { position: 'top' }
+    },
+    scales: {
+      y: { beginAtZero: true }
+    }
+  }
+});
+
+// Expense Pie Chart
+const expenseCtx = document.getElementById('expenseChart');
+const colors = ['#ef4444', '#f97316', '#eab308', '#84cc16', '#22c55e', '#10b981', '#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1'];
+const expensePieData = {
+  labels: months.map((m, i) => m.month),
+  datasets: [{
+    data: months.map(m => m.expenses),
+    backgroundColor: colors.slice(0, months.length),
+    borderColor: '#fff',
+    borderWidth: 2
+  }]
+};
+
+expenseChart = new Chart(expenseCtx, {
+  type: 'doughnut',
+  data: expensePieData,
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { position: 'bottom' },
+      tooltip: { callbacks: { label: function(ctx) { return ctx.label + ': ' + ctx.parsed.y.toFixed(2); } } }
+    }
+  }
+});
+{% endif %}
+</script>
+{% endblock %}

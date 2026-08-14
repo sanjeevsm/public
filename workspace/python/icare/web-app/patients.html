@@ -3,7 +3,7 @@
 {% block content %}
 <div class="page-head"><div class="page-head-text"><h1>Patients</h1><p>Patient records and contact details.</p></div></div>
 <div class="container">
-  <div class="mb-4"><a href="/patients/new" class="px-3 py-1 bg-[var(--brand)] text-white rounded">New patient</a></div>
+  <div class="mb-4"><a href="/patients/new" id="new-patient-btn" class="px-3 py-1 bg-[var(--brand)] text-white rounded">New patient</a></div>
   <div class="card p-4">
     <table class="min-w-full">
       <thead>
@@ -18,7 +18,7 @@
       <tbody id="patientsBody">
         {% if patients %}
           {% for p in patients %}
-            <tr class="border-t"><td class="p-2">{{ p.id }}</td><td class="p-2">{{ p.first_name }} {{ p.last_name }}</td><td class="p-2">{{ p.phone }}</td><td class="p-2">{{ p.email or '' }}</td><td class="p-2"><a href="/patients/{{ p.id }}/edit" style="color:var(--brand)">Edit</a> <button onclick="deletePatient({{ p.id }})" class="text-red-600 ml-2">Delete</button></td></tr>
+            <tr class="border-t"><td class="p-2">{{ p.id }}</td><td class="p-2">{{ p.first_name }} {{ p.last_name }}</td><td class="p-2">{{ p.phone }}</td><td class="p-2">{{ p.email or '' }}</td><td class="p-2"><a href="/patients/{{ p.id }}/edit" style="color:var(--brand)" class="action-btn-edit" data-action="edit">Edit</a> <button onclick="deletePatient({{ p.id }})" class="text-red-600 ml-2 action-btn-delete" data-action="delete">Delete</button></td></tr>
           {% endfor %}
         {% else %}
           <tr><td class="p-2" colspan="5">No patients</td></tr>
@@ -37,7 +37,7 @@ fetch('{{ api_url }}/patients').then(r=>r.json()).then(data=>{
     data.forEach(p=>{
       const tr = document.createElement('tr');
       tr.className='border-t';
-      tr.innerHTML = `<td class="p-2">${p.id}</td><td class="p-2">${p.first_name} ${p.last_name}</td><td class="p-2">${p.phone}</td><td class="p-2">${p.email||''}</td><td class="p-2"><a href="/patients/${p.id}/edit" style="color:var(--brand)">Edit</a> <button onclick="deletePatient(${p.id})" class="text-red-600 ml-2">Delete</button></td>`;
+      tr.innerHTML = `<td class="p-2">${p.id}</td><td class="p-2">${p.first_name} ${p.last_name}</td><td class="p-2">${p.phone}</td><td class="p-2">${p.email||''}</td><td class="p-2"><a href="/patients/${p.id}/edit" style="color:var(--brand)" class="action-btn-edit" data-action="edit">Edit</a> <button onclick="deletePatient(${p.id})" class="text-red-600 ml-2 action-btn-delete" data-action="delete">Delete</button></td>`;
       body.appendChild(tr);
     })
   }

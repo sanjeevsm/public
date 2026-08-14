@@ -7,7 +7,7 @@
     <p class="text-sm text-slate-500">Medical specialities offered.</p>
   </div>
   <div>
-    <a href="/specialities/new" class="px-3 py-2 bg-[var(--brand)] text-white rounded shadow">New Speciality</a>
+    <a href="/specialities/new" id="new-speciality-btn" class="px-3 py-2 bg-[var(--brand)] text-white rounded shadow">New Speciality</a>
   </div>
 </div>
 
@@ -19,7 +19,7 @@
     <tbody id="specList">
       {% if specialities %}
         {% for s in specialities %}
-          <tr class="border-t"><td class="p-2">{{ s.id }}</td><td class="p-2">{{ s.name }}</td><td class="p-2"><a style="color:var(--brand)" class="hover:underline" href="/specialities/{{ s.id }}/edit">Edit</a> <form method="post" action="/specialities/{{ s.id }}/delete" class="inline"><button type="submit" class="text-red-600 hover:underline">Delete</button></form></td></tr>
+          <tr class="border-t"><td class="p-2">{{ s.id }}</td><td class="p-2">{{ s.name }}</td><td class="p-2"><a style="color:var(--brand)" class="hover:underline action-btn-edit" data-action="edit" href="/specialities/{{ s.id }}/edit">Edit</a> <form method="post" action="/specialities/{{ s.id }}/delete" class="action-btn-delete" data-action="delete" style="display:inline"><button type="submit" class="text-red-600 hover:underline">Delete</button></form></td></tr>
         {% endfor %}
       {% else %}
         <tr><td class="p-2" colspan="3">No specialities found.</td></tr>
@@ -38,7 +38,7 @@ fetch('{{ api_url }}/specialities').then(r=>r.json()).then(data=>{
   // if server-side didn't render rows, populate as table rows
   if (!tbody.querySelector('tr')){
     tbody.innerHTML = '';
-    data.forEach(s=>{ const tr=document.createElement('tr'); tr.className='border-t'; tr.innerHTML = `<td class="p-2">${s.id}</td><td class="p-2">${s.name}</td><td class="p-2"><a style="color:var(--brand)" class="hover:underline" href="/specialities/${s.id}/edit">Edit</a> <button onclick="deleteSpeciality(${s.id})" class="text-red-600 ml-2">Delete</button></td>`; tbody.appendChild(tr); });
+    data.forEach(s=>{ const tr=document.createElement('tr'); tr.className='border-t'; tr.innerHTML = `<td class="p-2">${s.id}</td><td class="p-2">${s.name}</td><td class="p-2"><a style="color:var(--brand)" class="hover:underline action-btn-edit" data-action="edit" href="/specialities/${s.id}/edit">Edit</a> <button onclick="deleteSpeciality(${s.id})" class="text-red-600 ml-2 action-btn-delete" data-action="delete">Delete</button></td>`; tbody.appendChild(tr); });
   }
 })
 
@@ -49,5 +49,20 @@ function deleteSpeciality(id){
     window.location.reload();
   }).catch(()=>alert('delete failed'));
 }
-</script>
+
+// Control visibility of action buttons based on permissions
+window.addEventListener('load', function() {
+  const screenName = 'specialities';
+  controlActionVisibility(screenName, 'add', '#new-speciality-btn');
+  controlActionVisibility(screenName, 'edit', '.action-btn-edit');
+  controlActionVisibility(screenName, 'delete', '.action-btn-delete');
+});
+}
+// Control visibility of action buttons based on permissions
+window.addEventListener('load', function() {
+  const screenName = 'specialities';
+  controlActionVisibility(screenName, 'add', '#new-speciality-btn');
+  controlActionVisibility(screenName, 'edit', '.action-btn-edit');
+  controlActionVisibility(screenName, 'delete', '.action-btn-delete');
+});</script>
 {% endblock %}

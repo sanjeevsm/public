@@ -59,7 +59,7 @@
         /* use local static image with a translucent overlay so the image is a faint hint
            for light themes we make the overlay slightly less opaque so the image shows more */
         background-image:
-          linear-gradient(rgba(255,255,255,0.84), rgba(255,255,255,0.84)),
+          linear-gradient(rgba(255,255,255,0.70), rgba(255,255,255,0.70)),
           url('/static/hospital.jpg');
         background-size: cover;
         background-position: center center;
@@ -68,9 +68,9 @@
       }
       /* darker overlay for dark theme so the image remains subtle there too */
       .dark body {
-        /* keep dark overlay strong so the image stays very subtle in dark mode */
+        /* slightly reduce dark overlay so background is a bit more visible in dark mode */
         background-image:
-          linear-gradient(rgba(0,0,0,0.92), rgba(0,0,0,0.92)),
+          linear-gradient(rgba(0,0,0,0.88), rgba(0,0,0,0.88)),
           url('/static/hospital.jpg');
       }
       /* keep pseudo-element but disable its own image so overlay is controlled by body backgrounds */
@@ -115,17 +115,160 @@
       <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
         <div class="flex items-center gap-4">
           <div class="text-2xl font-semibold" style="color:var(--brand)">iCare+</div>
+              {% if session.get('user') %}
+              <!-- Store token in sessionStorage for client-side API calls -->
+              <script>
+                sessionStorage.setItem('token', '{{ session.get("token") }}');
+              </script>
               <nav class="flex items-center gap-4 text-sm">
                 <a href="/" class="flex items-center gap-2 menu-link" aria-label="Home">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="color:var(--brand)">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9.75L12 3l9 6.75V21a.75.75 0 01-.75.75H3.75A.75.75 0 013 21V9.75z" />
                   </svg>
                 </a>
-                <a class="menu-link" href="/appointments">Appointments</a>
-                <a class="menu-link" href="/patients">Patients</a>
-                <a class="menu-link" href="/doctors">Doctors</a>
-                <a class="menu-link" href="/specialities">Specialities</a>
+                <!-- Clinical Management -->
+                <a class="menu-link" href="/appointments" data-screen="appointments" title="Manage appointments">Appointments</a>
+                <a class="menu-link" href="/patients" data-screen="patients" title="Manage patients">Patients</a>
+                <a class="menu-link" href="/doctors" data-screen="doctors" title="Manage doctors">Doctors</a>
+                <a class="menu-link" href="/specialities" data-screen="specialities" title="Manage specialities">Specialities</a>
+                <!-- Billing & Finance -->
+                <a class="menu-link" href="/invoices" data-screen="invoices" title="Billing - Invoices">Invoices</a>
+                <a class="menu-link" href="/billing/transactions" data-screen="transactions" title="Billing - Transactions">Transactions</a>
+                <!-- Dashboard & Admin -->
+                <a class="menu-link" href="/billing/dashboard" data-screen="dashboard" title="View dashboard">Dashboard</a>
+                <a class="menu-link" href="/users" data-screen="users" title="Manage users">Users</a>
+                <a class="menu-link" href="/roles" data-screen="roles" title="Manage roles">Roles</a>
               </nav>
+              <script>
+                // Filter menu items based on user's accessible screens
+                (async function() {
+                  try {
+                    // Get token from session storage (set after login)
+                    const token = sessionStorage.getItem('token');
+                    if (!token) {
+                      // No token, user not logged in
+                      return;
+                    }
+                    
+                    // Get accessible screens from API
+                    const apiUrl = '{{ api_url }}'.replace(/\/$/, ''); // Remove trailing slash if present
+                    const response = await fetch(`${apiUrl}/user/accessible-screens`, {
+                      headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    
+                    if (!response.ok) {
+                      console.warn('Failed to fetch accessible screens:', response.status);
+                      return;
+                    }
+                    
+                    const data = await response.json();
+                    // API returns array directly, not wrapped in {data: [...]}
+                    const screenList = Array.isArray(data) ? data : (data.data || []);
+                    
+                    // Show menu items in accessible screens, hide others
+                    document.querySelectorAll('[data-screen]').forEach(link => {
+                      const screen = link.getAttribute('data-screen');
+                      if (screenList.includes(screen)) {
+                        link.style.display = ''; // Show
+                      } else {
+                        link.style.display = 'none'; // Hide
+                      }
+                    });
+                  } catch (error) {
+                    // If there's any error, keep all menu items visible (fail safe)
+                    console.error('Error filtering menu:', error);
+                  }
+                })();
+              </script>
+              <!-- Helper: Check user permissions for action buttons (add/edit/delete) -->
+              <script>
+                // Cache for action permissions to avoid repeated API calls
+                let _actionPermissionsCache = {};
+                
+                /**
+                 * Check if current user can perform an action on a screen
+                 * @param {string} screenName - Name of the screen (e.g., 'invoices', 'transactions')
+                 * @param {string} action - Action to check: 'view', 'add', 'edit', 'delete'
+                 * @param {function} callback - Callback(hasPermission) called when check completes
+                 */
+                async function checkPermission(screenName, action, callback) {
+                  try {
+                    const token = sessionStorage.getItem('token');
+                    if (!token) {
+                      callback(false);
+                      return;
+                    }
+                    
+                    const apiUrl = '{{ api_url }}'.replace(/\/$/, '');
+                    
+                    // Check cache first
+                    const cacheKey = `${screenName}:${action}`;
+                    if (_actionPermissionsCache[cacheKey] !== undefined) {
+                      callback(_actionPermissionsCache[cacheKey]);
+                      return;
+                    }
+                    
+                    // Fetch all action permissions for this screen
+                    const response = await fetch(`${apiUrl}/admin/action-permissions`, {
+                      headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    
+                    if (!response.ok) {
+                      callback(true); // Default to show if API fails (fail-open)
+                      return;
+                    }
+                    
+                    const perms = await response.json();
+                    const actionPerms = Array.isArray(perms) ? perms : [];
+                    
+                    // Check if current user has this permission
+                    // Get current user info from API
+                    const userResp = await fetch(`${apiUrl}/auth/me`, {
+                      headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    
+                    let user = null;
+                    if (userResp.ok) {
+                      user = await userResp.json();
+                    }
+                    
+                    // Admin users have all permissions
+                    if (user && user.is_admin) {
+                      _actionPermissionsCache[cacheKey] = true;
+                      callback(true);
+                      return;
+                    }
+                    
+                    // Check if user's role has this permission
+                    const hasPermission = actionPerms.some(p =>
+                      p.screen_name === screenName &&
+                      p.action === action &&
+                      p.role_name === (user ? user.role : null)
+                    );
+                    
+                    _actionPermissionsCache[cacheKey] = hasPermission;
+                    callback(hasPermission);
+                  } catch (err) {
+                    console.error('Permission check failed:', err);
+                    callback(true); // Default to show on error (fail-open)
+                  }
+                }
+                
+                /**
+                 * Control visibility of action buttons based on permissions
+                 * @param {string} screenName - Name of the screen
+                 * @param {string} action - Action: 'add', 'edit', 'delete'
+                 * @param {string} selector - CSS selector for elements to show/hide
+                 */
+                async function controlActionVisibility(screenName, action, selector) {
+                  checkPermission(screenName, action, (hasPermission) => {
+                    document.querySelectorAll(selector).forEach(el => {
+                      el.style.display = hasPermission ? '' : 'none';
+                    });
+                  });
+                }
+              </script>
+              {% endif %}
         </div>
         <div class="flex items-center gap-3">
           <div class="flex items-center gap-2">
@@ -141,6 +284,14 @@
             <button data-theme-btn="violet" onclick="applyTheme('violet')" aria-label="violet theme" class="theme-btn" style="background:#8b5cf6; border-color:#8b5cf6"></button>
             <button data-theme-btn="teal" onclick="applyTheme('teal')" aria-label="teal theme" class="theme-btn" style="background:#14b8a6; border-color:#14b8a6"></button>
             <button data-theme-btn="charcoal" onclick="applyTheme('charcoal')" aria-label="charcoal theme" class="theme-btn" style="background:#475569; border-color:#101217"></button>
+          </div>
+          <div class="ml-4">
+            {% if session.get('user') %}
+              <span class="text-sm mr-3">Hello, {{ session.get('user').get('username') }}</span>
+              <a class="menu-link" href="/logout">Logout</a>
+            {% else %}
+              <a class="menu-link" href="/login">Login</a>
+            {% endif %}
           </div>
         </div>
       </div>

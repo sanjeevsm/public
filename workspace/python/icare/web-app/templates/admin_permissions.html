@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+
+{% block title %}Admin - Permission Management{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4">
+  <div class="mb-6">
+    <h1 class="text-3xl font-bold mb-2">Permission Management</h1>
+    <p class="text-gray-600">Configure which roles can access which screens and perform which actions</p>
+  </div>
+
+  <!-- Tabs for Screen Permissions and Action Permissions -->
+  <div class="mb-6 flex gap-4 border-b border-gray-300">
+    <button onclick="switchTab('screen-perms')" id="tab-screen-perms" class="tab-button active px-4 py-2 font-semibold text-blue-600 border-b-2 border-blue-600">
+      Screen Permissions
+    </button>
+    <button onclick="switchTab('action-perms')" id="tab-action-perms" class="tab-button px-4 py-2 font-semibold text-gray-600">
+      Action Permissions
+    </button>
+  </div>
+
+  <!-- Screen Permissions Tab -->
+  <div id="screen-perms" class="tab-content">
+    <div class="bg-white rounded-lg shadow p-6 mb-6">
+      <h2 class="text-2xl font-bold mb-4">Screen-Role Mappings</h2>
+      <p class="text-gray-600 mb-4">Check which roles can access each screen</p>
+      
+      <div class="overflow-x-auto">
+        <table class="w-full border-collapse border border-gray-300">
+          <thead class="bg-gray-200">
+            <tr>
+              <th class="border border-gray-300 p-2 text-left">Screen</th>
+              {% for role in roles %}
+                <th class="border border-gray-300 p-2 text-center">{{ role.name }}</th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for screen in screens %}
+              <tr class="hover:bg-gray-100">
+                <td class="border border-gray-300 p-2 font-semibold">{{ screen }}</td>
+                {% for role in roles %}
+                  <td class="border border-gray-300 p-2 text-center">
+                    <input type="checkbox" 
+                           class="screen-perm-checkbox" 
+                           data-screen="{{ screen }}" 
+                           data-role="{{ role.name }}"
+                           {% if screen_perms | selectattr('role_name', 'equalto', role.name) | selectattr('screen_name', 'equalto', screen) | list | length > 0 %}checked{% endif %} />
+                  </td>
+                {% endfor %}
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      
+      <button onclick="saveScreenPermissions()" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+        Save Screen Permissions
+      </button>
+    </div>
+  </div>
+
+  <!-- Action Permissions Tab -->
+  <div id="action-perms" class="tab-content hidden">
+    <div class="bg-white rounded-lg shadow p-6 mb-6">
+      <h2 class="text-2xl font-bold mb-4">Action Permissions</h2>
+      <p class="text-gray-600 mb-4">Configure view, add, edit, delete permissions for each role on each screen</p>
+      
+      <div class="space-y-6">
+        {% for role in roles %}
+          <div class="border border-gray-300 rounded p-4">
+            <h3 class="text-xl font-bold mb-3">{{ role.name }}</h3>
+            
+            <div class="overflow-x-auto">
+              <table class="w-full border-collapse border border-gray-300 text-sm">
+                <thead class="bg-gray-200">
+                  <tr>
+                    <th class="border border-gray-300 p-2 text-left">Screen</th>
+                    {% for action in actions %}
+                      <th class="border border-gray-300 p-2 text-center">{{ action | capitalize }}</th>
+                    {% endfor %}
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for screen in screens %}
+                    <tr class="hover:bg-gray-100">
+                      <td class="border border-gray-300 p-2 font-semibold">{{ screen }}</td>
+                      {% for action in actions %}
+                        <td class="border border-gray-300 p-2 text-center">
+                          <input type="checkbox" 
+                                 class="action-perm-checkbox" 
+                                 data-role="{{ role.name }}" 
+                                 data-screen="{{ screen }}"
+                                 data-action="{{ action }}"
+                                 {% if action_perm_exists(role.name, screen, action) %}checked{% endif %} />
+                        </td>
+                      {% endfor %}
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+      
+      <button onclick="saveActionPermissions()" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+        Save Action Permissions
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Get token from session/storage
+  function getToken() {
+    return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || 
+           sessionStorage.getItem('token') || 
+           localStorage.getItem('token');
+  }
+  
+  function switchTab(tabName) {
+    // Hide all tabs
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+    document.querySelectorAll('.tab-button').forEach(btn => {
+      btn.classList.remove('text-blue-600', 'border-b-2', 'border-blue-600');
+      btn.classList.add('text-gray-600');
+    });
+    
+    // Show selected tab
+    document.getElementById(tabName).classList.remove('hidden');
+    document.getElementById('tab-' + tabName).classList.remove('text-gray-600');
+    document.getElementById('tab-' + tabName).classList.add('text-blue-600', 'border-b-2', 'border-blue-600');
+  }
+  
+  function saveScreenPermissions() {
+    const mappings = [];
+    document.querySelectorAll('.screen-perm-checkbox:checked').forEach(cb => {
+      mappings.push({
+        screen_name: cb.dataset.screen,
+        role_name: cb.dataset.role
+      });
+    });
+    
+    const apiUrl = '{{ api_url }}';
+    const token = getToken();
+    
+    fetch(apiUrl + '/admin/screen-permissions', {
+      method: 'PUT',
+      headers: {
+        'Authorization': 'Bearer ' + token,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ mappings })
+    })
+    .then(r => r.json())
+    .then(data => {
+      alert('Screen permissions updated: ' + data.updated + ' mappings saved');
+      location.reload();
+    })
+    .catch(err => alert('Error: ' + err));
+  }
+  
+  function saveActionPermissions() {
+    const permissions = [];
+    document.querySelectorAll('.action-perm-checkbox:checked').forEach(cb => {
+      permissions.push({
+        role_name: cb.dataset.role,
+        screen_name: cb.dataset.screen,
+        action: cb.dataset.action
+      });
+    });
+    
+    const apiUrl = '{{ api_url }}';
+    const token = getToken();
+    
+    fetch(apiUrl + '/admin/action-permissions', {
+      method: 'PUT',
+      headers: {
+        'Authorization': 'Bearer ' + token,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ permissions })
+    })
+    .then(r => r.json())
+    .then(data => {
+      alert('Action permissions updated: ' + data.updated + ' permissions saved');
+      location.reload();
+    })
+    .catch(err => alert('Error: ' + err));
+  }
+</script>
+
+<style>
+  .tab-button {
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  
+  .tab-button:hover {
+    opacity: 0.8;
+  }
+  
+  .tab-content.hidden {
+    display: none;
+  }
+</style>
+{% endblock %}
+

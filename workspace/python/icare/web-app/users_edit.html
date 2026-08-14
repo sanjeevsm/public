@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-md mx-auto mt-8">
+  <h2 class="text-2xl font-bold mb-4">{{ 'New User' if not user else 'Edit User' }}</h2>
+  <form method="post" action="{{ action }}">
+    <label class="block mb-2">Username<br><input name="username" value="{{ user.username if user else '' }}" class="border p-2 w-full"/></label>
+    <label class="block mb-2">Full name<br><input name="full_name" value="{{ user.full_name if user else '' }}" class="border p-2 w-full"/></label>
+    <label class="block mb-2">Email<br><input name="email" value="{{ user.email if user else '' }}" class="border p-2 w-full"/></label>
+    <label class="block mb-2">Password (leave blank to keep)<br><input type="password" name="password" class="border p-2 w-full"/></label>
+    <label class="block mb-2">Role<br>
+      <select name="role" class="border p-2 w-full">
+        <option value="">(none)</option>
+        {% for r in roles %}
+          {% if r.name %}
+            <option value="{{ r.name }}" {% if user and user.role==r.name %}selected{% endif %}>{{ r.name }}</option>
+          {% else %}
+            <option value="{{ r }}" {% if user and user.role==r %}selected{% endif %}>{{ r }}</option>
+          {% endif %}
+        {% endfor %}
+      </select>
+    </label>
+    <label class="inline-block mr-4"><input type="checkbox" name="is_admin" {% if user and user.is_admin %}checked{% endif %}/> Admin</label>
+    <label class="inline-block"><input type="checkbox" name="is_active" {% if user is none or user.is_active %}checked{% endif %}/> Active</label>
+    <div class="mt-4">
+      <button class="btn btn-primary">Save</button>
+      <a href="{{ url_for('users') }}" class="ml-2">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
