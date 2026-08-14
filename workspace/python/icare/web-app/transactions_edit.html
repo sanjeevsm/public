@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}{% if transaction %}Edit{% else %}New{% endif %} Transaction{% endblock %}
+{% block content %}
+<div class="max-w-md mx-auto mt-6">
+  <h2 class="text-2xl font-bold mb-4">{{ 'Edit Transaction' if transaction else 'New Transaction' }}</h2>
+  <form method="post" action="{{ action }}" class="card p-4">
+    <label class="block mb-2">Type<br>
+      <select name="type" class="border p-2 w-full" required>
+        <option value="">Select type</option>
+        <option value="income" {% if transaction and transaction.type == 'income' %}selected{% endif %}>Income</option>
+        <option value="expense" {% if transaction and transaction.type == 'expense' %}selected{% endif %}>Expense</option>
+      </select>
+    </label>
+    <label class="block mb-2">Date<br>
+      <input type="date" name="trans_date" value="{{ transaction.trans_date if transaction else '' }}" class="border p-2 w-full" required>
+    </label>
+    <label class="block mb-2">Amount<br>
+      <input type="number" name="amount" step="0.01" value="{{ transaction.amount if transaction else '' }}" class="border p-2 w-full" required>
+    </label>
+    <label class="block mb-2">Category ID<br>
+      <input type="text" name="category_id" value="{{ transaction.category_id if transaction else '' }}" class="border p-2 w-full">
+    </label>
+    <label class="block mb-4">Description<br>
+      <textarea name="description" class="border p-2 w-full">{{ transaction.description if transaction else '' }}</textarea>
+    </label>
+    <div class="flex gap-2">
+      <button class="btn btn-primary">Save</button>
+      <a href="{{ url_for('billing_transactions') }}" class="btn">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
