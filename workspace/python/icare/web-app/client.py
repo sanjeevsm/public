@@ -344,6 +344,39 @@ def appointments():
     return render_template('appointments.html', appointments=appts, stats={'total': len(appts)})
 
 
+@app.route('/appointments/<int:aid>/edit', methods=['GET'])
+def edit_appointment(aid):
+    """Edit appointment - get details"""
+    try:
+        r = requests.get(f'{API_URL}/appointments/{aid}', headers=api_headers(), timeout=5)
+        if r.status_code == 200:
+            appt = r.json()
+            return render_template('appointments_edit.html', appointment=appt, action=url_for('update_appointment', aid=aid))
+        else:
+            flash('Appointment not found', 'danger')
+    except Exception as e:
+        flash(f'Error loading appointment: {str(e)}', 'danger')
+    return redirect(url_for('appointments'))
+
+
+@app.route('/appointments/<int:aid>', methods=['POST'])
+def update_appointment(aid):
+    """Update appointment - save prescription and other details"""
+    data = {
+        'prescription': request.form.get('prescription', ''),
+        'status': request.form.get('status', 'confirmed')
+    }
+    try:
+        r = requests.put(f'{API_URL}/appointments/{aid}', json=data, headers=api_headers(), timeout=5)
+        if r.status_code == 200:
+            flash('Appointment updated successfully', 'success')
+        else:
+            flash('Failed to update appointment', 'danger')
+    except Exception as e:
+        flash(f'Error updating appointment: {str(e)}', 'danger')
+    return redirect(url_for('appointments'))
+
+
 @app.route('/reports')
 def reports():
     return render_template('reports.html')
@@ -676,14 +709,16 @@ def create_user():
         'email': request.form.get('email'),
         'is_admin': True if request.form.get('is_admin') else False,
         'is_active': True if request.form.get('is_active') else False,
-        'role': request.form.get('role')
+        'role': request.form.get('role'),
+        'doctor_id': int(request.form.get('doctor_id')) if request.form.get('doctor_id') else None
     }
     try:
         r = requests.post(f'{API_URL}/users', json=data, headers=api_headers(), timeout=5)
         if r.status_code == 201:
             flash('User created successfully', 'success')
         else:
-            flash('Failed to create user', 'danger')
+            error_msg = r.json().get('message', 'Failed to create user') if r.text else 'Failed to create user'
+            flash(error_msg, 'danger')
     except Exception as e:
         flash(f'Error creating user: {str(e)}', 'danger')
     return redirect(url_for('users'))
@@ -698,14 +733,16 @@ def update_user(uid):
         'email': request.form.get('email'),
         'is_admin': True if request.form.get('is_admin') else False,
         'is_active': True if request.form.get('is_active') else False,
-        'role': request.form.get('role')
+        'role': request.form.get('role'),
+        'doctor_id': int(request.form.get('doctor_id')) if request.form.get('doctor_id') else None
     }
     try:
         r = requests.put(f'{API_URL}/users/{uid}', json=data, headers=api_headers(), timeout=5)
         if r.status_code == 200:
             flash('User updated successfully', 'success')
         else:
-            flash('Failed to update user', 'danger')
+            error_msg = r.json().get('message', 'Failed to update user') if r.text else 'Failed to update user'
+            flash(error_msg, 'danger')
     except Exception as e:
         flash(f'Error updating user: {str(e)}', 'danger')
     return redirect(url_for('users'))

@@ -32,7 +32,7 @@ def verify_token(token, max_age=_TOKEN_EXP):
     if not uid:
         return None
     if _use_db():
-        rows = query('SELECT id, username, full_name, email, is_admin, role, is_active FROM users WHERE id=%s', (uid,))
+        rows = query('SELECT id, username, full_name, email, is_admin, role, doctor_id, is_active FROM users WHERE id=%s', (uid,))
         if not rows:
             return None
         u = rows[0]
@@ -42,7 +42,7 @@ def verify_token(token, max_age=_TOKEN_EXP):
     else:
         # fallback to admin only
         if uid == 0:
-            return {'id': 0, 'username': 'admin', 'full_name': 'Admin', 'email': 'admin@example.com', 'is_admin': True, 'role': 'Admin', 'is_active': True}
+            return {'id': 0, 'username': 'admin', 'full_name': 'Admin', 'email': 'admin@example.com', 'is_admin': True, 'role': 'Admin', 'doctor_id': None, 'is_active': True}
         return None
 
 def require_token(superadmin=False, role=None, roles=None):
@@ -218,6 +218,7 @@ def ensure_users_table_and_admin():
         email VARCHAR(200),
         is_admin BOOLEAN NOT NULL DEFAULT FALSE,
         role VARCHAR(50),
+        doctor_id INT REFERENCES doctors(id) ON DELETE SET NULL,
         is_active BOOLEAN NOT NULL DEFAULT TRUE,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
@@ -231,6 +232,11 @@ def ensure_users_table_and_admin():
     # ensure is_admin column exists (safe for older installs)
     try:
         query("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE;")
+    except Exception:
+        pass
+    # ensure doctor_id column exists (safe for older installs)
+    try:
+        query("ALTER TABLE users ADD COLUMN IF NOT EXISTS doctor_id INT REFERENCES doctors(id) ON DELETE SET NULL")
     except Exception:
         pass
     
@@ -404,6 +410,16 @@ def ensure_permission_tables():
                 pass
 
 
+def ensure_appointments_columns():
+    """Ensure appointments table has prescription column"""
+    if not _use_db():
+        return
+    try:
+        query("ALTER TABLE appointments ADD COLUMN IF NOT EXISTS prescription TEXT")
+    except Exception:
+        pass
+
+
 try:
     if _use_db():
         ensure_billing_tables()
@@ -421,6 +437,12 @@ except Exception:
 try:
     if _use_db():
         ensure_permission_tables()
+except Exception:
+    pass
+
+try:
+    if _use_db():
+        ensure_appointments_columns()
 except Exception:
     pass
 
@@ -494,7 +516,13 @@ def create_user():
     full_name = body.get('full_name')
     email = body.get('email')
     role = body.get('role') or body.get('category') or None
+    doctor_id = body.get('doctor_id')
     is_admin = bool(body.get('is_admin')) or (role == 'Admin')
+    
+    # If role is Doctor, doctor_id is mandatory
+    if role == 'Doctor' and not doctor_id:
+        return fail('doctor_id is required for Doctor role', 400)
+    
     pw_hash = generate_password_hash(password)
     if not _use_db():
         return fail('not available without DB', 400)
@@ -503,8 +531,15 @@ def create_user():
         rrole = query('SELECT name FROM user_roles WHERE name=%s', (role,))
         if not rrole:
             return fail('invalid role', 400)
-    r = query('INSERT INTO users (username, password_hash, full_name, email, is_admin) VALUES (%s,%s,%s,%s,%s) RETURNING id, username, full_name, email, is_admin, is_active',
-              (username, pw_hash, full_name, email, is_admin))
+    
+    # validate doctor_id exists if provided
+    if doctor_id:
+        ddoc = query('SELECT id FROM doctors WHERE id=%s', (doctor_id,))
+        if not ddoc:
+            return fail('invalid doctor_id', 400)
+    
+    r = query('INSERT INTO users (username, password_hash, full_name, email, is_admin, doctor_id) VALUES (%s,%s,%s,%s,%s,%s) RETURNING id, username, full_name, email, is_admin, doctor_id, is_active',
+              (username, pw_hash, full_name, email, is_admin, doctor_id if doctor_id else None))
     # if role provided, update it
     if role:
         query('UPDATE users SET role=%s WHERE username=%s', (role, username))
@@ -530,6 +565,22 @@ def update_user(uid):
             return fail('invalid role', 400)
         fields.append('role=%s')
         params.append(body.get('role'))
+        
+        # If role is Doctor, doctor_id is mandatory
+        if body.get('role') == 'Doctor' and not body.get('doctor_id'):
+            return fail('doctor_id is required for Doctor role', 400)
+    
+    # doctor_id handling
+    if 'doctor_id' in body:
+        doctor_id = body.get('doctor_id')
+        if doctor_id:
+            # validate doctor exists
+            ddoc = query('SELECT id FROM doctors WHERE id=%s', (doctor_id,))
+            if not ddoc:
+                return fail('invalid doctor_id', 400)
+        fields.append('doctor_id=%s')
+        params.append(doctor_id)
+    
     for k in ('username','full_name','email','is_admin','is_active'):
         if k in body:
             if k in ('is_admin','is_active'):
@@ -541,7 +592,7 @@ def update_user(uid):
     if not fields:
         return fail('no fields to update', 400)
     params.append(uid)
-    sql = f"UPDATE users SET {', '.join(fields)} WHERE id=%s RETURNING id, username, full_name, email, is_admin, role, is_active"
+    sql = f"UPDATE users SET {', '.join(fields)} WHERE id=%s RETURNING id, username, full_name, email, is_admin, role, doctor_id, is_active"
     r = query(sql, tuple(params))
     if not r:
         return fail('not found', 404)
@@ -825,15 +876,15 @@ def list_appointments():
             SELECT a.id, a.appointment_date, a.start_time, a.end_time,
                    d.id as doctor_id, d.first_name as doctor_first, d.last_name as doctor_last,
                    p.id as patient_id, p.first_name as patient_first, p.last_name as patient_last,
-                   a.status
+                   a.status, a.prescription
             FROM appointments a
             LEFT JOIN doctors d ON d.id = a.doctor_id
             LEFT JOIN patients p ON p.id = a.patient_id
         '''
-        # Doctor sees only their own appointments
+        # Doctor sees only their own appointments (based on doctor_id in users table)
         if user and user.get('role') == 'Doctor' and not user.get('is_admin'):
-            # TODO: Get doctor_id from user; for now show all but add to future
-            pass
+            if user.get('doctor_id'):
+                sql += f" WHERE a.doctor_id={user.get('doctor_id')}"
         sql += ' ORDER BY a.appointment_date DESC, a.start_time DESC LIMIT 500'
         rows = query(sql)
         # Flatten doctor/patient names for the frontend
@@ -843,6 +894,41 @@ def list_appointments():
         return ok(rows)
     else:
         return ok([])
+
+
+@app.route('/appointments/<int:aid>', methods=['GET'])
+@require_token()
+def get_appointment(aid):
+    """Get single appointment details"""
+    if _use_db():
+        user = g.current_user
+        sql = '''
+            SELECT a.id, a.appointment_date, a.start_time, a.end_time,
+                   d.id as doctor_id, d.first_name as doctor_first, d.last_name as doctor_last,
+                   p.id as patient_id, p.first_name as patient_first, p.last_name as patient_last,
+                   a.status, a.prescription
+            FROM appointments a
+            LEFT JOIN doctors d ON d.id = a.doctor_id
+            LEFT JOIN patients p ON p.id = a.patient_id
+            WHERE a.id = %s
+        '''
+        rows = query(sql, (aid,))
+        if not rows:
+            return fail('not found', 404)
+        
+        appt = rows[0]
+        
+        # Doctor can only view their own appointments
+        if user and user.get('role') == 'Doctor' and not user.get('is_admin'):
+            if user.get('doctor_id') and appt.get('doctor_id') != user.get('doctor_id'):
+                return fail('You can only view your own appointments', 403)
+        
+        # Flatten doctor/patient names
+        appt['doctor_name'] = f"{appt.get('doctor_first') or ''} {appt.get('doctor_last') or ''}".strip()
+        appt['patient_name'] = f"{appt.get('patient_first') or ''} {appt.get('patient_last') or ''}".strip()
+        return ok(appt)
+    else:
+        return fail('not available without DB', 400)
 
 
 # --- Doctors and schedules ---------------------------------------------------
@@ -1071,6 +1157,54 @@ def create_appointment():
     r = query('INSERT INTO appointments (doctor_id, patient_id, appointment_date, start_time, end_time, status) VALUES (%s,%s,%s,%s,%s,%s) RETURNING id, doctor_id, patient_id, appointment_date, start_time, end_time, status',
               (doctor_id, patient_id, date_str, start_time, end_time, 'booked'))
     return ok(r[0], 201)
+
+
+@app.route('/appointments/<int:aid>', methods=['PUT'])
+@require_token()
+def update_appointment(aid):
+    """Update appointment - doctors can update their own appointments with prescription details"""
+    user = g.current_user
+    # Check action permission
+    if not can_perform_action(user, 'appointments', 'edit'):
+        return fail('You do not have permission to edit appointments', 403)
+    
+    if not _use_db():
+        return fail('not available without DB', 400)
+    
+    body = request.get_json(force=True, silent=True) or {}
+    
+    # Get appointment to check ownership
+    appt = query('SELECT id, doctor_id FROM appointments WHERE id=%s', (aid,))
+    if not appt:
+        return fail('not found', 404)
+    
+    # Doctor can only edit their own appointments
+    if user.get('role') == 'Doctor' and not user.get('is_admin'):
+        if user.get('doctor_id') and appt[0].get('doctor_id') != user.get('doctor_id'):
+            return fail('You can only edit your own appointments', 403)
+    
+    # Update appointment fields (only prescription for doctors, more fields for admin)
+    fields = []
+    params = []
+    
+    if 'prescription' in body:
+        fields.append('prescription=%s')
+        params.append(body.get('prescription'))
+    
+    # Admin can update status
+    if 'status' in body and user.get('is_admin'):
+        fields.append('status=%s')
+        params.append(body.get('status'))
+    
+    if not fields:
+        return fail('no fields to update', 400)
+    
+    params.append(aid)
+    sql = f"UPDATE appointments SET {', '.join(fields)} WHERE id=%s RETURNING id, appointment_date, start_time, end_time, doctor_id, patient_id, status, prescription"
+    r = query(sql, tuple(params))
+    if not r:
+        return fail('not found', 404)
+    return ok(r[0])
 
 
 @app.route('/appointments/<int:aid>', methods=['DELETE'])

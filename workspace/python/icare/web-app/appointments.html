@@ -16,14 +16,14 @@
     </form>
   </div>
     <table class="min-w-full">
-      <thead><tr><th class="p-2 text-left">#</th><th class="p-2 text-left">Date</th><th class="p-2 text-left">Time</th><th class="p-2 text-left">Doctor</th><th class="p-2 text-left">Patient</th><th class="p-2 text-left">Status</th><th class="p-2 text-left">Actions</th></tr></thead>
+      <thead><tr><th class="p-2 text-left">#</th><th class="p-2 text-left">Date</th><th class="p-2 text-left">Time</th><th class="p-2 text-left">Doctor</th><th class="p-2 text-left">Patient</th><th class="p-2 text-left">Status</th><th class="p-2 text-left">Prescription</th><th class="p-2 text-left">Actions</th></tr></thead>
       <tbody id="appointmentsBody">
         {% if appointments %}
             {% for a in appointments %}
-              <tr class="border-t"><td class="p-2">{{ a.id }}</td><td class="p-2">{{ a.appointment_date }}</td><td class="p-2">{{ a.start_time }} - {{ a.end_time }}</td><td class="p-2">{{ a.doctor_name }}</td><td class="p-2">{{ a.patient_name }}</td><td class="p-2">{{ a.status }}</td><td class="p-2"><button onclick="deleteAppointment({{ a.id }})" class="text-red-600">Delete</button></td></tr>
+              <tr class="border-t"><td class="p-2">{{ a.id }}</td><td class="p-2">{{ a.appointment_date }}</td><td class="p-2">{{ a.start_time }} - {{ a.end_time }}</td><td class="p-2">{{ a.doctor_name }}</td><td class="p-2">{{ a.patient_name }}</td><td class="p-2">{{ a.status }}</td><td class="p-2">{{ a.prescription or '-' }}</td><td class="p-2"><a href="/appointments/{{ a.id }}/edit" class="text-blue-600 mr-2 action-btn-edit">Edit</a><button onclick="deleteAppointment({{ a.id }})" class="text-red-600 action-btn-delete">Delete</button></td></tr>
             {% endfor %}
         {% else %}
-          <tr><td class="p-2" colspan="7">No appointments</td></tr>
+          <tr><td class="p-2" colspan="8">No appointments</td></tr>
         {% endif %}
       </tbody>
     </table>
@@ -32,22 +32,67 @@
 
 {% block scripts %}
 <script>
-fetch('{{ api_url }}/appointments').then(r=>r.json()).then(data=>{
-  const body = document.getElementById('appointmentsBody');
-  const stats = document.getElementById('stats');
-  if (!body.querySelector('tr')) {
-    stats.textContent = `Total appointments: ${data.length}`;
-    data.forEach((a, idx)=>{
+async function loadAppointments() {
+  try {
+    const token = sessionStorage.getItem('token');
+    const apiUrl = '{{ api_url }}'.replace(/\/$/, '');
+    const response = await fetch(`${apiUrl}/appointments`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    if (!response.ok) {
+      console.error('Failed to load appointments:', response.status);
+      return;
+    }
+    
+    const data = await response.json();
+    const body = document.getElementById('appointmentsBody');
+    const stats = document.getElementById('stats');
+    
+    // Clear existing rows except first (template)
+    while (body.children.length > 0) {
+      body.removeChild(body.firstChild);
+    }
+    
+    if (data.length === 0) {
+      stats.textContent = 'Total appointments: 0';
       const tr = document.createElement('tr');
+      tr.innerHTML = '<td class="p-2" colspan="8">No appointments</td>';
+      body.appendChild(tr);
+      return;
+    }
+    
+    stats.textContent = `Total appointments: ${data.length}`;
+    data.forEach((a) => {
+      const tr = document.createElement('tr');
+      tr.className = 'border-t';
       const date = a.appointment_date || '';
       const time = a.start_time ? `${a.start_time} - ${a.end_time||''}` : '';
-      tr.innerHTML = `<td>${a.id}</td><td>${date}</td><td>${time}</td><td>${a.doctor_name||''}</td><td>${a.patient_name||''}</td><td>${a.status||''}</td><td><button class="text-red-600" onclick="deleteAppointment(${a.id})">Delete</button></td>`;
+      const prescription = a.prescription || '-';
+      tr.innerHTML = `<td class="p-2">${a.id}</td><td class="p-2">${date}</td><td class="p-2">${time}</td><td class="p-2">${a.doctor_name||''}</td><td class="p-2">${a.patient_name||''}</td><td class="p-2">${a.status||''}</td><td class="p-2">${prescription}</td><td class="p-2"><a href="/appointments/${a.id}/edit" class="text-blue-600 mr-2 action-btn-edit">Edit</a><button class="text-red-600 action-btn-delete" onclick="deleteAppointment(${a.id})">Delete</button></td>`;
       body.appendChild(tr);
-    })
+    });
+  } catch (e) {
+    console.error('Error loading appointments:', e);
+    document.getElementById('appointmentsBody').innerHTML = '<tr><td colspan="8" class="p-2">Could not load appointments</td></tr>';
   }
-}).catch(e=>{ document.getElementById('appointmentsBody').innerHTML = '<tr><td colspan="7">Could not load appointments</td></tr>'; console.error(e)});
+}
+
+// Load appointments on page load
+document.addEventListener('DOMContentLoaded', function() {
+  loadAppointments();
+  
+  // Control visibility of action buttons
+  const screenName = 'appointments';
+  controlActionVisibility(screenName, 'edit', '.action-btn-edit');
+  controlActionVisibility(screenName, 'delete', '.action-btn-delete');
+});
+
 // populate doctors and patients for booking
-Promise.all([fetch('{{ api_url }}/doctors').then(r=>r.json()), fetch('{{ api_url }}/patients').then(r=>r.json())]).then(([doctors, patients])=>{
+Promise.all([
+  fetch('{{ api_url }}/doctors').then(r=>r.json()), 
+  fetch('{{ api_url }}/patients').then(r=>r.json())
+]).then(([doctors, patients])=>{
   const dsel = document.getElementById('doctorSelect');
   doctors.forEach(d=>{ const o=document.createElement('option'); o.value=d.id; o.textContent = d.first_name + ' ' + d.last_name; dsel.appendChild(o); })
   const psel = document.getElementById('patientSelect');
@@ -63,15 +108,18 @@ Promise.all([fetch('{{ api_url }}/doctors').then(r=>r.json()), fetch('{{ api_url
   dsel.addEventListener('change', loadSlots);
   document.getElementById('apptDate').addEventListener('change', loadSlots);
   document.getElementById('slotMinutes').addEventListener('change', loadSlots);
-});
+}).catch(e => console.error('Error loading doctors/patients:', e));
 
 function deleteAppointment(id){
   if (!confirm('Delete appointment? This action cannot be undone.')) return;
-  fetch('{{ api_url }}/appointments/' + id, { method: 'DELETE' }).then(r=>r.json().then(j=>({ok:r.ok, body:j}))).then(res=>{
+  const token = sessionStorage.getItem('token');
+  fetch('{{ api_url }}/appointments/' + id, { 
+    method: 'DELETE',
+    headers: { 'Authorization': `Bearer ${token}` }
+  }).then(r=>r.json().then(j=>({ok:r.ok, body:j}))).then(res=>{
     if (!res.ok) return alert(res.body.error || 'delete failed');
-    window.location.reload();
+    loadAppointments();
   }).catch(()=>alert('delete failed'));
 }
-
 </script>
 {% endblock %}
