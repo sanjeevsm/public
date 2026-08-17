@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}iCare+ — Edit Appointment{% endblock %}
+{% block content %}
+<div class="max-w-2xl mx-auto mt-8">
+  <h2 class="text-2xl font-bold mb-6">Edit Appointment</h2>
+  
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="mb-4">
+        {% for cat, msg in messages %}
+          <div class="mb-2 px-3 py-2 rounded {{ 'bg-green-100 text-green-800' if cat=='success' else 'bg-red-100 text-red-800' }}">{{ msg }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+  
+  {% if appointment %}
+  <form method="post" action="{{ action }}" class="bg-white dark:bg-slate-800 p-6 rounded shadow">
+    <!-- Appointment Details (Read-only) -->
+    <fieldset class="mb-6">
+      <legend class="text-lg font-semibold mb-4">Appointment Details</legend>
+      
+      <div class="grid grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="block text-sm font-medium mb-1">Appointment ID</label>
+          <input type="text" value="{{ appointment.id }}" class="w-full p-2 border rounded bg-slate-100" readonly />
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Date</label>
+          <input type="text" value="{{ appointment.appointment_date }}" class="w-full p-2 border rounded bg-slate-100" readonly />
+        </div>
+      </div>
+      
+      <div class="grid grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="block text-sm font-medium mb-1">Time</label>
+          <input type="text" value="{{ appointment.start_time }} - {{ appointment.end_time }}" class="w-full p-2 border rounded bg-slate-100" readonly />
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Status</label>
+          <input type="text" value="{{ appointment.status }}" class="w-full p-2 border rounded bg-slate-100" readonly />
+        </div>
+      </div>
+      
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium mb-1">Doctor</label>
+          <input type="text" value="{{ appointment.doctor_name }}" class="w-full p-2 border rounded bg-slate-100" readonly />
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Patient</label>
+          <input type="text" value="{{ appointment.patient_name }}" class="w-full p-2 border rounded bg-slate-100" readonly />
+        </div>
+      </div>
+    </fieldset>
+    
+    <!-- Editable Fields -->
+    <fieldset class="mb-6">
+      <legend class="text-lg font-semibold mb-4">Prescription Details</legend>
+      
+      <label class="block mb-4">
+        <span class="block text-sm font-medium mb-2">Prescription</span>
+        <textarea name="prescription" class="w-full p-3 border rounded" rows="6" placeholder="Add prescription details, medications, instructions, etc.">{{ appointment.prescription or '' }}</textarea>
+      </label>
+    </fieldset>
+    
+    <!-- Status Field (for admin users) -->
+    <fieldset class="mb-6">
+      <legend class="text-lg font-semibold mb-4">Status</legend>
+      
+      <label class="block mb-2">
+        <select name="status" class="w-full p-2 border rounded">
+          <option value="confirmed" {% if appointment.status == 'confirmed' %}selected{% endif %}>Confirmed</option>
+          <option value="completed" {% if appointment.status == 'completed' %}selected{% endif %}>Completed</option>
+          <option value="cancelled" {% if appointment.status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+          <option value="no_show" {% if appointment.status == 'no_show' %}selected{% endif %}>No Show</option>
+        </select>
+      </label>
+    </fieldset>
+    
+    <!-- Form Actions -->
+    <div class="flex gap-3">
+      <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Save Changes</button>
+      <a href="{{ url_for('appointments') }}" class="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500">Cancel</a>
+    </div>
+  </form>
+  {% else %}
+  <div class="bg-red-100 text-red-800 p-4 rounded">
+    <p>Appointment not found. <a href="{{ url_for('appointments') }}" class="underline">Go back to appointments</a></p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
