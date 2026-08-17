@@ -2,13 +2,13 @@
 {% block content %}
 <div class="max-w-md mx-auto mt-8">
   <h2 class="text-2xl font-bold mb-4">{{ 'New User' if not user else 'Edit User' }}</h2>
-  <form method="post" action="{{ action }}">
+  <form method="post" action="{{ action }}" onsubmit="return validateDoctorRole()">
     <label class="block mb-2">Username<br><input name="username" value="{{ user.username if user else '' }}" class="border p-2 w-full"/></label>
     <label class="block mb-2">Full name<br><input name="full_name" value="{{ user.full_name if user else '' }}" class="border p-2 w-full"/></label>
     <label class="block mb-2">Email<br><input name="email" value="{{ user.email if user else '' }}" class="border p-2 w-full"/></label>
     <label class="block mb-2">Password (leave blank to keep)<br><input type="password" name="password" class="border p-2 w-full"/></label>
     <label class="block mb-2">Role<br>
-      <select name="role" class="border p-2 w-full">
+      <select id="roleSelect" name="role" class="border p-2 w-full" onchange="handleRoleChange()">
         <option value="">(none)</option>
         {% for r in roles %}
           {% if r.name %}
@@ -19,6 +19,15 @@
         {% endfor %}
       </select>
     </label>
+    
+    <!-- Doctor dropdown - appears only when role is Doctor -->
+    <label id="doctorLabel" class="block mb-2" style="display:none;">Doctor<br>
+      <select id="doctorSelect" name="doctor_id" class="border p-2 w-full">
+        <option value="">(select a doctor)</option>
+      </select>
+      <span class="text-red-600 text-sm">* Required for Doctor role</span>
+    </label>
+    
     <label class="inline-block mr-4"><input type="checkbox" name="is_admin" {% if user and user.is_admin %}checked{% endif %}/> Admin</label>
     <label class="inline-block"><input type="checkbox" name="is_active" {% if user is none or user.is_active %}checked{% endif %}/> Active</label>
     <div class="mt-4">
@@ -27,4 +36,68 @@
     </div>
   </form>
 </div>
+
+<script>
+  // Populate doctors dropdown
+  async function populateDoctors() {
+    try {
+      const token = sessionStorage.getItem('token');
+      const apiUrl = '{{ api_url }}'.replace(/\/$/, '');
+      const response = await fetch(`${apiUrl}/doctors`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        const doctors = await response.json();
+        const select = document.getElementById('doctorSelect');
+        select.innerHTML = '<option value="">(select a doctor)</option>';
+        doctors.forEach(doc => {
+          const option = document.createElement('option');
+          option.value = doc.id;
+          option.textContent = `${doc.first_name} ${doc.last_name}`;
+          {% if user and user.doctor_id %}
+            if (doc.id == {{ user.doctor_id }}) {
+              option.selected = true;
+            }
+          {% endif %}
+          select.appendChild(option);
+        });
+      }
+    } catch (error) {
+      console.error('Error loading doctors:', error);
+    }
+  }
+  
+  // Show/hide doctor dropdown based on role selection
+  function handleRoleChange() {
+    const role = document.getElementById('roleSelect').value;
+    const doctorLabel = document.getElementById('doctorLabel');
+    const doctorSelect = document.getElementById('doctorSelect');
+    
+    if (role === 'Doctor') {
+      doctorLabel.style.display = 'block';
+      populateDoctors();
+    } else {
+      doctorLabel.style.display = 'none';
+      doctorSelect.value = '';
+    }
+  }
+  
+  // Validate that doctor is selected when role is Doctor
+  function validateDoctorRole() {
+    const role = document.getElementById('roleSelect').value;
+    const doctorId = document.getElementById('doctorSelect').value;
+    
+    if (role === 'Doctor' && !doctorId) {
+      alert('Please select a doctor. Doctor role requires doctor assignment.');
+      return false;
+    }
+    return true;
+  }
+  
+  // Initialize on page load
+  document.addEventListener('DOMContentLoaded', function() {
+    handleRoleChange();
+  });
+</script>
 {% endblock %}
