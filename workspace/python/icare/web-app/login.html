@@ -1,18 +1,25 @@
 {% extends "base.html" %}
+{% block title %}iCare+ — Sign in{% endblock %}
 {% block content %}
-<div class="max-w-md mx-auto mt-8">
-  <h2 class="text-2xl font-bold mb-4">Login</h2>
-  {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-      {% for cat, msg in messages %}
-        <div class="mb-2 px-3 py-2 rounded {{ 'bg-green-100 text-green-800' if cat=='success' else 'bg-red-100 text-red-800' }}">{{ msg }}</div>
-      {% endfor %}
-    {% endif %}
-  {% endwith %}
-  <form method="post">
-    <label class="block mb-2">Username<br><input name="username" class="border p-2 w-full"/></label>
-    <label class="block mb-4">Password<br><input type="password" name="password" class="border p-2 w-full"/></label>
-    <button class="btn btn-primary">Login</button>
-  </form>
+<div class="min-h-[70vh] flex items-center justify-center">
+  <div class="card w-full max-w-md p-8">
+    <div class="flex flex-col items-center text-center mb-6">
+      <span class="brand-badge" style="border-radius:14px;font-size:1.5rem;padding:.55rem 1rem">{{ brand_name }}</span>
+      <h1 class="text-2xl font-bold mt-4">Welcome back</h1>
+      <p class="text-sm" style="color:var(--muted)">Sign in to your {{ brand_name }} account</p>
+    </div>
+
+    <form method="post" class="space-y-4">
+      <div>
+        <label class="block mb-1.5" for="username">Username</label>
+        <input id="username" name="username" autocomplete="username" placeholder="e.g. admin" required />
+      </div>
+      <div>
+        <label class="block mb-1.5" for="password">Password</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" placeholder="••••••••" required />
+      </div>
+      <button class="btn btn-primary w-full justify-center" style="width:100%;justify-content:center">Sign in</button>
+    </form>
+  </div>
 </div>
 {% endblock %}

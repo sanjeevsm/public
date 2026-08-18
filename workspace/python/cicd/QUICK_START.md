@@ -3,7 +3,7 @@
 ## Dashboard Not Loading? Here's the Fix!
 
 ### Problem
-When you open http://localhost:8090 in your browser, the dashboard doesn't load or shows "Connection refused".
+When you open http://localhost:8000 in your browser, the dashboard doesn't load or shows "Connection refused".
 
 ### Root Cause
 The dashboard backend services (FastAPI, Prometheus, Grafana) are not running.
@@ -33,7 +33,7 @@ The script will show:
 [OK]   Prometheus started (PID 12345)
 [CICD] Starting Grafana on port 9001 ...
 [OK]   Grafana started (PID 12346)
-[CICD] Starting CI/CD Dashboard API on port 8090 ...
+[CICD] Starting CI/CD Dashboard API on port 8000 ...
 [OK]   CI/CD Dashboard API started (PID 12347)
 [CICD] Waiting for services to be healthy...
 [OK]   Prometheus is ready
@@ -41,18 +41,18 @@ The script will show:
 [OK]   CI/CD Dashboard is ready
 
 CI/CD Dashboard is running!
-  Dashboard  -> http://localhost:8090
-  Grafana    -> http://localhost:3001
-  Prometheus -> http://localhost:9091
-  API Docs   -> http://localhost:8090/api/docs
-  Metrics    -> http://localhost:8090/metrics
+  Dashboard  -> http://localhost:8000
+  Grafana    -> http://localhost:9001
+  Prometheus -> http://localhost:9000
+  API Docs   -> http://localhost:8000/api/docs
+  Metrics    -> http://localhost:8000/metrics
 ```
 
 #### Step 3: Access the Dashboard
 
 The script will automatically open browsers, or you can manually navigate to:
-- **Main Dashboard:** http://localhost:8090
-- **API Documentation:** http://localhost:8090/api/docs
+- **Main Dashboard:** http://localhost:8000
+- **API Documentation:** http://localhost:8000/api/docs
 
 ### First Time Setup
 
@@ -112,21 +112,21 @@ Check if processes are running:
 Get-Process | Where-Object {$_.ProcessName -like "*prometheus*" -or $_.ProcessName -like "*grafana*" -or $_.ProcessName -like "*uvicorn*"}
 
 # Check specific ports
-netstat -ano | findstr "8090"    # Dashboard API
-netstat -ano | findstr "9091"    # Prometheus
-netstat -ano | findstr "3001"    # Grafana
+netstat -ano | findstr "8000"    # Dashboard API
+netstat -ano | findstr "9000"    # Prometheus
+netstat -ano | findstr "9001"    # Grafana
 ```
 
 ### Common Issues & Solutions
 
 #### Issue 1: Port Already in Use
 
-**Error:** Port 8090 is already in use
+**Error:** Port 8000 is already in use
 
 **Solution:**
 ```powershell
 # Find what's using the port
-netstat -ano | findstr "8090"
+netstat -ano | findstr "8000"
 
 # Kill the process (replace PID with actual process ID)
 Stop-Process -Id PID -Force
@@ -174,7 +174,7 @@ cd dashboard_api
 #### Issue 4: Browser Doesn't Open Automatically
 
 **Solution:**
-Manually open: http://localhost:8090
+Manually open: http://localhost:8000
 
 #### Issue 5: Dashboard Shows No Data
 
@@ -223,9 +223,9 @@ GITLAB_URL=https://gitlab.com
 GITLAB_TOKEN=your_personal_access_token_here
 
 # Application Ports
-APP_PORT=8090
-PROMETHEUS_PORT=9091
-GRAFANA_PORT=3001
+APP_PORT=8000
+PROMETHEUS_PORT=9000
+GRAFANA_PORT=9001
 
 # Logging
 LOG_LEVEL=INFO
@@ -265,13 +265,13 @@ Get-Content data\api.log -Tail 50
 Get-Content data\api-error.log -Tail 50
 
 # Test API endpoint
-Invoke-WebRequest http://localhost:8090/health
+Invoke-WebRequest http://localhost:8000/health
 ```
 
 ### Next Steps
 
 1. ✅ Start the dashboard: `.\scripts\start.ps1`
-2. ✅ Access UI: http://localhost:8090
+2. ✅ Access UI: http://localhost:8000
 3. ✅ Explore features: Overview, Pipelines, Jobs
 4. ✅ Read guide: README.md
 5. ✅ Configure GitLab integration
@@ -279,10 +279,10 @@ Invoke-WebRequest http://localhost:8090/health
 ### Support
 
 - **Documentation:** See README.md
-- **API Docs:** http://localhost:8090/api/docs (when running)
+- **API Docs:** http://localhost:8000/api/docs (when running)
 - **Logs:** `data/` directory
 - **Issues:** Check GitHub/GitLab repository
 
 ---
 
-**TL;DR:** Run `.\scripts\start.ps1` in PowerShell from the `python/cicd` directory, then open http://localhost:8090 🚀
+**TL;DR:** Run `.\scripts\start.ps1` in PowerShell from the `python/cicd` directory, then open http://localhost:8000 🚀
