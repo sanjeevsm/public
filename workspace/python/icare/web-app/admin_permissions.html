@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+{% block title %}Permission Management{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div class="page-head-text">
+    <h1>Permission Management</h1>
+    <p>Configure which roles can access which screens and perform which actions.</p>
+  </div>
+</div>
+
+<!-- Sticky tab bar sits just below the site-header -->
+<div id="permTabBar" class="perm-tab-bar">
+  <button onclick="switchTab('screen-perms')" id="tab-screen-perms" class="perm-tab active">Screen Access</button>
+  <button onclick="switchTab('action-perms')" id="tab-action-perms" class="perm-tab">Action Permissions</button>
+</div>
+
+<!-- ── Screen Access ─────────────────────────────────────────────────────── -->
+<div id="screen-perms" class="tab-content">
+  <div class="card p-6 mb-6">
+    <h2 class="text-lg font-semibold mb-1">Screen-Role Mappings</h2>
+    <p class="text-sm mb-4" style="color:var(--muted)">Check which roles can access each screen. Changes here also filter the Action Permissions tab.</p>
+
+    <div class="overflow-x-auto">
+      <table class="perm-table">
+        <thead>
+          <tr>
+            <th>Screen</th>
+            {% for role in roles %}<th>{{ role.name }}</th>{% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for screen in screens %}
+          <tr>
+            <td class="font-semibold">{{ screen }}</td>
+            {% for role in roles %}
+            <td class="text-center">
+              <input type="checkbox"
+                     class="screen-perm-checkbox perm-check"
+                     data-screen="{{ screen }}"
+                     data-role="{{ role.name }}"
+                     {% if screen_perms | selectattr('role_name','equalto',role.name) | selectattr('screen_name','equalto',screen) | list | length > 0 %}checked{% endif %} />
+            </td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <button onclick="saveScreenPermissions()" class="btn btn-primary mt-4">Save Screen Permissions</button>
+  </div>
+</div>
+
+<!-- ── Action Permissions ────────────────────────────────────────────────── -->
+<div id="action-perms" class="tab-content hidden">
+  <div class="card p-6 mb-6">
+    <h2 class="text-lg font-semibold mb-1">Action Permissions</h2>
+    <p class="text-sm mb-4" style="color:var(--muted)">View / Add / Edit / Delete permissions per role. Only screens enabled in Screen Access are shown.</p>
+
+    <div class="space-y-6">
+      {% for role in roles %}
+      <div class="border rounded-lg p-4" style="border-color:var(--border)">
+        <h3 class="font-bold mb-3">{{ role.name }}</h3>
+
+        <div class="overflow-x-auto">
+          <table class="perm-table text-sm" data-role-table="{{ role.name }}">
+            <thead>
+              <tr>
+                <th>Screen</th>
+                {% for action in actions %}<th>{{ action | capitalize }}</th>{% endfor %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for screen in screens %}
+              <tr class="action-row" data-role="{{ role.name }}" data-screen="{{ screen }}">
+                <td class="font-semibold">{{ screen }}</td>
+                {% for action in actions %}
+                <td class="text-center">
+                  <input type="checkbox"
+                         class="action-perm-checkbox perm-check"
+                         data-role="{{ role.name }}"
+                         data-screen="{{ screen }}"
+                         data-action="{{ action }}"
+                         {% if action_perm_exists(role.name, screen, action) %}checked{% endif %} />
+                </td>
+                {% endfor %}
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <p class="no-screens-msg text-sm mt-2 hidden" style="color:var(--muted)" data-role="{{ role.name }}">
+          No screens enabled for this role in Screen Access.
+        </p>
+      </div>
+      {% endfor %}
+    </div>
+
+    <button onclick="saveActionPermissions()" class="btn btn-primary mt-4">Save Action Permissions</button>
+  </div>
+</div>
+
+<!-- Floating scroll-to-top button -->
+<button id="scrollTopBtn" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Back to top" aria-label="Back to top">&#8679;</button>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function getToken(){
+  return sessionStorage.getItem('token') || localStorage.getItem('token') || '';
+}
+
+/* ── Tab switching ─────────────────────────────────────────────────────── */
+function switchTab(name){
+  document.querySelectorAll('.tab-content').forEach(el=>el.classList.add('hidden'));
+  document.querySelectorAll('.perm-tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById(name).classList.remove('hidden');
+  document.getElementById('tab-'+name).classList.add('active');
+  if(name==='action-perms') syncActionRows();
+}
+
+/* ── Filter action rows by enabled screen-perms ─────────────────────────── */
+function getEnabledScreens(){
+  // Returns a Set of "role::screen" strings that are checked in screen-perms
+  const enabled = new Set();
+  document.querySelectorAll('.screen-perm-checkbox:checked').forEach(cb=>{
+    enabled.add(cb.dataset.role+'::'+cb.dataset.screen);
+  });
+  return enabled;
+}
+
+function syncActionRows(){
+  const enabled = getEnabledScreens();
+  // For each role table, show only rows whose screen is enabled for that role
+  document.querySelectorAll('tr.action-row').forEach(row=>{
+    const key = row.dataset.role+'::'+row.dataset.screen;
+    row.classList.toggle('hidden', !enabled.has(key));
+  });
+  // Show "no screens" message if ALL rows for a role are hidden
+  document.querySelectorAll('[data-role-table]').forEach(tbl=>{
+    const role = tbl.dataset.roleTable;
+    const visibleRows = tbl.querySelectorAll('tr.action-row:not(.hidden)').length;
+    const msg = document.querySelector('.no-screens-msg[data-role="'+role+'"]');
+    if(msg) msg.classList.toggle('hidden', visibleRows>0);
+  });
+}
+
+// Re-sync action rows whenever a screen-perm checkbox changes
+document.addEventListener('change', e=>{
+  if(e.target.classList.contains('screen-perm-checkbox')) syncActionRows();
+});
+
+/* ── Save screen permissions ───────────────────────────────────────────── */
+function saveScreenPermissions(){
+  const mappings=[];
+  document.querySelectorAll('.screen-perm-checkbox:checked').forEach(cb=>{
+    mappings.push({screen_name:cb.dataset.screen, role_name:cb.dataset.role});
+  });
+  const apiUrl='{{ api_url }}';
+  fetch(apiUrl+'/admin/screen-permissions',{
+    method:'PUT',
+    headers:{'Authorization':'Bearer '+getToken(),'Content-Type':'application/json'},
+    body:JSON.stringify({mappings})
+  }).then(r=>r.json()).then(d=>{
+    alert('Screen permissions saved: '+d.updated+' mappings');
+    location.reload();
+  }).catch(err=>alert('Error: '+err));
+}
+
+/* ── Save action permissions ───────────────────────────────────────────── */
+function saveActionPermissions(){
+  const permissions=[];
+  document.querySelectorAll('.action-perm-checkbox:checked').forEach(cb=>{
+    permissions.push({role_name:cb.dataset.role, screen_name:cb.dataset.screen, action:cb.dataset.action});
+  });
+  const apiUrl='{{ api_url }}';
+  fetch(apiUrl+'/admin/action-permissions',{
+    method:'PUT',
+    headers:{'Authorization':'Bearer '+getToken(),'Content-Type':'application/json'},
+    body:JSON.stringify({permissions})
+  }).then(r=>r.json()).then(d=>{
+    alert('Action permissions saved: '+d.updated+' permissions');
+    location.reload();
+  }).catch(err=>alert('Error: '+err));
+}
+
+/* ── Scroll-to-top button ─────────────────────────────────────────────── */
+const scrollBtn = document.getElementById('scrollTopBtn');
+window.addEventListener('scroll',()=>{
+  scrollBtn.classList.toggle('visible', window.scrollY > 250);
+});
+
+/* ── Init ─────────────────────────────────────────────────────────────── */
+syncActionRows();
+</script>
+
+<style>
+/* Sticky tab bar */
+.perm-tab-bar{
+  position:sticky;
+  top:var(--header-offset, 64px);
+  z-index:30;
+  display:flex;
+  gap:.5rem;
+  background:var(--bg);
+  border-bottom:1px solid var(--border);
+  padding:.5rem 0;
+  margin-bottom:1.5rem;
+}
+.perm-tab{
+  padding:.45rem 1.1rem;
+  border-radius:8px 8px 0 0;
+  font-size:.875rem;
+  font-weight:600;
+  border:1px solid transparent;
+  border-bottom:none;
+  background:transparent;
+  color:var(--muted);
+  cursor:pointer;
+  transition:background .15s,color .15s;
+}
+.perm-tab:hover{ background:color-mix(in srgb,var(--brand) 8%,transparent); color:var(--text); }
+.perm-tab.active{ background:var(--card); color:var(--brand); border-color:var(--border); }
+
+/* Permission tables */
+.perm-table{ width:100%; border-collapse:collapse; }
+.perm-table th,.perm-table td{ border:1px solid var(--border); padding:.4rem .6rem; }
+.perm-table thead{ background:color-mix(in srgb,var(--brand) 7%,transparent); }
+.perm-table th{ font-weight:600; font-size:.8rem; text-transform:uppercase; letter-spacing:.03em; }
+.perm-table tbody tr:hover{ background:color-mix(in srgb,var(--brand) 4%,transparent); }
+
+/* Checkbox style */
+.perm-check{ width:1rem; height:1rem; accent-color:var(--brand); cursor:pointer; }
+
+/* Floating scroll-to-top */
+#scrollTopBtn{
+  position:fixed;
+  bottom:1.5rem;
+  right:1.5rem;
+  width:2.5rem;
+  height:2.5rem;
+  border-radius:50%;
+  background:var(--brand);
+  color:#fff;
+  font-size:1.4rem;
+  line-height:1;
+  border:none;
+  cursor:pointer;
+  box-shadow:0 4px 12px rgba(0,0,0,.25);
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .2s,transform .2s;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:100;
+}
+#scrollTopBtn.visible{ opacity:1; pointer-events:auto; }
+#scrollTopBtn:hover{ transform:translateY(-2px); }
+</style>
+{% endblock %}
