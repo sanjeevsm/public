@@ -1,41 +1,43 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="max-w-4xl mx-auto mt-6">
+<div class="page-head">
+  <div class="page-head-text"><h1>Roles</h1><p>Manage roles and their screen and action permissions.</p></div>
+</div>
+
+<div class="card p-4 mb-4">
   <div class="flex justify-between items-center mb-4">
-    <h2 class="text-2xl font-bold">Roles</h2>
     {% if session.get('user') and session.get('user').get('is_admin') %}
-      <button id="new-role-btn" onclick="document.getElementById('new-role').classList.toggle('hidden')" class="btn">New Role</button>
+      <button id="new-role-btn" onclick="document.getElementById('new-role').classList.toggle('hidden')" class="btn btn-primary btn-sm">+ New Role</button>
+    {% else %}
+      <span></span>
     {% endif %}
   </div>
-  <div id="new-role" class="hidden mb-4 card p-4">
+  <div id="new-role" class="hidden mb-4">
     {% if session.get('user') and session.get('user').get('is_admin') %}
-    <h3 class="font-semibold mb-2">Create New Role</h3>
-    <form method="post" action="{{ url_for('create_role_route') }}" class="flex gap-2">
-      <input name="name" placeholder="role name" class="border p-2" required>
-      <input name="description" placeholder="description" class="border p-2">
+    <form method="post" action="{{ url_for('create_role_route') }}" class="flex gap-2 flex-wrap">
+      <input name="name" placeholder="Role name" required />
+      <input name="description" placeholder="Description" />
       <button class="btn btn-primary">Create</button>
-      <button type="button" onclick="document.getElementById('new-role').classList.add('hidden')" class="btn">Cancel</button>
+      <button type="button" onclick="document.getElementById('new-role').classList.add('hidden')" class="btn btn-ghost">Cancel</button>
     </form>
     {% endif %}
   </div>
-  <table class="w-full table-auto">
-    <thead>
-      <tr class="text-left"><th>Role</th><th>Description</th><th>Actions</th></tr>
-    </thead>
+
+  <table class="min-w-full">
+    <thead><tr><th class="p-2 text-left">Role</th><th class="p-2 text-left">Description</th><th class="p-2 text-left">Actions</th></tr></thead>
     <tbody>
       {% for r in roles %}
-      <tr>
+      <tr class="border-t">
         {% if r.name %}
-          <td><span class="role-name-{{ loop.index }}">{{ r.name }}</span></td>
-          <td><span class="role-desc-{{ loop.index }}">{{ r.description }}</span></td>
+          <td class="p-2 font-semibold">{{ r.name }}</td>
+          <td class="p-2" style="color:var(--muted)">{{ r.description }}</td>
         {% else %}
-          <td>{{ r }}</td>
-          <td></td>
+          <td class="p-2">{{ r }}</td><td></td>
         {% endif %}
-        <td>
+        <td class="p-2">
           {% if session.get('user') and session.get('user').get('is_admin') and r.name %}
-          <button type="button" onclick="editRole(this, '{{ r.name }}', '{{ r.description }}')" class="action-btn-edit" data-action="edit">Edit</button>
-          <form method="post" action="{{ url_for('delete_role_route', rname=r.name) }}" class="action-btn-delete" data-action="delete" onsubmit="return confirm('Delete role?');" style="display:inline">
+          <button type="button" onclick="editRole('{{ r.name }}','{{ r.description }}')" class="action-btn-edit" data-action="edit">Edit</button>
+          <form method="post" action="{{ url_for('delete_role_route', rname=r.name) }}" class="action-btn-delete" data-action="delete" onsubmit="return confirm('Delete role {{ r.name }}?');" style="display:inline">
             <button class="text-red-600">Delete</button>
           </form>
           {% endif %}
@@ -46,304 +48,226 @@
   </table>
 </div>
 
-<div id="edit-role-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center overflow-y-auto" style="z-index: 1000;">
-  <div class="bg-white dark:bg-slate-800 rounded shadow-lg p-6 max-w-4xl w-full mx-4 my-8">
-    <h3 class="text-xl font-semibold mb-4">Edit Role</h3>
-    
-    <!-- Tabs for role info and permissions -->
-    <div class="mb-4 flex gap-2 border-b border-gray-300">
-      <button type="button" onclick="switchRoleTab('info')" id="role-tab-info" class="role-tab-btn active px-4 py-2 font-semibold text-blue-600 border-b-2 border-blue-600">
-        Role Info
-      </button>
-      <button type="button" onclick="switchRoleTab('screens')" id="role-tab-screens" class="role-tab-btn px-4 py-2 font-semibold text-gray-600">
-        Screen Access
-      </button>
-      <button type="button" onclick="switchRoleTab('actions')" id="role-tab-actions" class="role-tab-btn px-4 py-2 font-semibold text-gray-600">
-        Action Permissions
-      </button>
-    </div>
-    
-    <!-- Role Info Tab -->
-    <div id="role-info-tab" class="role-tab-content">
-      <form id="edit-role-form">
-        <input type="hidden" id="edit-role-original-name" name="original_name">
-        <label class="block mb-2">Role Name<br><input id="edit-role-name" name="name" class="border p-2 w-full"/></label>
-        <label class="block mb-4">Description<br><input id="edit-role-description" name="description" class="border p-2 w-full"/></label>
-      </form>
-    </div>
-    
-    <!-- Screen Access Tab -->
-    <div id="role-screens-tab" class="role-tab-content hidden">
-      <p class="text-sm text-gray-600 mb-3">Select which screens this role can access:</p>
-      <div class="overflow-x-auto">
-        <table class="w-full border-collapse border border-gray-300 text-sm">
-          <thead class="bg-gray-200">
-            <tr>
-              <th class="border border-gray-300 p-2 text-left">Screen</th>
-              <th class="border border-gray-300 p-2 text-center">Access</th>
-            </tr>
-          </thead>
-          <tbody id="role-screens-tbody">
-            <!-- Populated by JavaScript -->
-          </tbody>
-        </table>
+<!-- ── Edit Role Modal ─────────────────────────────────────────────────── -->
+<!-- Outer: full-screen backdrop, scrollable, flex aligns to top -->
+<div id="edit-role-modal" class="hidden" style="position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.5);overflow-y:auto;">
+  <!-- Inner: centred card with its own max-height scroll -->
+  <div style="max-width:56rem;width:100%;margin:2rem auto;padding:0 1rem 2rem;">
+    <div class="card p-0" style="display:flex;flex-direction:column;max-height:calc(100dvh - 4rem);overflow:hidden;">
+
+      <!-- Modal header (always visible) -->
+      <div style="padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);flex-shrink:0;">
+        <h3 class="text-lg font-bold" id="modal-role-title">Edit Role</h3>
       </div>
-    </div>
-    
-    <!-- Action Permissions Tab -->
-    <div id="role-actions-tab" class="role-tab-content hidden">
-      <p class="text-sm text-gray-600 mb-3">Configure what actions this role can perform on accessible screens:</p>
-      <div id="role-actions-container" class="space-y-4">
-        <!-- Populated by JavaScript -->
+
+      <!-- Sticky tab bar (always visible) -->
+      <div style="padding:.5rem 1.5rem 0;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--card);display:flex;gap:.5rem;">
+        <button type="button" onclick="switchRoleTab('info')" id="role-tab-info" class="perm-tab active">Role Info</button>
+        <button type="button" onclick="switchRoleTab('screens')" id="role-tab-screens" class="perm-tab">Screen Access</button>
+        <button type="button" onclick="switchRoleTab('actions')" id="role-tab-actions" class="perm-tab">Action Permissions</button>
       </div>
-    </div>
-    
-    <div class="flex gap-2 mt-6">
-      <button type="button" onclick="saveRoleEdit()" class="btn btn-primary">Save All Changes</button>
-      <button type="button" onclick="closeEditRole()" class="btn">Cancel</button>
+
+      <!-- Scrollable content area -->
+      <div style="flex:1;overflow-y:auto;padding:1.25rem 1.5rem;">
+
+        <!-- Role Info Tab -->
+        <div id="role-info-tab" class="role-tab-content">
+          <form id="edit-role-form" class="space-y-3">
+            <input type="hidden" id="edit-role-original-name" name="original_name">
+            <label class="block">Role Name<br><input id="edit-role-name" name="name" class="mt-1 w-full" /></label>
+            <label class="block">Description<br><input id="edit-role-description" name="description" class="mt-1 w-full" /></label>
+          </form>
+        </div>
+
+        <!-- Screen Access Tab -->
+        <div id="role-screens-tab" class="role-tab-content hidden">
+          <p class="text-sm mb-3" style="color:var(--muted)">Select which screens this role can access. Changes immediately filter the Action Permissions tab.</p>
+          <table class="perm-table text-sm">
+            <thead><tr><th class="text-left">Screen</th><th>Access</th></tr></thead>
+            <tbody id="role-screens-tbody"></tbody>
+          </table>
+        </div>
+
+        <!-- Action Permissions Tab -->
+        <div id="role-actions-tab" class="role-tab-content hidden">
+          <p class="text-sm mb-3" style="color:var(--muted)">Configure View / Add / Edit / Delete for each accessible screen. Enable screen access first to see screens here.</p>
+          <div id="role-actions-container" class="space-y-3"></div>
+          <p id="no-screens-hint" class="hidden text-sm mt-2" style="color:var(--muted)">No screens are enabled for this role. Go to Screen Access to grant access first.</p>
+        </div>
+
+      </div><!-- /scroll area -->
+
+      <!-- Footer actions (always visible) -->
+      <div style="padding:1rem 1.5rem;border-top:1px solid var(--border);flex-shrink:0;display:flex;gap:.5rem;">
+        <button type="button" onclick="saveRoleEdit()" class="btn btn-primary">Save All Changes</button>
+        <button type="button" onclick="closeEditRole()" class="btn btn-ghost">Cancel</button>
+      </div>
+
     </div>
   </div>
 </div>
 
 <script>
-// Store all screens and actions for permission management
-let allScreens = [];
-let allActions = ['view', 'add', 'edit', 'delete'];
+const ALL_SCREENS = ['appointments','patients','doctors','specialities','invoices','transactions','dashboard','users','roles'];
+const ALL_ACTIONS = ['view','add','edit','delete'];
 let currentEditingRole = null;
-let screenPermissions = new Set(); // screen names that role can access
-let actionPermissions = new Map(); // {screen}:{action} => bool
+let screenPermissions = new Set();
+let actionPermissions = new Map();
 
-async function editRole(btn, name, desc) {
+/* ── Open modal ─────────────────────────────────────────────────────── */
+async function editRole(name, desc) {
   currentEditingRole = name;
+  document.getElementById('modal-role-title').textContent = 'Edit Role — ' + name;
   document.getElementById('edit-role-original-name').value = name;
   document.getElementById('edit-role-name').value = name;
   document.getElementById('edit-role-description').value = desc;
-  
-  // Fetch all screens and permissions from API
+
   try {
     const token = sessionStorage.getItem('token');
     const apiUrl = '{{ api_url }}'.replace(/\/$/, '');
-    
-    // Get all screens (from the accessible-screens endpoint for all possible screens)
-    allScreens = ['appointments', 'patients', 'doctors', 'specialities', 'invoices', 'transactions', 'dashboard', 'users', 'roles'];
-    
-    // Get all screen permissions and filter for current role
-    const screenResp = await fetch(`${apiUrl}/admin/screen-permissions`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    const screenData = await screenResp.json();
-    const screenPerms = Array.isArray(screenData) ? screenData : [];
-    
-    // Load current screen permissions for this role
+
+    const [screenData, actionData] = await Promise.all([
+      fetch(apiUrl+'/admin/screen-permissions', {headers:{'Authorization':'Bearer '+token}}).then(r=>r.json()),
+      fetch(apiUrl+'/admin/action-permissions', {headers:{'Authorization':'Bearer '+token}}).then(r=>r.json())
+    ]);
+
     screenPermissions.clear();
-    screenPerms.forEach(p => {
-      if (p.role_name === name) {
-        screenPermissions.add(p.screen_name);
-      }
-    });
-    
-    // Get all action permissions and filter for current role
-    const actionResp = await fetch(`${apiUrl}/admin/action-permissions`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    const actionData = await actionResp.json();
-    const actionPerms = Array.isArray(actionData) ? actionData : [];
-    
+    (Array.isArray(screenData)?screenData:[]).forEach(p=>{ if(p.role_name===name) screenPermissions.add(p.screen_name); });
+
     actionPermissions.clear();
-    actionPerms.forEach(a => {
-      if (a.role_name === name) {
-        const key = `${a.screen_name}:${a.action}`;
-        actionPermissions.set(key, true);
-      }
-    });
-    
-    // Populate screens table
+    (Array.isArray(actionData)?actionData:[]).forEach(a=>{ if(a.role_name===name) actionPermissions.set(a.screen_name+':'+a.action, true); });
+
     populateScreensTable();
-    
-    // Populate actions table
     populateActionsTable();
-    
     document.getElementById('edit-role-modal').classList.remove('hidden');
     switchRoleTab('info');
-  } catch (err) {
-    console.error('Error loading permissions:', err);
-    alert('Error loading permissions: ' + err.message);
+  } catch(err) {
+    alert('Error loading permissions: '+err.message);
   }
 }
 
+/* ── Screens table ──────────────────────────────────────────────────── */
 function populateScreensTable() {
   const tbody = document.getElementById('role-screens-tbody');
   tbody.innerHTML = '';
-  
-  allScreens.forEach(screen => {
-    const isChecked = screenPermissions.has(screen);
-    const row = document.createElement('tr');
-    row.innerHTML = `
-      <td class="border border-gray-300 p-2">${screen}</td>
-      <td class="border border-gray-300 p-2 text-center">
-        <input type="checkbox" 
-               class="screen-access-cb" 
-               data-screen="${screen}"
-               ${isChecked ? 'checked' : ''}
-               onchange="handleScreenToggle('${screen}', this.checked)" />
-      </td>
-    `;
-    tbody.appendChild(row);
+  ALL_SCREENS.forEach(screen => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="font-semibold">${screen}</td>
+      <td class="text-center">
+        <input type="checkbox" class="perm-check screen-access-cb" data-screen="${screen}"
+               ${screenPermissions.has(screen)?'checked':''}
+               onchange="handleScreenToggle('${screen}',this.checked)" />
+      </td>`;
+    tbody.appendChild(tr);
   });
 }
 
-function handleScreenToggle(screen, isChecked) {
-  if (isChecked) {
-    screenPermissions.add(screen);
-  } else {
-    screenPermissions.delete(screen);
-  }
+function handleScreenToggle(screen, checked) {
+  if (checked) screenPermissions.add(screen); else screenPermissions.delete(screen);
+  // Re-render actions list immediately so the user sees the change
+  populateActionsTable();
 }
 
+/* ── Actions table (only enabled screens) ──────────────────────────── */
 function populateActionsTable() {
   const container = document.getElementById('role-actions-container');
+  const hint = document.getElementById('no-screens-hint');
   container.innerHTML = '';
-  
-  allScreens.forEach(screen => {
+
+  const enabledScreens = ALL_SCREENS.filter(s => screenPermissions.has(s));
+
+  if (enabledScreens.length === 0) {
+    hint.classList.remove('hidden');
+    return;
+  }
+  hint.classList.add('hidden');
+
+  enabledScreens.forEach(screen => {
     const div = document.createElement('div');
-    div.className = 'border border-gray-300 rounded p-3';
-    
-    let html = `<div class="font-semibold mb-2">${screen}</div>`;
-    html += '<div class="flex flex-wrap gap-3">';
-    
-    allActions.forEach(action => {
-      const key = `${screen}:${action}`;
-      const isChecked = actionPermissions.has(key);
-      const label = action.charAt(0).toUpperCase() + action.slice(1);
-      html += `
-        <label class="flex items-center gap-1">
-          <input type="checkbox" 
-                 class="action-cb" 
-                 data-screen="${screen}"
-                 data-action="${action}"
-                 ${isChecked ? 'checked' : ''}
-                 onchange="handleActionToggle('${screen}', '${action}', this.checked)" />
-          <span>${label}</span>
-        </label>
-      `;
+    div.className = 'border rounded-lg p-3';
+    div.style.borderColor = 'var(--border)';
+
+    let html = `<div class="font-semibold mb-2 text-sm">${screen}</div><div class="flex flex-wrap gap-4">`;
+    ALL_ACTIONS.forEach(action => {
+      const checked = actionPermissions.has(screen+':'+action) ? 'checked' : '';
+      const label = action.charAt(0).toUpperCase()+action.slice(1);
+      html += `<label class="flex items-center gap-1 text-sm cursor-pointer">
+        <input type="checkbox" class="perm-check action-cb" data-screen="${screen}" data-action="${action}"
+               ${checked} onchange="handleActionToggle('${screen}','${action}',this.checked)" />
+        ${label}</label>`;
     });
-    
     html += '</div>';
     div.innerHTML = html;
     container.appendChild(div);
   });
 }
 
-function handleActionToggle(screen, action, isChecked) {
-  const key = `${screen}:${action}`;
-  if (isChecked) {
-    actionPermissions.set(key, true);
-  } else {
-    actionPermissions.delete(key);
-  }
+function handleActionToggle(screen, action, checked) {
+  const key = screen+':'+action;
+  if (checked) actionPermissions.set(key, true); else actionPermissions.delete(key);
 }
 
-function switchRoleTab(tabName) {
-  // Hide all tabs
-  document.querySelectorAll('.role-tab-content').forEach(el => el.classList.add('hidden'));
-  document.querySelectorAll('.role-tab-btn').forEach(btn => {
-    btn.classList.remove('text-blue-600', 'border-b-2', 'border-blue-600');
-    btn.classList.add('text-gray-600');
-  });
-  
-  // Show selected tab
-  document.getElementById(`role-${tabName}-tab`).classList.remove('hidden');
-  document.getElementById(`role-tab-${tabName}`).classList.remove('text-gray-600');
-  document.getElementById(`role-tab-${tabName}`).classList.add('text-blue-600', 'border-b-2', 'border-blue-600');
+/* ── Tab switching ──────────────────────────────────────────────────── */
+function switchRoleTab(name) {
+  document.querySelectorAll('.role-tab-content').forEach(el=>el.classList.add('hidden'));
+  document.querySelectorAll('.perm-tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('role-'+name+'-tab').classList.remove('hidden');
+  document.getElementById('role-tab-'+name).classList.add('active');
+  // Always re-sync actions when switching to that tab
+  if (name==='actions') populateActionsTable();
 }
 
+/* ── Close ──────────────────────────────────────────────────────────── */
 function closeEditRole() {
   document.getElementById('edit-role-modal').classList.add('hidden');
 }
+// Click outside closes
+document.getElementById('edit-role-modal').addEventListener('click', function(e){
+  if (e.target===this) closeEditRole();
+});
 
+/* ── Save ───────────────────────────────────────────────────────────── */
 async function saveRoleEdit() {
   const originalName = document.getElementById('edit-role-original-name').value;
-  const newName = document.getElementById('edit-role-name').value;
-  const description = document.getElementById('edit-role-description').value;
-  
-  if (!newName) {
-    alert('Role name is required');
-    return;
-  }
-  
+  const newName = document.getElementById('edit-role-name').value.trim();
+  const description = document.getElementById('edit-role-description').value.trim();
+  if (!newName) { alert('Role name is required'); return; }
+
   try {
     const token = sessionStorage.getItem('token');
     const apiUrl = '{{ api_url }}'.replace(/\/$/, '');
-    
-    // Update role info
-    const roleResp = await fetch(`${apiUrl}/roles/${originalName}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({ name: newName, description: description })
-    });
-    
-    if (!roleResp.ok) {
-      throw new Error(`Failed to update role: ${roleResp.status}`);
-    }
-    
-    // Update screen permissions
+    const h = {'Content-Type':'application/json','Authorization':'Bearer '+token};
+
+    // 1. Update role info
+    const roleResp = await fetch(apiUrl+'/roles/'+originalName, {method:'PUT',headers:h,body:JSON.stringify({name:newName,description})});
+    if (!roleResp.ok) throw new Error('Failed to update role: '+roleResp.status);
+
+    // 2. Screen permissions
     const screenMappings = [];
-    screenPermissions.forEach(screen => {
-      screenMappings.push({
-        screen_name: screen,
-        role_name: newName  // Use the new name in case it changed
-      });
-    });
-    
-    const screenResp = await fetch(`${apiUrl}/admin/screen-permissions`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({ mappings: screenMappings })
-    });
-    
-    if (!screenResp.ok) {
-      throw new Error('Failed to update screen permissions');
-    }
-    
-    // Update action permissions
+    screenPermissions.forEach(screen => screenMappings.push({screen_name:screen, role_name:newName}));
+    const screenResp = await fetch(apiUrl+'/admin/screen-permissions', {method:'PUT',headers:h,body:JSON.stringify({mappings:screenMappings})});
+    if (!screenResp.ok) throw new Error('Failed to update screen permissions');
+
+    // 3. Action permissions — only for screens that are enabled
     const actionList = [];
-    actionPermissions.forEach((val, key) => {
+    actionPermissions.forEach((_, key) => {
       const [screen, action] = key.split(':');
-      actionList.push({
-        role_name: newName,  // Use the new name in case it changed
-        screen_name: screen,
-        action: action
-      });
+      if (screenPermissions.has(screen)) {
+        actionList.push({role_name:newName, screen_name:screen, action});
+      }
     });
-    
-    const actionResp = await fetch(`${apiUrl}/admin/action-permissions`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({ permissions: actionList })
-    });
-    
-    if (!actionResp.ok) {
-      throw new Error('Failed to update action permissions');
-    }
-    
+    const actionResp = await fetch(apiUrl+'/admin/action-permissions', {method:'PUT',headers:h,body:JSON.stringify({permissions:actionList})});
+    if (!actionResp.ok) throw new Error('Failed to update action permissions');
+
     alert('Role and permissions updated successfully');
     location.reload();
-  } catch (err) {
-    console.error('Error saving role:', err);
-    alert('Error: ' + err.message);
+  } catch(err) {
+    alert('Error: '+err.message);
   }
 }
 
-// Control visibility of action buttons based on permissions
+/* ── DOMContentLoaded ───────────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', function() {
   const screenName = 'roles';
   controlActionVisibility(screenName, 'add', '#new-role-btn');
@@ -351,4 +275,21 @@ document.addEventListener('DOMContentLoaded', function() {
   controlActionVisibility(screenName, 'delete', '.action-btn-delete');
 });
 </script>
+
+<style>
+/* reuse perm-tab style from admin_permissions.html */
+.perm-tab{
+  padding:.4rem 1rem;border-radius:6px 6px 0 0;font-size:.85rem;font-weight:600;
+  border:1px solid transparent;border-bottom:none;background:transparent;
+  color:var(--muted);cursor:pointer;transition:background .15s,color .15s;
+}
+.perm-tab:hover{ background:color-mix(in srgb,var(--brand) 8%,transparent);color:var(--text); }
+.perm-tab.active{ background:var(--card);color:var(--brand);border-color:var(--border); }
+.perm-table{ width:100%;border-collapse:collapse; }
+.perm-table th,.perm-table td{ border:1px solid var(--border);padding:.4rem .6rem; }
+.perm-table thead{ background:color-mix(in srgb,var(--brand) 7%,transparent); }
+.perm-table th{ font-weight:600;font-size:.75rem;text-transform:uppercase;letter-spacing:.03em; }
+.perm-table tbody tr:hover{ background:color-mix(in srgb,var(--brand) 4%,transparent); }
+.perm-check{ width:1rem;height:1rem;accent-color:var(--brand);cursor:pointer; }
+</style>
 {% endblock %}

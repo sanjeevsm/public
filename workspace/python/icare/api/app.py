@@ -67,13 +67,14 @@ def require_token(superadmin=False, role=None, roles=None):
             # admin short-circuit
             if superadmin and not user.get('is_admin'):
                 return fail('admin access required', 403)
-            # role/roles checks
-            if role:
-                if user.get('role') != role:
-                    return fail('role required: %s' % role, 403)
-            if roles:
-                if user.get('role') not in roles:
-                    return fail('one of roles required', 403)
+            # role/roles checks (admins bypass all role gates)
+            if not user.get('is_admin'):
+                if role:
+                    if user.get('role') != role:
+                        return fail('role required: %s' % role, 403)
+                if roles:
+                    if user.get('role') not in roles:
+                        return fail('one of roles required', 403)
             g.current_user = user
             return f(*args, **kwargs)
         wrapped.__name__ = f.__name__
@@ -111,6 +112,30 @@ def doctor_owns_appointment(doctor_id, appointment_id):
         return True
     rows = query('SELECT 1 FROM appointments WHERE id=%s AND doctor_id=%s', (appointment_id, doctor_id))
     return bool(rows)
+
+
+def doctor_treats_patient(doctor_id, patient_id):
+    """True if the patient has at least one appointment with this doctor."""
+    if not _use_db() or not doctor_id or not patient_id:
+        return False
+    rows = query('SELECT 1 FROM appointments WHERE doctor_id=%s AND patient_id=%s LIMIT 1', (doctor_id, patient_id))
+    return bool(rows)
+
+
+def is_scoped_doctor(user):
+    """A non-admin Doctor whose patient access must be limited to their own patients."""
+    return bool(user) and user.get('role') == 'Doctor' and not user.get('is_admin')
+
+
+def deny_if_not_doctors_patient(user, patient_id):
+    """For scoped doctors, block access unless they treat this patient.
+
+    Returns a fail() response to short-circuit, or None to allow.
+    """
+    if is_scoped_doctor(user):
+        if not doctor_treats_patient(user.get('doctor_id'), patient_id):
+            return fail('You can only access patients you treat', 403)
+    return None
 
 from werkzeug.exceptions import HTTPException
 from flask_cors import CORS
@@ -391,8 +416,12 @@ def ensure_permission_tables():
             ('Admin', 'invoices', 'view'), ('Admin', 'invoices', 'add'), ('Admin', 'invoices', 'edit'), ('Admin', 'invoices', 'delete'),
             ('Admin', 'transactions', 'view'), ('Admin', 'transactions', 'add'), ('Admin', 'transactions', 'edit'), ('Admin', 'transactions', 'delete'),
             ('Admin', 'users', 'view'), ('Admin', 'users', 'add'), ('Admin', 'users', 'edit'), ('Admin', 'users', 'delete'),
-            # Doctor: view only + edit own appointments
-            ('Doctor', 'appointments', 'view'), ('Doctor', 'patients', 'view'), ('Doctor', 'doctors', 'view'),
+            # Doctor: book follow-ups for their own patients (scoped in code); view/edit
+            # their own patients and add clinical notes via patients:edit. Doctors cannot
+            # create patients (Office does that) and cannot delete patients.
+            ('Doctor', 'appointments', 'view'), ('Doctor', 'appointments', 'add'), ('Doctor', 'appointments', 'edit'),
+            ('Doctor', 'patients', 'view'), ('Doctor', 'patients', 'edit'),
+            ('Doctor', 'doctors', 'view'),
             ('Doctor', 'dashboard', 'view'),
             # Billing: view and manage invoices/transactions
             ('Billing', 'invoices', 'view'), ('Billing', 'invoices', 'add'), ('Billing', 'invoices', 'edit'),
@@ -416,6 +445,65 @@ def ensure_appointments_columns():
         return
     try:
         query("ALTER TABLE appointments ADD COLUMN IF NOT EXISTS prescription TEXT")
+    except Exception:
+        pass
+
+
+def ensure_case_histories_table():
+    """Create the patient-centric case_histories table used by the API.
+
+    The schema file ships a richer appointment-centric `case_history` table that
+    no code references; the endpoints operate on `case_histories(patient_id, notes)`.
+    """
+    if not _use_db():
+        return
+    query('''
+    CREATE TABLE IF NOT EXISTS case_histories (
+        id SERIAL PRIMARY KEY,
+        patient_id INT NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+        notes TEXT NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    ''')
+
+
+# Canonical action permissions for the built-in Doctor role. Doctors book follow-ups
+# for patients they already treat (scoped in code), view/edit their own patients and
+# clinical notes, but must NOT create or delete patients (Office does patient creation
+# and initial bookings).
+_DOCTOR_CANONICAL_PERMS = [
+    ('Doctor', 'appointments', 'view'), ('Doctor', 'appointments', 'add'), ('Doctor', 'appointments', 'edit'),
+    ('Doctor', 'patients', 'view'), ('Doctor', 'patients', 'edit'),
+    ('Doctor', 'doctors', 'view'),
+    ('Doctor', 'dashboard', 'view'),
+]
+
+
+def backfill_doctor_permissions():
+    """Reconcile the Doctor role's permissions for installs seeded before the
+    doctor/patient scoping rules.
+
+    Runs only when a legacy state is detected (Doctor still has the now-forbidden
+    patients:add, or is missing patients:edit) so it doesn't clobber later admin
+    customisations on already-corrected installs.
+    """
+    if not _use_db():
+        return
+    try:
+        legacy_add = query("SELECT 1 FROM action_permissions WHERE role_name='Doctor' AND screen_name='patients' AND action='add'")
+        has_edit = query("SELECT 1 FROM action_permissions WHERE role_name='Doctor' AND screen_name='patients' AND action='edit'")
+        if not legacy_add and has_edit:
+            return  # already reconciled
+        # Doctors can never create patients
+        query("DELETE FROM action_permissions WHERE role_name='Doctor' AND screen_name='patients' AND action='add'")
+        # Ensure the canonical Doctor permissions exist
+        for role, screen, action in _DOCTOR_CANONICAL_PERMS:
+            try:
+                query("INSERT INTO action_permissions (role_name, screen_name, action) VALUES (%s,%s,%s) ON CONFLICT DO NOTHING", (role, screen, action))
+            except Exception:
+                existing = query("SELECT 1 FROM action_permissions WHERE role_name=%s AND screen_name=%s AND action=%s", (role, screen, action))
+                if not existing:
+                    query("INSERT INTO action_permissions (role_name, screen_name, action) VALUES (%s,%s,%s)", (role, screen, action))
     except Exception:
         pass
 
@@ -446,6 +534,18 @@ try:
 except Exception:
     pass
 
+try:
+    if _use_db():
+        ensure_case_histories_table()
+except Exception:
+    pass
+
+try:
+    if _use_db():
+        backfill_doctor_permissions()
+except Exception:
+    pass
+
 # --- Specialities endpoints -----------------------------------------------------
 @app.route('/specialities', methods=['GET'])
 def list_specialities():
@@ -471,7 +571,7 @@ def auth_login():
             token = generate_token_for(user)
             return ok({'user': user, 'token': token})
         return fail('invalid credentials', 401)
-    rows = query('SELECT id, username, password_hash, full_name, email, is_admin, is_active FROM users WHERE username=%s', (username,))
+    rows = query('SELECT id, username, password_hash, full_name, email, is_admin, is_active, role, doctor_id FROM users WHERE username=%s', (username,))
     if not rows:
         return fail('invalid credentials', 401)
     user = rows[0]
@@ -856,9 +956,21 @@ def delete_speciality(sid):
 
 # --- Patients endpoints --------------------------------------------------------
 @app.route('/patients', methods=['GET'])
+@require_token()
 def list_patients():
     if _use_db():
-        rows = query('SELECT id, first_name, last_name, email, phone FROM patients ORDER BY id LIMIT 200')
+        user = g.current_user
+        # Scoped doctors only see patients they treat
+        if is_scoped_doctor(user):
+            if not user.get('doctor_id'):
+                return ok([])
+            rows = query('''SELECT DISTINCT p.id, p.first_name, p.last_name, p.email, p.phone
+                            FROM patients p
+                            JOIN appointments a ON a.patient_id = p.id
+                            WHERE a.doctor_id = %s
+                            ORDER BY p.id LIMIT 200''', (user.get('doctor_id'),))
+        else:
+            rows = query('SELECT id, first_name, last_name, email, phone FROM patients ORDER BY id LIMIT 200')
         return ok(rows)
     else:
         return ok([])
@@ -1017,6 +1129,9 @@ def delete_doctor(did):
 @app.route('/doctors/<int:did>/schedules', methods=['POST'])
 @require_token()
 def add_schedule(did):
+    user = g.current_user
+    if not can_perform_action(user, 'doctors', 'add'):
+        return fail('You do not have permission to add schedules', 403)
     body = request.get_json(force=True, silent=True) or {}
     dow = body.get('day_of_week')
     start = body.get('start_time')
@@ -1034,6 +1149,9 @@ def add_schedule(did):
 @app.route('/schedules/<int:sid>', methods=['PUT'])
 @require_token()
 def update_schedule(sid):
+    user = g.current_user
+    if not can_perform_action(user, 'doctors', 'edit'):
+        return fail('You do not have permission to edit schedules', 403)
     body = request.get_json(force=True, silent=True) or {}
     dow = body.get('day_of_week')
     start = body.get('start_time')
@@ -1053,6 +1171,9 @@ def update_schedule(sid):
 @app.route('/schedules/<int:sid>', methods=['DELETE'])
 @require_token()
 def delete_schedule(sid):
+    user = g.current_user
+    if not can_perform_action(user, 'doctors', 'delete'):
+        return fail('You do not have permission to delete schedules', 403)
     if _use_db():
         r = query('DELETE FROM doctor_schedules WHERE id=%s RETURNING id', (sid,))
         if not r:
@@ -1130,6 +1251,13 @@ def create_appointment():
         return fail('doctor_id, patient_id, appointment_date and start_time are required', 400)
     if not _use_db():
         return fail('not available without DB', 400)
+    # Doctors may only book follow-ups for themselves, and only for patients they
+    # already treat. The initial appointment for a patient must be booked by Office.
+    if is_scoped_doctor(user):
+        if not user.get('doctor_id') or int(doctor_id) != int(user.get('doctor_id')):
+            return fail('Doctors can only book appointments for themselves', 403)
+        if not doctor_treats_patient(user.get('doctor_id'), patient_id):
+            return fail('You can only book follow-ups for patients you already treat; the first appointment must be booked by Office', 403)
     # compute end_time
     sm = _time_to_minutes(start_time)
     em = sm + slot
@@ -1155,7 +1283,7 @@ def create_appointment():
             return fail('conflict with existing appointment', 400)
     # insert
     r = query('INSERT INTO appointments (doctor_id, patient_id, appointment_date, start_time, end_time, status) VALUES (%s,%s,%s,%s,%s,%s) RETURNING id, doctor_id, patient_id, appointment_date, start_time, end_time, status',
-              (doctor_id, patient_id, date_str, start_time, end_time, 'booked'))
+              (doctor_id, patient_id, date_str, start_time, end_time, 'confirmed'))
     return ok(r[0], 201)
 
 
@@ -1241,8 +1369,12 @@ def delete_appointment(aid):
 
 # --- Patients CRUD ----------------------------------------------------------
 @app.route('/patients/<int:pid>', methods=['GET'])
+@require_token()
 def get_patient(pid):
     if _use_db():
+        denied = deny_if_not_doctors_patient(g.current_user, pid)
+        if denied:
+            return denied
         rows = query('SELECT id, first_name, last_name, email, phone FROM patients WHERE id=%s', (pid,))
         if not rows:
             return fail('not found', 404)
@@ -1278,16 +1410,30 @@ def update_patient(pid):
     # Check action permission
     if not can_perform_action(user, 'patients', 'edit'):
         return fail('You do not have permission to edit patients', 403)
-    
+
+    # Doctors may only edit patients they treat
+    denied = deny_if_not_doctors_patient(user, pid)
+    if denied:
+        return denied
+
     body = request.get_json(force=True, silent=True) or {}
-    if _use_db():
-        r = query('UPDATE patients SET first_name=%s,last_name=%s,email=%s,phone=%s WHERE id=%s RETURNING id, first_name, last_name, email, phone',
-                  (body.get('first_name'), body.get('last_name'), body.get('email'), body.get('phone'), pid))
-        if not r:
-            return fail('not found', 404)
-        return ok(r[0])
-    else:
+    if not _use_db():
         return fail('not available without DB', 404)
+    # Partial update: only set fields present in the request body
+    fields = []
+    params = []
+    for k in ('first_name', 'last_name', 'email', 'phone'):
+        if k in body:
+            fields.append(f"{k}=%s")
+            params.append(body.get(k))
+    if not fields:
+        return fail('no fields to update', 400)
+    params.append(pid)
+    sql = f"UPDATE patients SET {', '.join(fields)} WHERE id=%s RETURNING id, first_name, last_name, email, phone"
+    r = query(sql, tuple(params))
+    if not r:
+        return fail('not found', 404)
+    return ok(r[0])
 
 
 @app.route('/patients/<int:pid>', methods=['DELETE'])
@@ -1297,7 +1443,12 @@ def delete_patient(pid):
     # Check action permission
     if not can_perform_action(user, 'patients', 'delete'):
         return fail('You do not have permission to delete patients', 403)
-    
+
+    # Doctors may only act on patients they treat
+    denied = deny_if_not_doctors_patient(user, pid)
+    if denied:
+        return denied
+
     if _use_db():
         rows = query("SELECT count(*) as cnt FROM appointments WHERE patient_id=%s AND status!='completed'", (pid,))
         if rows and int(rows[0].get('cnt',0))>0:
@@ -1333,6 +1484,9 @@ def list_leaves():
 @app.route('/leaves', methods=['POST'])
 @require_token()
 def create_leave():
+    user = g.current_user
+    if not can_perform_action(user, 'doctors', 'add'):
+        return fail('You do not have permission to add leaves', 403)
     body = request.get_json(force=True, silent=True) or {}
     if not body.get('doctor_id') or not body.get('leave_date'):
         return fail('doctor_id and leave_date required', 400)
@@ -1347,6 +1501,9 @@ def create_leave():
 @app.route('/leaves/<int:lid>', methods=['DELETE'])
 @require_token()
 def delete_leave(lid):
+    user = g.current_user
+    if not can_perform_action(user, 'doctors', 'delete'):
+        return fail('You do not have permission to delete leaves', 403)
     if _use_db():
         r = query('DELETE FROM doctor_leaves WHERE id=%s RETURNING id', (lid,))
         if not r:
@@ -1358,11 +1515,25 @@ def delete_leave(lid):
 
 # --- Case history for patients ---------------------------------------------
 @app.route('/case_histories', methods=['GET'])
+@require_token()
 def list_case_histories():
     pid = request.args.get('patient_id')
     if _use_db():
+        user = g.current_user
         if pid:
+            denied = deny_if_not_doctors_patient(user, pid)
+            if denied:
+                return denied
             rows = query('SELECT id, patient_id, notes, created_at FROM case_histories WHERE patient_id=%s ORDER BY created_at DESC', (pid,))
+        elif is_scoped_doctor(user):
+            # Restrict the unfiltered listing to the doctor's own patients
+            if not user.get('doctor_id'):
+                return ok([])
+            rows = query('''SELECT DISTINCT ch.id, ch.patient_id, ch.notes, ch.created_at
+                            FROM case_histories ch
+                            JOIN appointments a ON a.patient_id = ch.patient_id
+                            WHERE a.doctor_id = %s
+                            ORDER BY ch.created_at DESC LIMIT 500''', (user.get('doctor_id'),))
         else:
             rows = query('SELECT id, patient_id, notes, created_at FROM case_histories ORDER BY created_at DESC LIMIT 500')
         return ok(rows)
@@ -1373,9 +1544,16 @@ def list_case_histories():
 @app.route('/case_histories', methods=['POST'])
 @require_token()
 def create_case_history():
+    user = g.current_user
+    if not can_perform_action(user, 'patients', 'edit'):
+        return fail('You do not have permission to add case history', 403)
     body = request.get_json(force=True, silent=True) or {}
     if not body.get('patient_id') or not body.get('notes'):
         return fail('patient_id and notes required', 400)
+    # Doctors may only add notes for patients they treat
+    denied = deny_if_not_doctors_patient(user, body.get('patient_id'))
+    if denied:
+        return denied
     if _use_db():
         r = query('INSERT INTO case_histories (patient_id, notes, created_at) VALUES (%s,%s,now()) RETURNING id, patient_id, notes, created_at',
                   (body.get('patient_id'), body.get('notes')))
@@ -1387,7 +1565,18 @@ def create_case_history():
 @app.route('/case_histories/<int:cid>', methods=['DELETE'])
 @require_token()
 def delete_case_history(cid):
+    user = g.current_user
+    if not can_perform_action(user, 'patients', 'edit'):
+        return fail('You do not have permission to delete case history', 403)
     if _use_db():
+        # Doctors may only act on notes for patients they treat
+        if is_scoped_doctor(user):
+            existing = query('SELECT patient_id FROM case_histories WHERE id=%s', (cid,))
+            if not existing:
+                return fail('not found', 404)
+            denied = deny_if_not_doctors_patient(user, existing[0].get('patient_id'))
+            if denied:
+                return denied
         r = query('DELETE FROM case_histories WHERE id=%s RETURNING id', (cid,))
         if not r:
             return fail('not found', 404)
@@ -1453,6 +1642,9 @@ def list_billing_transactions():
 @app.route('/billing/transactions', methods=['POST'])
 @require_token()
 def create_billing_transaction():
+    user = g.current_user
+    if not can_perform_action(user, 'transactions', 'add'):
+        return fail('You do not have permission to add transactions', 403)
     body = request.get_json(force=True, silent=True) or {}
     if not body.get('trans_date') or not body.get('amount') or not body.get('type'):
         return fail('trans_date, amount, type required', 400)
@@ -1471,6 +1663,9 @@ def create_billing_transaction():
 @app.route('/billing/transactions/<int:tid>', methods=['PUT'])
 @require_token()
 def update_billing_transaction(tid):
+    user = g.current_user
+    if not can_perform_action(user, 'transactions', 'edit'):
+        return fail('You do not have permission to edit transactions', 403)
     body = request.get_json(force=True, silent=True) or {}
     if not _use_db():
         return fail('not available without DB', 400)
@@ -1493,6 +1688,9 @@ def update_billing_transaction(tid):
 @app.route('/billing/transactions/<int:tid>', methods=['DELETE'])
 @require_token()
 def delete_billing_transaction(tid):
+    user = g.current_user
+    if not can_perform_action(user, 'transactions', 'delete'):
+        return fail('You do not have permission to delete transactions', 403)
     if not _use_db():
         return fail('not available without DB', 400)
     r = query('DELETE FROM billing_transactions WHERE id=%s RETURNING id', (tid,))

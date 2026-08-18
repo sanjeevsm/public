@@ -63,7 +63,7 @@ Browser (localStorage: token, provider config)
    │  HTTP headers: X-Provider-*, every request
    │  WS query params: ?provider=&token=&...
    ▼
-CI/CD Dashboard API  :8090  (Python FastAPI)
+CI/CD Dashboard API  :8000  (Python FastAPI)
    │  httpx (async, per-user TTL cache)
    ▼
 Git Provider API
@@ -187,7 +187,7 @@ sudo apt-get install -y grafana
 
 ```ini
 # API server port
-APP_PORT=8090
+APP_PORT=8000
 
 # Log level: debug | info | warning | error
 LOG_LEVEL=info
@@ -196,11 +196,11 @@ LOG_LEVEL=info
 CACHE_TTL=60
 
 # --- Optional monitoring stack ---
-PROMETHEUS_PORT=9091
+PROMETHEUS_PORT=9000
 PROMETHEUS_RETENTION=30d
 PROMETHEUS_EXE=          # path to prometheus binary
 
-GRAFANA_PORT=3001
+GRAFANA_PORT=9001
 GRAFANA_ADMIN_USER=admin
 GRAFANA_ADMIN_PASSWORD=admin123
 GRAFANA_EXE=             # path to grafana binary
@@ -261,17 +261,17 @@ This starts Prometheus, Grafana (if configured), and the FastAPI dashboard. Proc
 
 ```powershell
 # Windows
-dashboard_api\.venv\Scripts\uvicorn.exe main:app --host 0.0.0.0 --port 8090 --app-dir dashboard_api
+dashboard_api\.venv\Scripts\uvicorn.exe main:app --host 0.0.0.0 --port 8000 --app-dir dashboard_api
 
 # macOS / Linux
-dashboard_api/.venv/bin/uvicorn main:app --host 0.0.0.0 --port 8090 --app-dir dashboard_api
+dashboard_api/.venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000 --app-dir dashboard_api
 ```
 
 Or with environment variables:
 
 ```bash
-APP_PORT=8090 LOG_LEVEL=info \
-  dashboard_api/.venv/bin/uvicorn main:app --host 0.0.0.0 --port 8090
+APP_PORT=8000 LOG_LEVEL=info \
+  dashboard_api/.venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
 ---
@@ -280,13 +280,13 @@ APP_PORT=8090 LOG_LEVEL=info \
 
 | URL | Description |
 |---|---|
-| `http://<host>:8090` | Dashboard SPA |
-| `http://<host>:8090/api/docs` | Swagger UI (interactive API docs) |
-| `http://<host>:8090/api/redoc` | ReDoc API reference |
-| `http://<host>:8090/health` | Health check `{"status":"healthy"}` |
-| `http://<host>:8090/metrics` | Prometheus metrics endpoint |
-| `http://<host>:3001` | Grafana (if started) |
-| `http://<host>:9091` | Prometheus (if started) |
+| `http://<host>:8000` | Dashboard SPA |
+| `http://<host>:8000/api/docs` | Swagger UI (interactive API docs) |
+| `http://<host>:8000/api/redoc` | ReDoc API reference |
+| `http://<host>:8000/health` | Health check `{"status":"healthy"}` |
+| `http://<host>:8000/metrics` | Prometheus metrics endpoint |
+| `http://<host>:9001` | Grafana (if started) |
+| `http://<host>:9000` | Prometheus (if started) |
 
 For **network access from other machines** replace `localhost` with the server's IP address or hostname. The FastAPI server binds to `0.0.0.0` by default so it accepts connections on all interfaces.
 
@@ -376,19 +376,19 @@ dashboard_api/.venv/   Python virtual environment
 - For GitLab self-hosted: confirm the URL is correct and the instance is reachable
 
 **CORS errors**
-- Ensure you access the dashboard via the FastAPI server (`http://host:8090`), not by opening `index.html` directly as a file
+- Ensure you access the dashboard via the FastAPI server (`http://host:8000`), not by opening `index.html` directly as a file
 
 **Port already in use**
 
 ```powershell
-# Windows — find and kill process on port 8090
-netstat -ano | findstr :8090
+# Windows — find and kill process on port 8000
+netstat -ano | findstr :8000
 taskkill /PID <pid> /F
 ```
 
 ```bash
 # macOS / Linux
-lsof -i :8090
+lsof -i :8000
 kill -9 <pid>
 ```
 

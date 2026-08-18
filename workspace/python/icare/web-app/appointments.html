@@ -4,122 +4,396 @@
 <div class="page-head"><div class="page-head-text"><h1>Appointments</h1><p>Upcoming appointments and status.</p></div></div>
 <div class="container">
   <div id="stats">{% if appointments %}Total appointments: {{ appointments|length }}{% endif %}</div>
-  <div class="mb-6 p-4 bg-white dark:bg-slate-800 rounded shadow">
-    <h3 class="font-semibold mb-2">Book appointment</h3>
-    <form id="bookForm" method="post" action="/appointments/book" class="grid grid-cols-4 gap-2 items-end">
-      <label>Doctor<select id="doctorSelect" name="doctor_id" class="p-2 border"></select></label>
-      <label>Patient<select id="patientSelect" name="patient_id" class="p-2 border"></select></label>
-      <label>Date<input type="date" id="apptDate" name="appointment_date" class="p-2 border" /></label>
-      <label>Slot Minutes<select id="slotMinutes" name="slot_minutes" class="p-2 border"><option value="10">10</option><option value="15">15</option><option value="30">30</option></select></label>
-      <label class="col-span-2">Time<select id="slotSelect" name="start_time" class="p-2 border w-full"></select></label>
-      <div><button class="px-3 py-1 bg-[var(--brand)] text-white rounded">Book</button></div>
+  <div class="mb-6 p-4 rounded shadow" style="background:var(--card);border:1px solid var(--border)">
+    <h3 class="font-semibold mb-3">Book appointment</h3>
+    <form id="bookForm" method="post" action="/appointments/book" class="grid grid-cols-2 sm:grid-cols-4 gap-3 items-end">
+
+      <!-- Doctor field -->
+      {% if current_role == 'Doctor' %}
+      <div>
+        <div class="text-sm font-medium mb-1">Doctor</div>
+        <input type="hidden" name="doctor_id" id="doctorHidden" value="{{ current_doctor_id }}">
+        <div id="doctorLabel" class="p-2 rounded text-sm" style="background:color-mix(in srgb,var(--brand) 6%,var(--card));border:1px solid var(--border);color:var(--text)">Loading…</div>
+      </div>
+      {% else %}
+      <label class="block">
+        <span class="text-sm font-medium">Doctor</span>
+        <select id="doctorSelect" name="doctor_id" class="mt-1 w-full p-2 border rounded" style="border-color:var(--border)"></select>
+      </label>
+      {% endif %}
+
+      <!-- Patient field -->
+      <label class="block">
+        <span class="text-sm font-medium">Patient</span>
+        <select id="patientSelect" name="patient_id" class="mt-1 w-full p-2 border rounded" style="border-color:var(--border)"></select>
+      </label>
+
+      <!-- Date picker (mini-calendar) -->
+      <div class="relative" id="datePickerWrap">
+        <div class="text-sm font-medium mb-1">Date</div>
+        <input type="hidden" id="apptDate" name="appointment_date">
+        <button type="button" id="datePickerTrigger"
+                onclick="toggleCal()"
+                class="w-full text-left p-2 rounded text-sm"
+                style="border:1px solid var(--border);background:var(--card);color:var(--muted)">
+          Pick a date
+        </button>
+        <!-- Mini-calendar popup -->
+        <div id="miniCal" class="hidden" style="position:absolute;top:calc(100% + 4px);left:0;z-index:200;min-width:260px;
+             background:var(--card);border:1px solid var(--border);border-radius:10px;
+             box-shadow:0 8px 28px rgba(0,0,0,.18);padding:.75rem;user-select:none">
+          <!-- Header row -->
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem">
+            <button type="button" onclick="navMonth(-1)" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:var(--brand);padding:0 .4rem">&#8249;</button>
+            <span id="calMonthLabel" style="font-weight:700;font-size:.9rem"></span>
+            <button type="button" onclick="navMonth(1)"  style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:var(--brand);padding:0 .4rem">&#8250;</button>
+          </div>
+          <!-- Day-of-week header -->
+          <div id="calDowHead" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:2px"></div>
+          <!-- Date grid -->
+          <div id="calGrid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px"></div>
+          <!-- Legend -->
+          <div id="calLegend" style="margin-top:.5rem;font-size:.72rem;color:var(--muted);display:flex;gap:.75rem;flex-wrap:wrap"></div>
+        </div>
+      </div>
+
+      <!-- Slot duration -->
+      <label class="block">
+        <span class="text-sm font-medium">Slot (min)</span>
+        <select id="slotMinutes" name="slot_minutes" class="mt-1 w-full p-2 border rounded" style="border-color:var(--border)">
+          <option value="10">10</option>
+          <option value="15">15</option>
+          <option value="30">30</option>
+        </select>
+      </label>
+
+      <!-- Time slot -->
+      <label class="block col-span-2">
+        <span class="text-sm font-medium">Time</span>
+        <select id="slotSelect" name="start_time" class="mt-1 w-full p-2 border rounded" style="border-color:var(--border)"></select>
+      </label>
+
+      <!-- Book button -->
+      <div>
+        <button id="bookBtn" class="btn btn-primary w-full" disabled>Book</button>
+      </div>
     </form>
   </div>
-    <table class="min-w-full">
-      <thead><tr><th class="p-2 text-left">#</th><th class="p-2 text-left">Date</th><th class="p-2 text-left">Time</th><th class="p-2 text-left">Doctor</th><th class="p-2 text-left">Patient</th><th class="p-2 text-left">Status</th><th class="p-2 text-left">Prescription</th><th class="p-2 text-left">Actions</th></tr></thead>
-      <tbody id="appointmentsBody">
-        {% if appointments %}
-            {% for a in appointments %}
-              <tr class="border-t"><td class="p-2">{{ a.id }}</td><td class="p-2">{{ a.appointment_date }}</td><td class="p-2">{{ a.start_time }} - {{ a.end_time }}</td><td class="p-2">{{ a.doctor_name }}</td><td class="p-2">{{ a.patient_name }}</td><td class="p-2">{{ a.status }}</td><td class="p-2">{{ a.prescription or '-' }}</td><td class="p-2"><a href="/appointments/{{ a.id }}/edit" class="text-blue-600 mr-2 action-btn-edit">Edit</a><button onclick="deleteAppointment({{ a.id }})" class="text-red-600 action-btn-delete">Delete</button></td></tr>
-            {% endfor %}
-        {% else %}
-          <tr><td class="p-2" colspan="8">No appointments</td></tr>
-        {% endif %}
-      </tbody>
-    </table>
+
+  <table class="min-w-full">
+    <thead><tr>
+      <th class="p-2 text-left">#</th>
+      <th class="p-2 text-left">Date</th>
+      <th class="p-2 text-left">Time</th>
+      <th class="p-2 text-left">Doctor</th>
+      <th class="p-2 text-left">Patient</th>
+      <th class="p-2 text-left">Status</th>
+      <th class="p-2 text-left">Prescription</th>
+      <th class="p-2 text-left">Actions</th>
+    </tr></thead>
+    <tbody id="appointmentsBody">
+      {% if appointments %}
+        {% for a in appointments %}
+          <tr class="border-t">
+            <td class="p-2">{{ a.id }}</td>
+            <td class="p-2">{{ a.appointment_date }}</td>
+            <td class="p-2">{{ a.start_time }} - {{ a.end_time }}</td>
+            <td class="p-2">{{ a.doctor_name }}</td>
+            <td class="p-2">{{ a.patient_name }}</td>
+            <td class="p-2">{{ a.status }}</td>
+            <td class="p-2">{{ a.prescription or '-' }}</td>
+            <td class="p-2">
+              <a href="/appointments/{{ a.id }}/edit" class="action-btn-edit mr-2">Edit</a>
+              <button onclick="deleteAppointment({{ a.id }})" class="action-btn-delete">Delete</button>
+            </td>
+          </tr>
+        {% endfor %}
+      {% else %}
+        <tr><td class="p-2" colspan="8">No appointments</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
+/* ─── constants ─────────────────────────────────────────────────────────── */
+const isDoctor  = '{{ current_role }}' === 'Doctor';
+const myDoctorId = '{{ current_doctor_id }}';
+const apiUrl    = '{{ api_url }}'.replace(/\/$/, '');
+const DAY_NAMES = ['Mo','Tu','We','Th','Fr','Sa','Su'];
+const MONTHS    = ['January','February','March','April','May','June',
+                   'July','August','September','October','November','December'];
+
+/* ─── calendar state ────────────────────────────────────────────────────── */
+let calYear, calMonth;          // currently viewed month
+let workDays = new Set();       // Set of API day_of_week (0=Mon … 6=Sun) for current doctor
+let selectedDate = '';          // 'YYYY-MM-DD'
+let calOpen = false;
+
+/* ─── Convert JS Date.getDay() (0=Sun) → API day_of_week (0=Mon) ─────── */
+function jsDayToApi(d){ return (d + 6) % 7; }
+
+/* ─── Load doctor schedule → populate workDays ─────────────────────────── */
+async function loadSchedule(doctorId) {
+  workDays.clear();
+  if (!doctorId) return;
+  try {
+    const r = await fetch(apiUrl + '/schedules');
+    if (!r.ok) return;
+    const all = await r.json();
+    all.filter(s => s.doctor_id == doctorId).forEach(s => workDays.add(s.day_of_week));
+  } catch(_){}
+  // Re-render calendar with new work days; clear selected date if now invalid
+  if (selectedDate) {
+    const d = new Date(selectedDate + 'T00:00:00');
+    if (!workDays.has(jsDayToApi(d.getDay()))) {
+      selectedDate = '';
+      document.getElementById('apptDate').value = '';
+      document.getElementById('datePickerTrigger').textContent = 'Pick a date';
+      document.getElementById('datePickerTrigger').style.color = 'var(--muted)';
+      document.getElementById('slotSelect').innerHTML = '';
+    }
+  }
+  if (calOpen) renderCal();
+}
+
+/* ─── Toggle calendar popup ─────────────────────────────────────────────── */
+function toggleCal() {
+  calOpen = !calOpen;
+  if (calOpen) {
+    const now = new Date();
+    calYear  = now.getFullYear();
+    calMonth = now.getMonth();
+    renderCal();
+    document.getElementById('miniCal').classList.remove('hidden');
+  } else {
+    document.getElementById('miniCal').classList.add('hidden');
+  }
+}
+
+/* ─── Navigate months ───────────────────────────────────────────────────── */
+function navMonth(delta) {
+  calMonth += delta;
+  if (calMonth > 11){ calMonth = 0; calYear++; }
+  if (calMonth < 0) { calMonth = 11; calYear--; }
+  renderCal();
+}
+
+/* ─── Render calendar grid ──────────────────────────────────────────────── */
+function renderCal() {
+  document.getElementById('calMonthLabel').textContent = MONTHS[calMonth] + ' ' + calYear;
+
+  // Day-of-week header
+  const dowHead = document.getElementById('calDowHead');
+  if (!dowHead.children.length) {
+    DAY_NAMES.forEach(d => {
+      const s = document.createElement('div');
+      s.textContent = d;
+      s.style.cssText = 'text-align:center;font-size:.7rem;font-weight:700;color:var(--muted);padding:2px 0';
+      dowHead.appendChild(s);
+    });
+  }
+
+  const grid = document.getElementById('calGrid');
+  grid.innerHTML = '';
+
+  const today = new Date(); today.setHours(0,0,0,0);
+  const firstDay = new Date(calYear, calMonth, 1);
+  // blank cells before first day (Mon=0 offset)
+  const startOffset = (firstDay.getDay() + 6) % 7;
+  for (let i = 0; i < startOffset; i++) {
+    grid.appendChild(Object.assign(document.createElement('div'), {style:''}));
+  }
+
+  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = new Date(calYear, calMonth, day);
+    const apiDay = jsDayToApi(date.getDay());
+    const isWork = workDays.size === 0 || workDays.has(apiDay); // if no schedule loaded yet, allow all
+    const isToday = date.getTime() === today.getTime();
+    const isPast  = date < today;
+    const dateStr = calYear + '-' + String(calMonth+1).padStart(2,'0') + '-' + String(day).padStart(2,'0');
+    const isSel   = dateStr === selectedDate;
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = day;
+
+    const disabled = !isWork || isPast;
+    btn.disabled = disabled;
+
+    let bg = 'transparent', color = 'var(--text)', border = 'none', fontW = '400';
+    if (isSel)         { bg = 'var(--brand)'; color = '#fff'; fontW = '700'; border = 'none'; }
+    else if (isToday)  { border = '2px solid var(--brand)'; color = 'var(--brand)'; fontW = '600'; }
+    else if (!isWork)  { color = 'var(--muted)'; }
+    else if (isPast)   { color = 'var(--muted)'; }
+
+    btn.style.cssText = `width:100%;aspect-ratio:1;border-radius:50%;font-size:.78rem;font-weight:${fontW};
+      background:${bg};color:${color};border:${border};cursor:${disabled?'default':'pointer'};
+      opacity:${!isWork?'0.3':isPast?'0.4':'1'};transition:background .1s`;
+
+    if (!disabled) {
+      btn.addEventListener('mouseenter', () => { if (!isSel) btn.style.background = 'color-mix(in srgb,var(--brand) 15%,transparent)'; });
+      btn.addEventListener('mouseleave', () => { if (!isSel) btn.style.background = 'transparent'; });
+      btn.addEventListener('click', () => selectDate(dateStr));
+    }
+    grid.appendChild(btn);
+  }
+
+  // Legend
+  const legend = document.getElementById('calLegend');
+  legend.innerHTML = '';
+  if (workDays.size > 0) {
+    const days = [...workDays].sort().map(d => DAY_NAMES[d]).join(', ');
+    legend.innerHTML = `<span style="color:var(--brand)">&#9679;</span> Working days: ${days}`;
+  }
+}
+
+/* ─── Select a date ─────────────────────────────────────────────────────── */
+function selectDate(dateStr) {
+  selectedDate = dateStr;
+  document.getElementById('apptDate').value = dateStr;
+  const [y,m,d] = dateStr.split('-');
+  const display = new Date(dateStr + 'T00:00:00').toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+  const trigger = document.getElementById('datePickerTrigger');
+  trigger.textContent = display;
+  trigger.style.color = 'var(--text)';
+  // Close calendar
+  calOpen = false;
+  document.getElementById('miniCal').classList.add('hidden');
+  // Load available time slots
+  loadSlots();
+}
+
+/* ─── Close calendar on outside click ───────────────────────────────────── */
+document.addEventListener('click', e => {
+  if (calOpen && !document.getElementById('datePickerWrap').contains(e.target)) {
+    calOpen = false;
+    document.getElementById('miniCal').classList.add('hidden');
+  }
+});
+
+/* ─── Load time slots ────────────────────────────────────────────────────── */
+function loadSlots() {
+  const did  = isDoctor ? myDoctorId : document.getElementById('doctorSelect')?.value;
+  const date = document.getElementById('apptDate').value;
+  const slot = document.getElementById('slotMinutes').value;
+  const sselect = document.getElementById('slotSelect');
+  sselect.innerHTML = '';
+  if (!did || !date) return;
+  fetch(apiUrl + '/doctors/' + did + '/available_slots?date=' + date + '&slot=' + slot)
+    .then(r => r.json()).then(slots => {
+      if (slots.length === 0) {
+        const o = document.createElement('option'); o.textContent = 'No slots available'; sselect.appendChild(o);
+      } else {
+        slots.forEach(s => { const o=document.createElement('option'); o.value=s.start_time; o.textContent=s.start_time.slice(0,5); sselect.appendChild(o); });
+      }
+    }).catch(() => {});
+}
+
+/* ─── Populate booking form on page load ────────────────────────────────── */
+(function(){
+  const token   = sessionStorage.getItem('token');
+  const headers = token ? {'Authorization':'Bearer '+token} : {};
+
+  const fetches = isDoctor
+    ? [Promise.resolve([]), fetch(apiUrl+'/patients',{headers}).then(r=>r.json())]
+    : [fetch(apiUrl+'/doctors',{headers}).then(r=>r.json()), fetch(apiUrl+'/patients',{headers}).then(r=>r.json())];
+
+  Promise.all(fetches).then(([allDoctors, patients]) => {
+    const bookBtn = document.getElementById('bookBtn');
+
+    if (isDoctor) {
+      // Show doctor name and load their schedule immediately
+      fetch(apiUrl+'/doctors/'+myDoctorId, {headers})
+        .then(r => r.ok ? r.json() : null)
+        .then(doc => {
+          const lbl = document.getElementById('doctorLabel');
+          if (lbl) lbl.textContent = doc ? doc.first_name+' '+doc.last_name : 'You';
+        }).catch(()=>{});
+      loadSchedule(myDoctorId);
+    } else {
+      const dsel = document.getElementById('doctorSelect');
+      allDoctors.forEach(d => {
+        const o = document.createElement('option'); o.value=d.id; o.textContent=d.first_name+' '+d.last_name; dsel.appendChild(o);
+      });
+      if (dsel.value) loadSchedule(dsel.value);
+      dsel.addEventListener('change', () => {
+        loadSchedule(dsel.value);
+        // Clear date when doctor changes
+        selectedDate='';
+        document.getElementById('apptDate').value='';
+        document.getElementById('datePickerTrigger').textContent='Pick a date';
+        document.getElementById('datePickerTrigger').style.color='var(--muted)';
+        document.getElementById('slotSelect').innerHTML='';
+        loadSlots();
+      });
+    }
+
+    // Populate patients
+    const psel = document.getElementById('patientSelect');
+    patients.forEach(p => { const o=document.createElement('option'); o.value=p.id; o.textContent=p.first_name+' '+p.last_name; psel.appendChild(o); });
+
+    if (patients.length === 0) {
+      const hint = document.createElement('option'); hint.value=''; hint.textContent='No patients available'; hint.disabled=true; hint.selected=true;
+      psel.appendChild(hint);
+      bookBtn.disabled = true;
+      bookBtn.title = 'No eligible patients to book for';
+    } else {
+      bookBtn.disabled = false;
+    }
+
+    document.getElementById('slotMinutes').addEventListener('change', loadSlots);
+  }).catch(e => console.error('Error loading booking form:', e));
+})();
+
+/* ─── Appointments list ─────────────────────────────────────────────────── */
 async function loadAppointments() {
   try {
     const token = sessionStorage.getItem('token');
-    const apiUrl = '{{ api_url }}'.replace(/\/$/, '');
-    const response = await fetch(`${apiUrl}/appointments`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    
-    if (!response.ok) {
-      console.error('Failed to load appointments:', response.status);
-      return;
-    }
-    
-    const data = await response.json();
+    const r = await fetch(apiUrl+'/appointments', {headers:{'Authorization':'Bearer '+token}});
+    if (!r.ok) return;
+    const data = await r.json();
     const body = document.getElementById('appointmentsBody');
     const stats = document.getElementById('stats');
-    
-    // Clear existing rows except first (template)
-    while (body.children.length > 0) {
-      body.removeChild(body.firstChild);
-    }
-    
+    body.innerHTML = '';
     if (data.length === 0) {
       stats.textContent = 'Total appointments: 0';
-      const tr = document.createElement('tr');
-      tr.innerHTML = '<td class="p-2" colspan="8">No appointments</td>';
-      body.appendChild(tr);
+      body.innerHTML = '<tr><td class="p-2" colspan="8">No appointments</td></tr>';
       return;
     }
-    
-    stats.textContent = `Total appointments: ${data.length}`;
-    data.forEach((a) => {
-      const tr = document.createElement('tr');
-      tr.className = 'border-t';
-      const date = a.appointment_date || '';
-      const time = a.start_time ? `${a.start_time} - ${a.end_time||''}` : '';
-      const prescription = a.prescription || '-';
-      tr.innerHTML = `<td class="p-2">${a.id}</td><td class="p-2">${date}</td><td class="p-2">${time}</td><td class="p-2">${a.doctor_name||''}</td><td class="p-2">${a.patient_name||''}</td><td class="p-2">${a.status||''}</td><td class="p-2">${prescription}</td><td class="p-2"><a href="/appointments/${a.id}/edit" class="text-blue-600 mr-2 action-btn-edit">Edit</a><button class="text-red-600 action-btn-delete" onclick="deleteAppointment(${a.id})">Delete</button></td>`;
+    stats.textContent = 'Total appointments: '+data.length;
+    data.forEach(a => {
+      const tr = document.createElement('tr'); tr.className='border-t';
+      const time = a.start_time ? a.start_time+' - '+(a.end_time||'') : '';
+      tr.innerHTML = `<td class="p-2">${a.id}</td><td class="p-2">${a.appointment_date||''}</td><td class="p-2">${time}</td>
+        <td class="p-2">${a.doctor_name||''}</td><td class="p-2">${a.patient_name||''}</td>
+        <td class="p-2">${a.status||''}</td><td class="p-2">${a.prescription||'-'}</td>
+        <td class="p-2"><a href="/appointments/${a.id}/edit" class="action-btn-edit mr-2">Edit</a>
+          <button class="action-btn-delete" onclick="deleteAppointment(${a.id})">Delete</button></td>`;
       body.appendChild(tr);
     });
-  } catch (e) {
-    console.error('Error loading appointments:', e);
+  } catch(e) {
     document.getElementById('appointmentsBody').innerHTML = '<tr><td colspan="8" class="p-2">Could not load appointments</td></tr>';
   }
 }
 
-// Load appointments on page load
-document.addEventListener('DOMContentLoaded', function() {
-  loadAppointments();
-  
-  // Control visibility of action buttons
-  const screenName = 'appointments';
-  controlActionVisibility(screenName, 'edit', '.action-btn-edit');
-  controlActionVisibility(screenName, 'delete', '.action-btn-delete');
-});
-
-// populate doctors and patients for booking
-Promise.all([
-  fetch('{{ api_url }}/doctors').then(r=>r.json()), 
-  fetch('{{ api_url }}/patients').then(r=>r.json())
-]).then(([doctors, patients])=>{
-  const dsel = document.getElementById('doctorSelect');
-  doctors.forEach(d=>{ const o=document.createElement('option'); o.value=d.id; o.textContent = d.first_name + ' ' + d.last_name; dsel.appendChild(o); })
-  const psel = document.getElementById('patientSelect');
-  patients.forEach(p=>{ const o=document.createElement('option'); o.value=p.id; o.textContent = p.first_name + ' ' + p.last_name; psel.appendChild(o); })
-  function loadSlots(){
-    const did = dsel.value; const date = document.getElementById('apptDate').value; const slot = document.getElementById('slotMinutes').value;
-    const sselect = document.getElementById('slotSelect'); sselect.innerHTML='';
-    if (!did || !date) return;
-    fetch(`${'{{ api_url }}'}/doctors/${did}/available_slots?date=${date}&slot=${slot}`).then(r=>r.json()).then(slots=>{
-      slots.forEach(s=>{ const o=document.createElement('option'); o.value=s.start_time; o.textContent = s.start_time.slice(0,5); sselect.appendChild(o); })
-    }).catch(()=>{});
-  }
-  dsel.addEventListener('change', loadSlots);
-  document.getElementById('apptDate').addEventListener('change', loadSlots);
-  document.getElementById('slotMinutes').addEventListener('change', loadSlots);
-}).catch(e => console.error('Error loading doctors/patients:', e));
-
 function deleteAppointment(id){
   if (!confirm('Delete appointment? This action cannot be undone.')) return;
   const token = sessionStorage.getItem('token');
-  fetch('{{ api_url }}/appointments/' + id, { 
-    method: 'DELETE',
-    headers: { 'Authorization': `Bearer ${token}` }
-  }).then(r=>r.json().then(j=>({ok:r.ok, body:j}))).then(res=>{
-    if (!res.ok) return alert(res.body.error || 'delete failed');
-    loadAppointments();
-  }).catch(()=>alert('delete failed'));
+  fetch(apiUrl+'/appointments/'+id, {method:'DELETE',headers:{'Authorization':'Bearer '+token}})
+    .then(r=>r.json().then(j=>({ok:r.ok,body:j}))).then(res=>{
+      if (!res.ok) return alert(res.body.error||'delete failed');
+      loadAppointments();
+    }).catch(()=>alert('delete failed'));
 }
+
+document.addEventListener('DOMContentLoaded', function(){
+  loadAppointments();
+  controlActionVisibility('appointments','edit','.action-btn-edit');
+  controlActionVisibility('appointments','delete','.action-btn-delete');
+});
 </script>
 {% endblock %}

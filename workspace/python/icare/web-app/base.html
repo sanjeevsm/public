@@ -5,306 +5,388 @@
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>{% block title %}iCare+{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script>
-      // Theme presets and applying selection via localStorage
+      // ── Theme engine ──────────────────────────────────────────────────────────
+      // Each theme sets a small set of CSS custom properties. `brand2` enables a
+      // subtle gradient on primary actions; `bg2` drives the ambient background mesh.
       const THEMES = {
-        light: {dark:false, vars:{'brand':'#2563eb','bg':'#f8fafc','card':'#ffffff','table-head':'#f1f5f9','table-row':'#ffffff','text':'#0f172a','muted':'#64748b'}},
-        dark: {dark:true, vars:{'brand':'#60a5fa','bg':'#0f172a','card':'#0b1220','table-head':'#081026','table-row':'#07101e','text':'#e6eef8','muted':'#9fb4d6'}},
-        solar: {dark:false, vars:{'brand':'#b58900','bg':'#fff7e6','card':'#fff8ec','table-head':'#fff4d9','table-row':'#fffaf0','text':'#3b2f00','muted':'#7a6534'}},
-        green: {dark:false, vars:{'brand':'#10b981','bg':'#f0fdf4','card':'#ecfdf0','table-head':'#e6f9ea','table-row':'#f7fff6','text':'#042e20','muted':'#276749'}},
-        slate: {dark:false, vars:{'brand':'#334155','bg':'#f8fafc','card':'#ffffff','table-head':'#f1f5f9','table-row':'#ffffff','text':'#0f172a','muted':'#64748b'}},
-        midnight: {dark:true, vars:{'brand':'#7c3aed','bg':'#030712','card':'#071029','table-head':'#0b1630','table-row':'#07101e','text':'#dfe7ff','muted':'#99a6d1'}},
-        rose: {dark:false, vars:{'brand':'#fb7185','bg':'#fff5f7','card':'#fff7f9','table-head':'#fff0f3','table-row':'#fffafc','text':'#3b0f12','muted':'#8b444f'}},
-        ocean: {dark:false, vars:{'brand':'#0ea5e9','bg':'#f0fbff','card':'#f8feff','table-head':'#e6f9ff','table-row':'#ffffff','text':'#042e3a','muted':'#2b8aa6'}},
-        sunset: {dark:false, vars:{'brand':'#fb923c','bg':'#fff7f0','card':'#fff6f2','table-head':'#fff1e8','table-row':'#fffaf7','text':'#3a1600','muted':'#7a4a22'}},
-        violet: {dark:true, vars:{'brand':'#8b5cf6','bg':'#0b0216','card':'#0f0520','table-head':'#0d0830','table-row':'#0b0a1a','text':'#f0eefe','muted':'#9b8fd6'}},
-        teal: {dark:false, vars:{'brand':'#14b8a6','bg':'#f2fdfc','card':'#ecfffb','table-head':'#e8fffb','table-row':'#f9fffe','text':'#033033','muted':'#2c7a76'}},
-        charcoal: {dark:true, vars:{'brand':'#475569','bg':'#020305','card':'#081015','table-head':'#0b1016','table-row':'#07090c','text':'#dbe8ef','muted':'#97a6b3'}}
+        aurora:   {label:'Aurora',   dark:false, vars:{brand:'#6366f1', brand2:'#8b5cf6', bg:'#f6f7fb', bg2:'#eef1ff', card:'#ffffff', text:'#0f172a', muted:'#64748b', border:'rgba(15,23,42,.08)', head:'rgba(255,255,255,.72)', thead:'#f4f5fb', trow:'#ffffff', ring:'rgba(99,102,241,.35)'}},
+        light:    {label:'Daylight', dark:false, vars:{brand:'#2563eb', brand2:'#3b82f6', bg:'#f8fafc', bg2:'#eef2ff', card:'#ffffff', text:'#0f172a', muted:'#64748b', border:'rgba(15,23,42,.08)', head:'rgba(255,255,255,.72)', thead:'#f1f5f9', trow:'#ffffff', ring:'rgba(37,99,235,.35)'}},
+        ocean:    {label:'Ocean',    dark:false, vars:{brand:'#0ea5e9', brand2:'#06b6d4', bg:'#f2fbff', bg2:'#e0f6ff', card:'#ffffff', text:'#042e3a', muted:'#3b7c92', border:'rgba(4,46,58,.10)', head:'rgba(255,255,255,.72)', thead:'#e6f7ff', trow:'#ffffff', ring:'rgba(14,165,233,.35)'}},
+        teal:     {label:'Teal',     dark:false, vars:{brand:'#14b8a6', brand2:'#0ea5e9', bg:'#f1fdfb', bg2:'#dffaf4', card:'#ffffff', text:'#053b38', muted:'#2c7a76', border:'rgba(5,59,56,.10)', head:'rgba(255,255,255,.72)', thead:'#e6fbf6', trow:'#ffffff', ring:'rgba(20,184,166,.35)'}},
+        green:    {label:'Emerald',  dark:false, vars:{brand:'#10b981', brand2:'#22c55e', bg:'#f2fdf6', bg2:'#dcfce7', card:'#ffffff', text:'#052e20', muted:'#2f7a57', border:'rgba(5,46,32,.10)', head:'rgba(255,255,255,.72)', thead:'#e8f9ee', trow:'#ffffff', ring:'rgba(16,185,129,.35)'}},
+        sand:     {label:'Sand',     dark:false, vars:{brand:'#b45309', brand2:'#d97706', bg:'#faf7f2', bg2:'#f3ece1', card:'#fffdf9', text:'#3b2a13', muted:'#8a6d47', border:'rgba(59,42,19,.10)', head:'rgba(255,253,249,.75)', thead:'#f5efe4', trow:'#fffdf9', ring:'rgba(180,83,9,.30)'}},
+        solar:    {label:'Solar',    dark:false, vars:{brand:'#ca8a04', brand2:'#eab308', bg:'#fffbeb', bg2:'#fef3c7', card:'#fffdf4', text:'#3b2f00', muted:'#8a7327', border:'rgba(59,47,0,.10)', head:'rgba(255,253,244,.75)', thead:'#fdf6dd', trow:'#fffdf4', ring:'rgba(202,138,4,.30)'}},
+        rose:     {label:'Rose',     dark:false, vars:{brand:'#e11d48', brand2:'#fb7185', bg:'#fff5f7', bg2:'#ffe4e9', card:'#fffafb', text:'#3f0a17', muted:'#9c5561', border:'rgba(63,10,23,.10)', head:'rgba(255,250,251,.75)', thead:'#ffeaf0', trow:'#fffafb', ring:'rgba(225,29,72,.30)'}},
+        sunset:   {label:'Sunset',   dark:false, vars:{brand:'#f97316', brand2:'#f43f5e', bg:'#fff7f1', bg2:'#ffe8d8', card:'#fffbf8', text:'#3a1600', muted:'#8a4f28', border:'rgba(58,22,0,.10)', head:'rgba(255,251,248,.75)', thead:'#ffeede', trow:'#fffbf8', ring:'rgba(249,115,22,.30)'}},
+        slate:    {label:'Slate',    dark:false, vars:{brand:'#475569', brand2:'#64748b', bg:'#f8fafc', bg2:'#eef2f7', card:'#ffffff', text:'#0f172a', muted:'#64748b', border:'rgba(15,23,42,.08)', head:'rgba(255,255,255,.72)', thead:'#f1f5f9', trow:'#ffffff', ring:'rgba(71,85,105,.30)'}},
+        nord:     {label:'Nord',     dark:true,  vars:{brand:'#88c0d0', brand2:'#81a1c1', bg:'#2e3440', bg2:'#3b4252', card:'#3b4252', text:'#eceff4', muted:'#a9b3c4', border:'rgba(236,239,244,.10)', head:'rgba(46,52,64,.78)', thead:'#434c5e', trow:'#3b4252', ring:'rgba(136,192,208,.35)'}},
+        dark:     {label:'Carbon',   dark:true,  vars:{brand:'#60a5fa', brand2:'#818cf8', bg:'#0b1220', bg2:'#0f1a2e', card:'#111a2b', text:'#e6eef8', muted:'#93a4c0', border:'rgba(230,238,248,.10)', head:'rgba(11,18,32,.78)', thead:'#0e1728', trow:'#111a2b', ring:'rgba(96,165,250,.35)'}},
+        graphite: {label:'Graphite', dark:true,  vars:{brand:'#a3a3f5', brand2:'#c084fc', bg:'#0c0c0f', bg2:'#151519', card:'#161619', text:'#ececf0', muted:'#9a9aa6', border:'rgba(236,236,240,.09)', head:'rgba(12,12,15,.80)', thead:'#1c1c21', trow:'#161619', ring:'rgba(163,163,245,.35)'}},
+        midnight: {label:'Midnight', dark:true,  vars:{brand:'#7c3aed', brand2:'#a855f7', bg:'#050816', bg2:'#0b1030', card:'#0d1330', text:'#dfe7ff', muted:'#94a1cf', border:'rgba(223,231,255,.10)', head:'rgba(5,8,22,.80)', thead:'#0f1638', trow:'#0d1330', ring:'rgba(124,58,237,.40)'}},
+        violet:   {label:'Violet',   dark:true,  vars:{brand:'#8b5cf6', brand2:'#d946ef', bg:'#0c0518', bg2:'#160a2e', card:'#150a26', text:'#f0eefe', muted:'#a996d6', border:'rgba(240,238,254,.10)', head:'rgba(12,5,24,.80)', thead:'#1b0f34', trow:'#150a26', ring:'rgba(139,92,246,.40)'}},
+        charcoal: {label:'Charcoal', dark:true,  vars:{brand:'#94a3b8', brand2:'#64748b', bg:'#08090c', bg2:'#101319', card:'#12151b', text:'#dbe4ec', muted:'#8b97a6', border:'rgba(219,228,236,.09)', head:'rgba(8,9,12,.80)', thead:'#171b22', trow:'#12151b', ring:'rgba(148,163,184,.32)'}}
       };
+
       function applyTheme(name){
-        const t = THEMES[name] || THEMES.light;
+        const t = THEMES[name] || THEMES.aurora;
         localStorage.setItem('icare:theme', name);
-        if (t.dark) document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark');
-        const vars = t.vars || {};
-        Object.keys(vars).forEach(k=>document.documentElement.style.setProperty('--'+k, vars[k]));
-        // mark selected button
-        document.querySelectorAll('[data-theme-btn]').forEach(b=>b.classList.remove('ring-2','ring-sky-400'));
-        const el = document.querySelector(`[data-theme-btn="${name}"]`);
-        if (el) el.classList.add('ring-2','ring-sky-400');
+        document.documentElement.classList.toggle('dark', !!t.dark);
+        Object.keys(t.vars).forEach(k => document.documentElement.style.setProperty('--'+k, t.vars[k]));
+        document.querySelectorAll('[data-theme-btn]').forEach(b =>
+          b.setAttribute('aria-pressed', b.getAttribute('data-theme-btn') === name ? 'true' : 'false'));
       }
-      // initialize
-      const saved = localStorage.getItem('icare:theme') || 'light';
-      applyTheme(saved);
+      const savedTheme = localStorage.getItem('icare:theme') || 'aurora';
+      applyTheme(savedTheme);
     </script>
     <style>
       :root{
-        --brand:#2563eb;
-        --bg:#f8fafc;
-        --card:#ffffff;
-        --text:#0f172a;
-        --muted:#64748b;
-        --header:#ffffff;
-        --table-head:#f1f5f9;
-        --table-row:#ffffff;
-        --table-border:rgba(15,23,42,0.06);
+        --brand:#6366f1; --brand2:#8b5cf6;
+        --bg:#f6f7fb; --bg2:#eef1ff; --card:#ffffff;
+        --text:#0f172a; --muted:#64748b;
+        --border:rgba(15,23,42,.08); --ring:rgba(99,102,241,.35);
+        --head:rgba(255,255,255,.72); --thead:#f4f5fb; --trow:#ffffff;
+        --radius:14px; --radius-sm:10px;
+        --shadow:0 1px 2px rgba(15,23,42,.04), 0 8px 24px -12px rgba(15,23,42,.18);
+        --shadow-lg:0 10px 40px -12px rgba(15,23,42,.28);
       }
-      /* apply variables to core elements so theme affects entire UI */
-      html, body { background-color: var(--bg) !important; color: var(--text) !important; }
-      header { background-color: var(--header) !important; }
-      main { background-color: transparent !important; }
-      /* subtle background image (hospital) behind the UI; low opacity so it never hides content
-         Add the image both as a pseudo-element and as a direct body background as a fallback
-         (some browsers or CSP may prevent pseudo-element rendering of external images). */
-      body {
-        /* use local static image with a translucent overlay so the image is a faint hint
-           for light themes we make the overlay slightly less opaque so the image shows more */
-        background-image:
-          linear-gradient(rgba(255,255,255,0.70), rgba(255,255,255,0.70)),
-          url('/static/hospital.jpg');
-        background-size: cover;
-        background-position: center center;
-        background-attachment: fixed;
-        background-repeat: no-repeat;
+
+      *{ box-sizing:border-box; }
+      html{ scroll-behavior:smooth; }
+      body{
+        font-family:'Inter',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+        background-color:var(--bg) !important; color:var(--text) !important;
+        -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+        min-height:100vh; letter-spacing:-0.01em;
       }
-      /* darker overlay for dark theme so the image remains subtle there too */
-      .dark body {
-        /* slightly reduce dark overlay so background is a bit more visible in dark mode */
-        background-image:
-          linear-gradient(rgba(0,0,0,0.88), rgba(0,0,0,0.88)),
-          url('/static/hospital.jpg');
+      /* Ambient background mesh — subtle, brand-tinted, no external image */
+      body::before{
+        content:""; position:fixed; inset:0; z-index:0; pointer-events:none;
+        background:
+          radial-gradient(60rem 60rem at 12% -10%, var(--bg2), transparent 60%),
+          radial-gradient(48rem 48rem at 100% 0%, color-mix(in srgb, var(--brand) 16%, transparent), transparent 55%),
+          radial-gradient(60rem 40rem at 50% 120%, color-mix(in srgb, var(--brand2) 12%, transparent), transparent 60%);
+        opacity:.9;
       }
-      /* keep pseudo-element but disable its own image so overlay is controlled by body backgrounds */
-      body::before {
-        content: "";
-        position: fixed;
-        inset: 0;
-        z-index: 0;
-        pointer-events: none;
-        background: transparent;
+      header, main{ position:relative; z-index:1; }
+
+      h1,h2,h3{ letter-spacing:-0.02em; }
+
+      /* ── Cards ─────────────────────────────────────────────────────────────── */
+      .card{
+        background-color:var(--card); border:1px solid var(--border);
+        border-radius:var(--radius); box-shadow:var(--shadow);
       }
-      /* ensure main UI sits above the background image */
-      header, main, .card, nav, footer { position: relative; z-index: 1; }
-      .card { background-color: var(--card); border: 1px solid var(--table-border); border-radius: 6px; }
-      /* table theming */
-      table thead th { background-color: var(--table-head) !important; color: var(--text) !important; }
-      table tbody tr { background-color: var(--table-row) !important; }
-      table, th, td { border-color: var(--table-border) !important; }
-      /* override common Tailwind color utilities used in templates */
-      .bg-white { background-color: var(--card) !important; }
-      .bg-slate-50 { background-color: var(--bg) !important; }
-      .text-slate-900 { color: var(--text) !important; }
-      /* ensure medium-weight slate text also follows theme (fixes invisible menu labels) */
-      .text-slate-600 { color: var(--text) !important; }
-      .text-slate-500 { color: var(--muted) !important; }
-      .border-slate-100 { border-color: var(--table-border) !important; }
-      .dark\:bg-slate-800 { background-color: var(--card) !important; }
-      /* menu link styling: always visible across themes */
-      nav a.menu-link { color: var(--text) !important; font-weight: 600 !important; padding: .25rem .5rem; border-radius: .375rem; }
-      nav a.menu-link:hover { color: var(--brand) !important; background-color: rgba(0,0,0,0.03); }
-      nav a.menu-link:focus { box-shadow: 0 0 0 3px rgba(37,99,235,0.15); outline: none; }
-      /* theme swatch buttons */
-      .theme-btn { width: 28px; height: 28px; border-radius: 9999px; border: 2px solid rgba(15,23,42,0.08); display: inline-block; cursor: pointer; }
-      .theme-btn:hover { transform: translateY(-1px); }
-      .theme-btn:focus { outline: none; box-shadow: 0 0 0 3px rgba(37,99,235,0.18); }
-      /* support Tailwind ring class used by applyTheme() */
-      .theme-btn.ring-2 { box-shadow: 0 0 0 3px rgba(37,99,235,0.25); }
+
+      /* ── Page header banner ────────────────────────────────────────────────── */
+      .page-head{
+        position:relative; overflow:hidden; margin-bottom:1.5rem;
+        padding:1.4rem 1.6rem; border-radius:var(--radius);
+        border:1px solid var(--border); box-shadow:var(--shadow);
+        background:
+          linear-gradient(135deg, color-mix(in srgb, var(--brand) 16%, var(--card)), var(--card) 62%);
+      }
+      .page-head::after{
+        content:""; position:absolute; right:-40px; top:-40px; width:180px; height:180px;
+        border-radius:9999px; background:linear-gradient(135deg,var(--brand),var(--brand2));
+        opacity:.14; filter:blur(6px);
+      }
+      .page-head h1{ font-size:1.5rem; font-weight:700; margin:0; }
+      .page-head p{ margin:.25rem 0 0; color:var(--muted); font-size:.9rem; }
+
+      /* ── Buttons ───────────────────────────────────────────────────────────── */
+      .btn, a.btn, button.btn{
+        display:inline-flex; align-items:center; gap:.5rem; cursor:pointer;
+        padding:.55rem .95rem; border-radius:var(--radius-sm); font-weight:600; font-size:.875rem;
+        border:1px solid transparent; transition:transform .12s ease, box-shadow .2s ease, background .2s ease, opacity .2s ease;
+        text-decoration:none; line-height:1;
+      }
+      .btn:active{ transform:translateY(1px); }
+      .btn-primary{ color:#fff; background:linear-gradient(135deg,var(--brand),var(--brand2)); box-shadow:0 6px 16px -6px color-mix(in srgb,var(--brand) 60%,transparent); }
+      .btn-primary:hover{ box-shadow:0 10px 22px -8px color-mix(in srgb,var(--brand) 70%,transparent); }
+      .btn-ghost{ background:transparent; border-color:var(--border); color:var(--text); }
+      .btn-ghost:hover{ background:color-mix(in srgb,var(--brand) 8%,transparent); border-color:color-mix(in srgb,var(--brand) 40%,var(--border)); }
+      .btn-danger{ color:#fff; background:linear-gradient(135deg,#ef4444,#f43f5e); }
+      .btn-sm{ padding:.35rem .6rem; font-size:.8rem; border-radius:8px; }
+      button:disabled,.btn:disabled{ opacity:.45; cursor:not-allowed; pointer-events:none; }
+
+      /* Legacy inline primary actions used across templates:
+         a/button with `bg-[var(--brand)]` become polished gradient buttons */
+      a[class*="bg-[var(--brand)]"], button[class*="bg-[var(--brand)]"]{
+        background:linear-gradient(135deg,var(--brand),var(--brand2)) !important;
+        border-radius:var(--radius-sm) !important; padding:.55rem .95rem !important;
+        font-weight:600 !important; box-shadow:0 6px 16px -6px color-mix(in srgb,var(--brand) 60%,transparent);
+        transition:transform .12s ease, box-shadow .2s ease; display:inline-flex; align-items:center; gap:.4rem;
+      }
+      a[class*="bg-[var(--brand)]"]:hover, button[class*="bg-[var(--brand)]"]:hover{ transform:translateY(-1px); }
+
+      /* Row action controls (Edit link / Delete button) — consistent pills */
+      .action-btn-edit{
+        display:inline-flex; align-items:center; padding:.28rem .6rem; border-radius:8px; font-weight:600; font-size:.8rem;
+        color:var(--brand) !important; background:color-mix(in srgb,var(--brand) 10%,transparent); text-decoration:none;
+      }
+      .action-btn-edit:hover{ background:color-mix(in srgb,var(--brand) 18%,transparent); }
+      .action-btn-delete{
+        display:inline-flex; align-items:center; padding:.28rem .6rem; border-radius:8px; font-weight:600; font-size:.8rem;
+        color:#ef4444 !important; background:rgba(239,68,68,.10); border:none; cursor:pointer;
+      }
+      .action-btn-delete:hover{ background:rgba(239,68,68,.18); }
+
+      /* ── Forms ─────────────────────────────────────────────────────────────── */
+      input:not([type=checkbox]):not([type=radio]):not(.theme-btn),
+      select, textarea{
+        width:100%; background:var(--card); color:var(--text);
+        border:1px solid var(--border) !important; border-radius:var(--radius-sm);
+        padding:.6rem .75rem; font-size:.9rem; transition:border-color .15s ease, box-shadow .15s ease;
+      }
+      input:focus, select:focus, textarea:focus{
+        outline:none; border-color:var(--brand) !important;
+        box-shadow:0 0 0 3px var(--ring);
+      }
+      label{ font-size:.85rem; font-weight:500; color:var(--text); }
+
+      /* ── Tables ────────────────────────────────────────────────────────────── */
+      .card table{ width:100%; border-collapse:separate; border-spacing:0; }
+      table thead th{
+        background:transparent !important; color:var(--muted) !important;
+        font-size:.72rem; font-weight:600; text-transform:uppercase; letter-spacing:.06em;
+        padding:.75rem .85rem !important; border-bottom:1px solid var(--border) !important; text-align:left;
+      }
+      table tbody td{ padding:.7rem .85rem !important; font-size:.9rem; border-top:1px solid var(--border) !important; }
+      table tbody tr{ background:transparent !important; transition:background .12s ease; }
+      table tbody tr:hover{ background:color-mix(in srgb,var(--brand) 6%,transparent) !important; }
+      table tbody tr:first-child td{ border-top:none !important; }
+
+      /* ── Flash / alerts ────────────────────────────────────────────────────── */
+      .alert{ border-radius:var(--radius-sm); padding:.7rem 1rem; font-size:.88rem; border:1px solid var(--border); margin-bottom:.6rem; }
+      .alert-success{ background:color-mix(in srgb,#22c55e 14%,transparent); color:#166534; border-color:color-mix(in srgb,#22c55e 30%,transparent); }
+      .alert-info{ background:color-mix(in srgb,var(--brand) 12%,transparent); color:var(--brand); border-color:var(--ring); }
+      .alert-danger{ background:color-mix(in srgb,#ef4444 12%,transparent); color:#b91c1c; border-color:color-mix(in srgb,#ef4444 30%,transparent); }
+
+      /* ── Badges ────────────────────────────────────────────────────────────── */
+      .badge{ display:inline-flex; align-items:center; padding:.2rem .55rem; border-radius:9999px; font-size:.72rem; font-weight:600;
+        background:color-mix(in srgb,var(--brand) 12%,transparent); color:var(--brand); }
+
+      /* ── Tailwind utility → theme token compatibility (for existing templates
+         and JS-generated content so they stay legible across every theme) ─────── */
+      .bg-white, .dark\:bg-slate-800, .dark\:bg-slate-900{ background-color:var(--card) !important; }
+      .bg-slate-50{ background-color:var(--bg) !important; }
+      .text-slate-900, .text-slate-800, .text-slate-700, .text-slate-600,
+      .text-gray-900, .text-gray-800, .text-gray-700, .text-gray-600{ color:var(--text) !important; }
+      .text-slate-500, .text-slate-400, .text-gray-500, .text-gray-400{ color:var(--muted) !important; }
+      .border, .border-t, .border-slate-100, .border-slate-200, .border-slate-300,
+      .border-gray-100, .border-gray-200, .border-gray-300{ border-color:var(--border) !important; }
+      .bg-gray-50, .bg-gray-100{ background-color:var(--thead) !important; }
+
+      /* ── Header + navigation ───────────────────────────────────────────────── */
+      .site-header{
+        position:sticky; top:0; z-index:50;
+        background:var(--head); backdrop-filter:saturate(140%) blur(12px);
+        border-bottom:1px solid var(--border);
+      }
+      .brand-badge{
+        display:inline-flex; align-items:center; padding:.4rem .75rem; border-radius:10px;
+        background:linear-gradient(135deg,var(--brand),var(--brand2)); color:#fff;
+        font-weight:800; font-size:1.05rem; letter-spacing:-0.02em; line-height:1;
+        box-shadow:0 6px 16px -6px color-mix(in srgb,var(--brand) 70%,transparent);
+      }
+
+      nav.main-nav{ display:flex; align-items:center; gap:.15rem; overflow-x:auto; scrollbar-width:none; }
+      nav.main-nav::-webkit-scrollbar{ display:none; }
+      a.menu-link{
+        color:var(--muted) !important; font-weight:600; font-size:.85rem; white-space:nowrap;
+        padding:.45rem .7rem; border-radius:9px; transition:background .15s ease, color .15s ease;
+      }
+      a.menu-link:hover{ color:var(--text) !important; background:color-mix(in srgb,var(--brand) 8%,transparent); }
+      a.menu-link[aria-current="page"]{ color:var(--brand) !important; background:color-mix(in srgb,var(--brand) 12%,transparent); }
+      a.menu-link.icon-link{ padding:.35rem; }
+
+      .userchip{ font-size:.8rem; color:var(--muted); padding:.3rem .6rem; border:1px solid var(--border); border-radius:9999px; }
+
+      /* ── Theme palette dropdown ────────────────────────────────────────────── */
+      details.palette{ position:relative; }
+      details.palette > summary{
+        list-style:none; cursor:pointer; display:inline-flex; align-items:center; gap:.4rem;
+        padding:.35rem .6rem; border:1px solid var(--border); border-radius:9999px; font-size:.8rem; color:var(--muted);
+      }
+      details.palette > summary::-webkit-details-marker{ display:none; }
+      details.palette[open] > summary{ color:var(--text); border-color:var(--brand); }
+      .palette-panel{
+        position:absolute; right:0; margin-top:.5rem; width:230px; padding:.75rem;
+        background:var(--card); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow-lg); z-index:60;
+      }
+      .palette-panel .grp{ font-size:.68rem; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin:.25rem 0 .4rem; }
+      .swatch-row{ display:grid; grid-template-columns:repeat(6,1fr); gap:.4rem; margin-bottom:.5rem; }
+      .theme-btn{
+        width:26px; height:26px; border-radius:9px; cursor:pointer; padding:0; border:2px solid rgba(127,127,127,.2);
+        transition:transform .12s ease, box-shadow .15s ease;
+      }
+      .theme-btn:hover{ transform:translateY(-1px); }
+      .theme-btn[aria-pressed="true"]{ box-shadow:0 0 0 2px var(--card), 0 0 0 4px var(--brand); }
     </style>
 </head>
-<body class="bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 min-h-screen">
-    <header class="bg-white dark:bg-slate-800 shadow-sm">
-      <div class="max-w-6xl mx-auto px-4 py-4">
-        <div class="flex items-center justify-between mb-4">
-          <div class="flex items-center gap-4">
-            <div class="text-2xl font-semibold" style="color:var(--brand)">iCare+</div>
-            {% if session.get('user') %}
-            <!-- Store token in sessionStorage for client-side API calls -->
-            <script>
-              sessionStorage.setItem('token', '{{ session.get("token") }}');
-            </script>
-            {% endif %}
-          </div>
-          <div>
-            {% if session.get('user') %}
-              <span class="text-sm mr-3">Hello, {{ session.get('user').get('username') }}</span>
-              <a class="menu-link" href="/logout">Logout</a>
-            {% else %}
-              <a class="menu-link" href="/login">Login</a>
-            {% endif %}
-          </div>
-        </div>
-        
-        <!-- Menu Navigation -->
-        {% if session.get('user') %}
-        <nav class="flex items-center gap-4 text-sm mb-3">
-          <a href="/" class="flex items-center gap-2 menu-link" aria-label="Home">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="color:var(--brand)">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9.75L12 3l9 6.75V21a.75.75 0 01-.75.75H3.75A.75.75 0 013 21V9.75z" />
-            </svg>
+<body class="min-h-screen">
+    <header class="site-header">
+      <div class="max-w-6xl mx-auto px-4">
+        <!-- Row 1: brand · username · theme · logout -->
+        <div class="flex items-center justify-between py-3">
+          <a href="/" class="flex items-center" aria-label="iCare home">
+            <span class="brand-badge">{{ brand_name }}</span>
           </a>
-          <!-- Clinical Management -->
-          <a class="menu-link" href="/appointments" data-screen="appointments" title="Manage appointments">Appointments</a>
-          <a class="menu-link" href="/patients" data-screen="patients" title="Manage patients">Patients</a>
-          <a class="menu-link" href="/doctors" data-screen="doctors" title="Manage doctors">Doctors</a>
-          <a class="menu-link" href="/specialities" data-screen="specialities" title="Manage specialities">Specialities</a>
-          <!-- Billing & Finance -->
-          <a class="menu-link" href="/invoices" data-screen="invoices" title="Billing - Invoices">Invoices</a>
-          <a class="menu-link" href="/billing/transactions" data-screen="transactions" title="Billing - Transactions">Transactions</a>
-          <!-- Dashboard & Admin -->
-          <a class="menu-link" href="/billing/dashboard" data-screen="dashboard" title="View dashboard">Dashboard</a>
-          <a class="menu-link" href="/users" data-screen="users" title="Manage users">Users</a>
-          <a class="menu-link" href="/roles" data-screen="roles" title="Manage roles">Roles</a>
-        </nav>
-        <script>
-          // Filter menu items based on user's accessible screens
-          (async function() {
-            try {
-              // Get token from session storage (set after login)
-              const token = sessionStorage.getItem('token');
-              if (!token) {
-                // No token, user not logged in
-                return;
-              }
-              
-              // Get accessible screens from API
-              const apiUrl = '{{ api_url }}'.replace(/\/$/, ''); // Remove trailing slash if present
-              const response = await fetch(`${apiUrl}/user/accessible-screens`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-              });
-              
-              if (!response.ok) {
-                console.warn('Failed to fetch accessible screens:', response.status);
-                return;
-              }
-              
-              const data = await response.json();
-              // API returns array directly, not wrapped in {data: [...]}
-              const screenList = Array.isArray(data) ? data : (data.data || []);
-              
-              // Show menu items in accessible screens, hide others
-              document.querySelectorAll('[data-screen]').forEach(link => {
-                const screen = link.getAttribute('data-screen');
-                if (screenList.includes(screen)) {
-                  link.style.display = ''; // Show
-                } else {
-                  link.style.display = 'none'; // Hide
-                }
-              });
-            } catch (error) {
-              // If there's any error, keep all menu items visible (fail safe)
-              console.error('Error filtering menu:', error);
-            }
-          })();
-        </script>
-        
-        <!-- Helper: Check user permissions for action buttons (add/edit/delete) -->
-        <script>
-          // Cache for action permissions to avoid repeated API calls
-          let _actionPermissionsCache = {};
-          
-          /**
-           * Check if current user can perform an action on a screen
-           * @param {string} screenName - Name of the screen (e.g., 'invoices', 'transactions')
-           * @param {string} action - Action to check: 'view', 'add', 'edit', 'delete'
-           * @param {function} callback - Callback(hasPermission) called when check completes
-           */
-          async function checkPermission(screenName, action, callback) {
-            try {
-              const token = sessionStorage.getItem('token');
-              if (!token) {
-                callback(false);
-                return;
-              }
-              
-              const apiUrl = '{{ api_url }}'.replace(/\/$/, '');
-              
-              // Check cache first
-              const cacheKey = `${screenName}:${action}`;
-              if (_actionPermissionsCache[cacheKey] !== undefined) {
-                callback(_actionPermissionsCache[cacheKey]);
-                return;
-              }
-              
-              // Fetch all action permissions for this screen
-              const response = await fetch(`${apiUrl}/admin/action-permissions`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-              });
-              
-              if (!response.ok) {
-                callback(true); // Default to show if API fails (fail-open)
-                return;
-              }
-              
-              const perms = await response.json();
-              const actionPerms = Array.isArray(perms) ? perms : [];
-              
-              // Check if current user has this permission
-              // Get current user info from API
-              const userResp = await fetch(`${apiUrl}/auth/me`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-              });
-              
-              let user = null;
-              if (userResp.ok) {
-                user = await userResp.json();
-              }
-              
-              // Admin users have all permissions
-              if (user && user.is_admin) {
-                _actionPermissionsCache[cacheKey] = true;
-                callback(true);
-                return;
-              }
-              
-              // Check if user's role has this permission
-              const hasPermission = actionPerms.some(p =>
-                p.screen_name === screenName &&
-                p.action === action &&
-                p.role_name === (user ? user.role : null)
-              );
-              
-              _actionPermissionsCache[cacheKey] = hasPermission;
-              callback(hasPermission);
-            } catch (err) {
-              console.error('Permission check failed:', err);
-              callback(true); // Default to show on error (fail-open)
-            }
-          }
-          
-          /**
-           * Control visibility of action buttons based on permissions
-           * @param {string} screenName - Name of the screen
-           * @param {string} action - Action: 'add', 'edit', 'delete'
-           * @param {string} selector - CSS selector for elements to show/hide
-           */
-          async function controlActionVisibility(screenName, action, selector) {
-            checkPermission(screenName, action, (hasPermission) => {
-              document.querySelectorAll(selector).forEach(el => {
-                el.style.display = hasPermission ? '' : 'none';
-              });
-            });
-          }
-        </script>
-        {% endif %}
-        
-        <!-- Theme Selector (on new line below menu) -->
-        <div class="flex items-center gap-2 pt-3 border-t border-slate-200 dark:border-slate-700">
-          <span class="text-xs text-slate-500 dark:text-slate-400 mr-2">Theme:</span>
-          <button data-theme-btn="light" onclick="applyTheme('light')" aria-label="light theme" class="theme-btn" style="background:#ffffff; border-color:rgba(15,23,42,0.08)"></button>
-          <button data-theme-btn="dark" onclick="applyTheme('dark')" aria-label="dark theme" class="theme-btn" style="background:#0b1220; border-color:#0b1220"></button>
-          <button data-theme-btn="solar" onclick="applyTheme('solar')" aria-label="solar theme" class="theme-btn" style="background:#fff0b3; border-color:#f5d38a"></button>
-          <button data-theme-btn="green" onclick="applyTheme('green')" aria-label="green theme" class="theme-btn" style="background:#10b981; border-color:#10b981"></button>
-          <button data-theme-btn="slate" onclick="applyTheme('slate')" aria-label="slate theme" class="theme-btn" style="background:#475569; border-color:#475569"></button>
-          <button data-theme-btn="midnight" onclick="applyTheme('midnight')" aria-label="midnight theme" class="theme-btn" style="background:#1e293b; border-color:#1e293b"></button>
-          <button data-theme-btn="rose" onclick="applyTheme('rose')" aria-label="rose theme" class="theme-btn" style="background:#fb7185; border-color:#fb7185"></button>
-          <button data-theme-btn="ocean" onclick="applyTheme('ocean')" aria-label="ocean theme" class="theme-btn" style="background:#0ea5e9; border-color:#0ea5e9"></button>
-          <button data-theme-btn="sunset" onclick="applyTheme('sunset')" aria-label="sunset theme" class="theme-btn" style="background:#fb923c; border-color:#fb923c"></button>
-          <button data-theme-btn="violet" onclick="applyTheme('violet')" aria-label="violet theme" class="theme-btn" style="background:#8b5cf6; border-color:#8b5cf6"></button>
-          <button data-theme-btn="teal" onclick="applyTheme('teal')" aria-label="teal theme" class="theme-btn" style="background:#14b8a6; border-color:#14b8a6"></button>
-          <button data-theme-btn="charcoal" onclick="applyTheme('charcoal')" aria-label="charcoal theme" class="theme-btn" style="background:#475569; border-color:#101217"></button>
+          <div class="flex items-center gap-2.5">
+            {% if session.get('user') %}
+              <script>sessionStorage.setItem('token', '{{ session.get("token") }}');</script>
+              <span class="userchip">{{ session.get('user').get('username') }}</span>
+            {% endif %}
+            <!-- Theme palette -->
+            <details class="palette">
+              <summary aria-label="Choose theme">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="19" cy="12" r="2.5"/><circle cx="6" cy="8" r="2.5"/><circle cx="8" cy="16" r="2.5"/><path d="M12 22a10 10 0 1 1 0-20 8 8 0 0 1 0 16h-1.5a1.5 1.5 0 0 0 0 3z"/></svg>
+                Theme
+              </summary>
+              <div class="palette-panel">
+                <div class="grp">Light</div>
+                <div class="swatch-row" data-swatches="light"></div>
+                <div class="grp">Dark</div>
+                <div class="swatch-row" data-swatches="dark"></div>
+              </div>
+            </details>
+            {% if session.get('user') %}
+              <a class="btn btn-ghost btn-sm" href="/logout">Logout</a>
+            {% else %}
+              <a class="btn btn-primary btn-sm" href="/login">Login</a>
+            {% endif %}
+          </div>
         </div>
+
+        <!-- Row 2: full-width nav menu -->
+        {% if session.get('user') %}
+        <nav class="main-nav pb-2">
+          <a href="/" class="menu-link icon-link" aria-label="Home" title="Dashboard">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9.75L12 3l9 6.75V21a.75.75 0 01-.75.75H3.75A.75.75 0 013 21V9.75z"/></svg>
+          </a>
+          <a class="menu-link" href="/appointments" data-screen="appointments">Appointments</a>
+          <a class="menu-link" href="/patients" data-screen="patients">Patients</a>
+          <a class="menu-link" href="/doctors" data-screen="doctors">Doctors</a>
+          <a class="menu-link" href="/specialities" data-screen="specialities">Specialities</a>
+          <a class="menu-link" href="/invoices" data-screen="invoices">Invoices</a>
+          <a class="menu-link" href="/billing/transactions" data-screen="transactions">Transactions</a>
+          <a class="menu-link" href="/billing/dashboard" data-screen="dashboard">Dashboard</a>
+          <a class="menu-link" href="/users" data-screen="users">Users</a>
+          <a class="menu-link" href="/roles" data-screen="roles">Roles</a>
+        </nav>
+        {% endif %}
       </div>
     </header>
-    <main class="max-w-6xl mx-auto p-6">{% block content %}{% endblock %}</main>
+
+    <main class="max-w-6xl mx-auto p-6">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="mb-4">
+            {% for cat, msg in messages %}
+              <div class="alert {{ 'alert-success' if cat=='success' else 'alert-info' if cat=='info' else 'alert-danger' }}">{{ msg }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+      {% block content %}{% endblock %}
+    </main>
+
+    <!-- Render theme swatches from THEMES and wire selection -->
+    <script>
+      (function(){
+        const mk = (key, t) => {
+          const b = document.createElement('button');
+          b.type='button'; b.className='theme-btn'; b.dataset.themeBtn=key;
+          b.title=t.label; b.setAttribute('aria-label', t.label+' theme');
+          b.style.background = `linear-gradient(135deg, ${t.vars.brand}, ${t.vars.brand2})`;
+          b.setAttribute('aria-pressed', (localStorage.getItem('icare:theme')||'aurora')===key ? 'true':'false');
+          b.addEventListener('click', ()=>{ applyTheme(key); });
+          return b;
+        };
+        const light = document.querySelector('[data-swatches="light"]');
+        const dark  = document.querySelector('[data-swatches="dark"]');
+        Object.entries(THEMES).forEach(([k,t])=> (t.dark?dark:light)?.appendChild(mk(k,t)));
+        // close the palette after picking
+        document.querySelectorAll('.theme-btn').forEach(b=> b.addEventListener('click', ()=>{
+          const d=document.querySelector('details.palette'); if(d) d.open=false;
+        }));
+      })();
+    </script>
+
+    <!-- Expose header height as --header-offset for sticky sub-elements -->
+    <script>
+      (function(){
+        function setHeaderOffset(){
+          const h = document.querySelector('.site-header');
+          if(h) document.documentElement.style.setProperty('--header-offset', h.offsetHeight+'px');
+        }
+        setHeaderOffset();
+        window.addEventListener('resize', setHeaderOffset);
+      })();
+    </script>
+
+    {% if session.get('user') %}
+    <!-- Highlight the active nav item -->
+    <script>
+      (function(){
+        const path = location.pathname;
+        let best=null, bestLen=-1;
+        document.querySelectorAll('nav.main-nav a[data-screen], nav.main-nav a[href="/"]').forEach(a=>{
+          const href=a.getAttribute('href');
+          if(href==='/'){ if(path==='/'&&bestLen<0){best=a;bestLen=0;} return; }
+          if(path.startsWith(href) && href.length>bestLen){ best=a; bestLen=href.length; }
+        });
+        if(best) best.setAttribute('aria-current','page');
+      })();
+    </script>
+
+    <!-- Menu filtering based on accessible screens (unchanged behavior) -->
+    <script>
+      (async function(){
+        try{
+          const token = sessionStorage.getItem('token'); if(!token) return;
+          const apiUrl = '{{ api_url }}'.replace(/\/$/, '');
+          const res = await fetch(`${apiUrl}/user/accessible-screens`, { headers:{ 'Authorization':`Bearer ${token}` }});
+          if(!res.ok){ console.warn('accessible-screens', res.status); return; }
+          const data = await res.json();
+          const screens = Array.isArray(data)? data : (data.data||[]);
+          document.querySelectorAll('[data-screen]').forEach(link=>{
+            link.style.display = screens.includes(link.getAttribute('data-screen')) ? '' : 'none';
+          });
+        }catch(e){ console.error('menu filter', e); }
+      })();
+    </script>
+
+    <!-- Action-button permission helpers (unchanged API) -->
+    <script>
+      let _actionPermissionsCache = {};
+      async function checkPermission(screenName, action, callback){
+        try{
+          const token = sessionStorage.getItem('token'); if(!token){ callback(false); return; }
+          const apiUrl = '{{ api_url }}'.replace(/\/$/, '');
+          const cacheKey = `${screenName}:${action}`;
+          if(_actionPermissionsCache[cacheKey] !== undefined){ callback(_actionPermissionsCache[cacheKey]); return; }
+          const response = await fetch(`${apiUrl}/admin/action-permissions`, { headers:{ 'Authorization':`Bearer ${token}` }});
+          if(!response.ok){ callback(true); return; }
+          const perms = await response.json();
+          const actionPerms = Array.isArray(perms)? perms : [];
+          const userResp = await fetch(`${apiUrl}/auth/me`, { headers:{ 'Authorization':`Bearer ${token}` }});
+          let user = userResp.ok ? await userResp.json() : null;
+          if(user && user.is_admin){ _actionPermissionsCache[cacheKey]=true; callback(true); return; }
+          const hasPermission = actionPerms.some(p => p.screen_name===screenName && p.action===action && p.role_name===(user? user.role : null));
+          _actionPermissionsCache[cacheKey]=hasPermission; callback(hasPermission);
+        }catch(err){ console.error('Permission check failed:', err); callback(true); }
+      }
+      async function controlActionVisibility(screenName, action, selector){
+        checkPermission(screenName, action, (has)=>{ document.querySelectorAll(selector).forEach(el=>{ el.style.display = has ? '' : 'none'; }); });
+      }
+    </script>
+    {% endif %}
+
     {% block scripts %}{% endblock %}
   </body>
 </html>

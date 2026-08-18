@@ -50,7 +50,7 @@ A full-stack medical clinic management system for managing doctors, patients, ap
 
 ### ✅ User Interface
 - **Login Screen** — Secure login with hidden menu until authentication
-- **Responsive Design** — Tailwind CSS + theme switcher (12 themes)
+- **Responsive Design** — Tailwind CSS + theme switcher (16 themes, light & dark)
 - **Dashboard** — Welcome screen with doctor/speciality browser
 - **Navigation** — Context-aware menu (shows only authenticated user's available options)
 
@@ -271,7 +271,9 @@ All settings are loaded from `.env` at startup:
 | DB_NAME | clinic | Database name |
 | DB_USER | postgres | DB username |
 | DB_PASSWORD | postgres | DB password |
+| API_HOST | 0.0.0.0 | REST API bind host |
 | API_PORT | 8004 | REST API port |
+| WEB_HOST | 0.0.0.0 | Frontend bind host |
 | WEB_PORT | 3003 | Frontend server port |
 | API_URL | http://localhost:8004 | API URL (used by web app) |
 | API_SECRET | dev-secret | Secret for signing tokens |
@@ -321,13 +323,24 @@ action_permissions (role_name, screen_name, action)
 | Role | Screens | Actions | Purpose |
 |------|---------|---------|---------|
 | **Admin** | All screens | All actions | Full system access; default admin user: `admin/admin` |
-| **Doctor** | appointments | view, add, edit | View appointments, add/edit prescriptions |
+| **Doctor** | appointments, patients, doctors, dashboard | appointments: view/add/edit · patients: view/edit | Manage own appointments and patients (see scoping below); **cannot create or delete patients** |
 | **Nurse** | appointments, patients, doctors | view only | Read-only clinical data access |
-| **Office** | appointments, patients | view, add, edit | Manage appointments and patient records |
+| **Office** | appointments, patients | view, add, edit | Create patients and book the initial appointment |
 | **Billing** | invoices, transactions, dashboard | view, add, edit | Invoice and payment management |
 | **Security** | (none) | (none) | Reserved for future use |
 
 **Note**: All roles are customizable. Admin can create custom roles via the Roles UI or manage permissions directly at `/admin/permissions`
+
+### Doctor Patient-Scoping Rules
+
+Beyond the permission checkboxes, a non-admin **Doctor** (linked to a `doctors` row via `users.doctor_id`) is restricted in code to patients they actually treat:
+
+- **Patient access is scoped** — `GET /patients` returns only patients who have an appointment with that doctor; viewing or editing a patient they do not treat returns `403`.
+- **Cannot create patients** — patient creation is reserved for **Office** (and Admin). Doctors have no `patients:add` permission.
+- **Booking is follow-up only** — a doctor may book further appointments only for a patient they already treat, and only for **themselves** (their own `doctor_id`). The **initial** appointment for a patient must be booked by **Office**.
+- **Case notes follow the same scope** — doctors can add/view case history only for their own patients.
+
+Admin users bypass all of the above. These rules are enforced server-side regardless of the permission table.
 
 ### Admin Has Full Access by Default
 - Admin users (with `is_admin=true`) automatically see **ALL screens** in the menu
@@ -678,7 +691,7 @@ icare/
 ### Key Implementation Details
 - Tokens: Signed with `itsdangerous.URLSafeTimedSerializer`
 - Password hashing: `werkzeug.security.generate_password_hash/check_password_hash`
-- Database: Psycopg2 connection pooling via `psycopg2.connect()`
+- Database: Psycopg2 with a new connection opened per query via `psycopg2.connect()` (no pooling)
 - Runtime migrations: Tables auto-created on first API startup
 - PDF export: reportlab `SimpleDocTemplate` for invoices
 - Charts: Chart.js for dashboard visualizations
