@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Navbar } from '../components/Navbar';
+import { CalendarDays, RefreshCw } from 'lucide-react';
 import { TransactionSummary } from '../types/transaction';
 import { transactionService } from '../services/transactionService';
 import { DashboardSummary } from '../components/DashboardSummary';
@@ -10,18 +10,18 @@ import { CategoryChart } from '../components/CategoryChart';
 import { EntityStatusBanner } from '../components/EntityStatusBanner';
 import { useAuth } from '../contexts/AuthContext';
 
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
 export const DashboardPage: React.FC = () => {
   const { user } = useAuth();
   const [summary, setSummary] = useState<TransactionSummary | null>(null);
   const [viewMonthly, setViewMonthly] = useState(false);
-  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
-  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  useEffect(() => {
-    fetchSummary();
-  }, [refreshTrigger]);
+  useEffect(() => { fetchSummary(); }, [refreshTrigger, viewMonthly, selectedYear, selectedMonth]);
 
   const fetchSummary = async () => {
     setIsLoading(true);
@@ -30,78 +30,128 @@ export const DashboardPage: React.FC = () => {
         ? await transactionService.getMonthlySummary(selectedYear, selectedMonth)
         : await transactionService.getSummary();
       setSummary(data);
-    } catch (error) {
-      console.error('Failed to fetch summary:', error);
+    } catch (err) {
+      console.error('Failed to fetch summary:', err);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleRefresh = () => {
-    setRefreshTrigger(prev => prev + 1);
-  };
+  const handleRefresh = () => setRefreshTrigger(p => p + 1);
 
-  if (isLoading) {
+  if (isLoading && !summary) {
     return (
-      <>
-        <Navbar />
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
-        </div>
-      </>
+      <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="spinner spinner-lg" />
+      </div>
     );
   }
 
   return (
-    <>
-      <Navbar />
-      <div className="min-h-screen bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-8">
-            Financial Dashboard
-          </h1>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', padding: '2rem 1.5rem' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
 
-          {/* Entity Status Banner */}
-          <EntityStatusBanner hasEntity={!!user?.entity_id} />
+        {/* Page header */}
+        <div className="page-header" style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+          <div>
+            <h1 className="page-title">Financial Dashboard</h1>
+            <p className="page-subtitle">
+              {viewMonthly
+                ? `${MONTHS[selectedMonth - 1]} ${selectedYear}`
+                : 'All-time overview'}
+            </p>
+          </div>
 
-          {/* Summary Cards */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center space-x-3">
-              <label className="flex items-center space-x-2">
-                <input type="checkbox" checked={viewMonthly} onChange={(e) => setViewMonthly(e.target.checked)} />
-                <span>Monthly view</span>
-              </label>
-              {viewMonthly && (
-                <div className="flex items-center space-x-2">
-                  <select value={selectedMonth} onChange={(e) => setSelectedMonth(parseInt(e.target.value))} className="input">
-                    {[...Array(12)].map((_, i) => (
-                      <option key={i} value={i + 1}>{new Date(0, i).toLocaleString(undefined, { month: 'long' })}</option>
-                    ))}
+          {/* Period controls */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+            {/* All-time / Monthly toggle */}
+            <div style={{
+              display: 'flex',
+              background: 'var(--surface-2)',
+              border: '1px solid var(--border)',
+              borderRadius: 10,
+              padding: '3px',
+            }}>
+              {(['all-time', 'monthly'] as const).map(mode => (
+                <button
+                  key={mode}
+                  onClick={() => setViewMonthly(mode === 'monthly')}
+                  style={{
+                    padding: '0.375rem 0.875rem',
+                    borderRadius: 7,
+                    fontSize: '0.8125rem',
+                    fontWeight: 500,
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    background: (mode === 'monthly') === viewMonthly ? 'var(--primary)' : 'transparent',
+                    color: (mode === 'monthly') === viewMonthly ? '#fff' : 'var(--text-secondary)',
+                  }}
+                >
+                  {mode === 'all-time' ? 'All-time' : 'Monthly'}
+                </button>
+              ))}
+            </div>
+
+            {viewMonthly && (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <CalendarDays size={15} style={{ color: 'var(--text-muted)' }} />
+                  <select
+                    value={selectedMonth}
+                    onChange={e => setSelectedMonth(+e.target.value)}
+                    className="input"
+                    style={{ width: 'auto', paddingTop: '0.375rem', paddingBottom: '0.375rem' }}
+                  >
+                    {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
                   </select>
-                  <input type="number" value={selectedYear} onChange={(e) => setSelectedYear(parseInt(e.target.value))} className="input w-28" />
-                  <button className="btn btn-ghost" onClick={() => fetchSummary()}>Go</button>
+                  <input
+                    type="number"
+                    value={selectedYear}
+                    onChange={e => setSelectedYear(+e.target.value)}
+                    className="input"
+                    style={{ width: 90, paddingTop: '0.375rem', paddingBottom: '0.375rem' }}
+                  />
                 </div>
-              )}
+              </>
+            )}
+
+            <button className="btn btn-ghost btn-sm" onClick={handleRefresh} title="Refresh">
+              <RefreshCw size={15} />
+            </button>
+          </div>
+        </div>
+
+        {/* Entity banner */}
+        <EntityStatusBanner hasEntity={!!user?.entity_id} />
+
+        {/* Stat cards */}
+        {summary && (
+          <div className="animate-slide-up">
+            <DashboardSummary summary={summary} />
+          </div>
+        )}
+
+        {/* Charts + quick actions */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '1.25rem', marginBottom: '1.25rem' }}>
+          {summary && (
+            <div className="card animate-slide-up stagger-1">
+              <CategoryChart summary={summary} />
             </div>
+          )}
+          <div className="card animate-slide-up stagger-2">
+            <h2 className="section-title">Quick Actions</h2>
+            <ImportExport onImportSuccess={handleRefresh} />
           </div>
-          {summary && <DashboardSummary summary={summary} />}
+        </div>
 
-          {/* Charts */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            {summary && <CategoryChart summary={summary} />}
-            
-            <div className="card">
-              <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
-              <ImportExport onImportSuccess={handleRefresh} />
-            </div>
-          </div>
+        {/* Add transaction */}
+        <div style={{ marginBottom: '1.25rem' }} className="animate-slide-up stagger-3">
+          <TransactionForm onSuccess={handleRefresh} hasEntity={!!user?.entity_id} />
+        </div>
 
-          {/* Transaction Form */}
-          <div className="mb-8">
-            <TransactionForm onSuccess={handleRefresh} hasEntity={!!user?.entity_id} />
-          </div>
-
-          {/* Transaction List */}
+        {/* Transaction history */}
+        <div className="animate-slide-up" style={{ animationDelay: '0.2s' }}>
           <TransactionList
             refreshTrigger={refreshTrigger}
             onUpdate={handleRefresh}
@@ -110,6 +160,6 @@ export const DashboardPage: React.FC = () => {
           />
         </div>
       </div>
-    </>
+    </div>
   );
 };

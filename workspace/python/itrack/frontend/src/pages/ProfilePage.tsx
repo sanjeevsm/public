@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Navbar } from '../components/Navbar';
 import { useAuth } from '../contexts/AuthContext';
 import { authService } from '../services/authService';
 import { userService } from '../services/userService';
@@ -115,8 +114,7 @@ export const ProfilePage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar />
+    <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       <div className="max-w-4xl mx-auto px-4 py-8 space-y-8">
 
         {/* ── My Profile ── */}
