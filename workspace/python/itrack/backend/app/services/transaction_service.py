@@ -193,6 +193,23 @@ class TransactionService:
             categories_breakdown=categories_breakdown,
         )
 
+    async def get_monthly_history(self, user_id: str, months: int = 6) -> list[dict]:
+        """Return per-month income/expense/balance for the last N months, newest last."""
+        now = datetime.now(timezone.utc)
+        result = []
+        for i in range(months - 1, -1, -1):
+            total_m = now.year * 12 + (now.month - 1) - i
+            y, m = total_m // 12, (total_m % 12) + 1
+            summary = await self.get_summary(user_id, y, m)
+            result.append({
+                "year": y,
+                "month": m,
+                "income": summary.total_income,
+                "expense": summary.total_expense,
+                "balance": summary.total_balance,
+            })
+        return result
+
     async def export_to_csv(self, user_id: str) -> str:
         """Stream all transactions directly from cursor — no memory cap."""
         output = StringIO()
