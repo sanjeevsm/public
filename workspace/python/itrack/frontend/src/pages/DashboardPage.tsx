@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { CalendarDays, RefreshCw } from 'lucide-react';
+import { Activity, CalendarDays, RefreshCw } from 'lucide-react';
 import { TransactionSummary } from '../types/transaction';
 import { transactionService } from '../services/transactionService';
 import { DashboardSummary } from '../components/DashboardSummary';
@@ -8,25 +8,30 @@ import { TransactionForm } from '../components/TransactionForm';
 import { ImportExport } from '../components/ImportExport';
 import { CategoryChart } from '../components/CategoryChart';
 import { EntityStatusBanner } from '../components/EntityStatusBanner';
+import { ForecastView } from '../components/ForecastView';
 import { useAuth } from '../contexts/AuthContext';
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
+type ViewMode = 'all-time' | 'monthly' | 'forecast';
+
 export const DashboardPage: React.FC = () => {
   const { user } = useAuth();
   const [summary, setSummary] = useState<TransactionSummary | null>(null);
-  const [viewMonthly, setViewMonthly] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('all-time');
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  useEffect(() => { fetchSummary(); }, [refreshTrigger, viewMonthly, selectedYear, selectedMonth]);
+  useEffect(() => {
+    if (viewMode !== 'forecast') fetchSummary();
+  }, [refreshTrigger, viewMode, selectedYear, selectedMonth]);
 
   const fetchSummary = async () => {
     setIsLoading(true);
     try {
-      const data = viewMonthly
+      const data = viewMode === 'monthly'
         ? await transactionService.getMonthlySummary(selectedYear, selectedMonth)
         : await transactionService.getSummary();
       setSummary(data);
@@ -39,7 +44,7 @@ export const DashboardPage: React.FC = () => {
 
   const handleRefresh = () => setRefreshTrigger(p => p + 1);
 
-  if (isLoading && !summary) {
+  if (isLoading && !summary && viewMode !== 'forecast') {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div className="spinner spinner-lg" />
@@ -56,7 +61,9 @@ export const DashboardPage: React.FC = () => {
           <div>
             <h1 className="page-title">Financial Dashboard</h1>
             <p className="page-subtitle">
-              {viewMonthly
+              {viewMode === 'forecast'
+                ? 'Balance forecast by scenario'
+                : viewMode === 'monthly'
                 ? `${MONTHS[selectedMonth - 1]} ${selectedYear}`
                 : 'All-time overview'}
             </p>
@@ -64,7 +71,7 @@ export const DashboardPage: React.FC = () => {
 
           {/* Period controls */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-            {/* All-time / Monthly toggle */}
+            {/* View mode toggle */}
             <div style={{
               display: 'flex',
               background: 'var(--surface-2)',
@@ -72,10 +79,10 @@ export const DashboardPage: React.FC = () => {
               borderRadius: 10,
               padding: '3px',
             }}>
-              {(['all-time', 'monthly'] as const).map(mode => (
+              {(['all-time', 'monthly', 'forecast'] as const).map(mode => (
                 <button
                   key={mode}
-                  onClick={() => setViewMonthly(mode === 'monthly')}
+                  onClick={() => setViewMode(mode)}
                   style={{
                     padding: '0.375rem 0.875rem',
                     borderRadius: 7,
@@ -84,81 +91,92 @@ export const DashboardPage: React.FC = () => {
                     border: 'none',
                     cursor: 'pointer',
                     transition: 'all 0.15s ease',
-                    background: (mode === 'monthly') === viewMonthly ? 'var(--primary)' : 'transparent',
-                    color: (mode === 'monthly') === viewMonthly ? '#fff' : 'var(--text-secondary)',
+                    background: viewMode === mode ? 'var(--primary)' : 'transparent',
+                    color: viewMode === mode ? '#fff' : 'var(--text-secondary)',
+                    display: 'flex', alignItems: 'center', gap: '0.375rem',
                   }}
                 >
-                  {mode === 'all-time' ? 'All-time' : 'Monthly'}
+                  {mode === 'forecast' && <Activity size={13} />}
+                  {mode === 'all-time' ? 'All-time' : mode === 'monthly' ? 'Monthly' : 'Forecast'}
                 </button>
               ))}
             </div>
 
-            {viewMonthly && (
-              <>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <CalendarDays size={15} style={{ color: 'var(--text-muted)' }} />
-                  <select
-                    value={selectedMonth}
-                    onChange={e => setSelectedMonth(+e.target.value)}
-                    className="input"
-                    style={{ width: 'auto', paddingTop: '0.375rem', paddingBottom: '0.375rem' }}
-                  >
-                    {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
-                  </select>
-                  <input
-                    type="number"
-                    value={selectedYear}
-                    onChange={e => setSelectedYear(+e.target.value)}
-                    className="input"
-                    style={{ width: 90, paddingTop: '0.375rem', paddingBottom: '0.375rem' }}
-                  />
-                </div>
-              </>
+            {/* Month/year selectors (only for monthly view) */}
+            {viewMode === 'monthly' && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <CalendarDays size={15} style={{ color: 'var(--text-muted)' }} />
+                <select
+                  value={selectedMonth}
+                  onChange={e => setSelectedMonth(+e.target.value)}
+                  className="input"
+                  style={{ width: 'auto', paddingTop: '0.375rem', paddingBottom: '0.375rem' }}
+                >
+                  {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+                </select>
+                <input
+                  type="number"
+                  value={selectedYear}
+                  onChange={e => setSelectedYear(+e.target.value)}
+                  className="input"
+                  style={{ width: 90, paddingTop: '0.375rem', paddingBottom: '0.375rem' }}
+                />
+              </div>
             )}
 
-            <button className="btn btn-ghost btn-sm" onClick={handleRefresh} title="Refresh">
-              <RefreshCw size={15} />
-            </button>
+            {viewMode !== 'forecast' && (
+              <button className="btn btn-ghost btn-sm" onClick={handleRefresh} title="Refresh">
+                <RefreshCw size={15} />
+              </button>
+            )}
           </div>
         </div>
 
         {/* Entity banner */}
         <EntityStatusBanner hasEntity={!!user?.entity_id} />
 
-        {/* Stat cards */}
-        {summary && (
+        {/* ── Forecast view ─────────────────────────────────────── */}
+        {viewMode === 'forecast' && (
           <div className="animate-slide-up">
-            <DashboardSummary summary={summary} />
+            <ForecastView />
           </div>
         )}
 
-        {/* Charts + quick actions */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '1.25rem', marginBottom: '1.25rem' }}>
-          {summary && (
-            <div className="card animate-slide-up stagger-1">
-              <CategoryChart summary={summary} />
+        {/* ── Normal views (all-time / monthly) ─────────────────── */}
+        {viewMode !== 'forecast' && (
+          <>
+            {summary && (
+              <div className="animate-slide-up">
+                <DashboardSummary summary={summary} />
+              </div>
+            )}
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '1.25rem', marginBottom: '1.25rem' }}>
+              {summary && (
+                <div className="card animate-slide-up stagger-1">
+                  <CategoryChart summary={summary} />
+                </div>
+              )}
+              <div className="card animate-slide-up stagger-2">
+                <h2 className="section-title">Quick Actions</h2>
+                <ImportExport onImportSuccess={handleRefresh} />
+              </div>
             </div>
-          )}
-          <div className="card animate-slide-up stagger-2">
-            <h2 className="section-title">Quick Actions</h2>
-            <ImportExport onImportSuccess={handleRefresh} />
-          </div>
-        </div>
 
-        {/* Add transaction */}
-        <div style={{ marginBottom: '1.25rem' }} className="animate-slide-up stagger-3">
-          <TransactionForm onSuccess={handleRefresh} hasEntity={!!user?.entity_id} />
-        </div>
+            <div style={{ marginBottom: '1.25rem' }} className="animate-slide-up stagger-3">
+              <TransactionForm onSuccess={handleRefresh} hasEntity={!!user?.entity_id} />
+            </div>
 
-        {/* Transaction history */}
-        <div className="animate-slide-up" style={{ animationDelay: '0.2s' }}>
-          <TransactionList
-            refreshTrigger={refreshTrigger}
-            onUpdate={handleRefresh}
-            onDelete={handleRefresh}
-            showEntityInfo={!!user?.entity_id}
-          />
-        </div>
+            <div className="animate-slide-up" style={{ animationDelay: '0.2s' }}>
+              <TransactionList
+                refreshTrigger={refreshTrigger}
+                onUpdate={handleRefresh}
+                onDelete={handleRefresh}
+                showEntityInfo={!!user?.entity_id}
+              />
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

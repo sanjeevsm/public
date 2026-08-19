@@ -4,6 +4,7 @@ import {
   TransactionInput,
   TransactionSummary,
   ImportResult,
+  MonthlyDataPoint,
 } from '../types/transaction';
 
 export const transactionService = {
@@ -69,6 +70,11 @@ export const transactionService = {
   },
   async bulkCreate(transactions: TransactionInput[]): Promise<{ inserted: number; failed: number; errors: any[] }> {
     const response = await apiClient.post('/api/transactions/bulk', transactions);
+    return response.data;
+  },
+
+  async getMonthlyHistory(months = 6): Promise<MonthlyDataPoint[]> {
+    const response = await apiClient.get<MonthlyDataPoint[]>('/api/transactions/history', { params: { months } });
     return response.data;
   },
 };
