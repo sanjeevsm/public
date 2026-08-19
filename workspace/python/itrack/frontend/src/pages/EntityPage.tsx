@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Navbar } from '../components/Navbar';
 import { EntityCreateForm } from '../components/EntityCreateForm';
 import { EntityDashboardSummary } from '../components/EntityDashboardSummary';
 import { EntityManagement } from '../components/EntityManagement';
@@ -72,13 +71,12 @@ export const EntityPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <Navbar />
+      <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
         <div className="container mx-auto px-4 py-8">
           <div className="flex justify-center items-center h-64">
             <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="mt-4 text-gray-600">Loading...</p>
+              <div className="spinner spinner-lg mx-auto"></div>
+              <p className="mt-4" style={{ color: 'var(--text-secondary)' }}>Loading...</p>
             </div>
           </div>
         </div>
@@ -89,8 +87,7 @@ export const EntityPage: React.FC = () => {
   // No entity - show create form
   if (!entity) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <Navbar />
+      <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
         <div className="container mx-auto px-4 py-8">
           <div className="max-w-2xl mx-auto">
             {error && (
@@ -156,8 +153,7 @@ export const EntityPage: React.FC = () => {
 
   // Has entity - show dashboard
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar />
+    <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       <div className="container mx-auto px-4 py-8">
         {error && (
           <div className="mb-4 p-4 bg-red-100 text-red-700 rounded-lg">

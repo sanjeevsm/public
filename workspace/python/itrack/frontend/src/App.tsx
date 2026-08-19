@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { Layout } from './components/Layout';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { DashboardPage } from './pages/DashboardPage';
@@ -15,85 +16,28 @@ import { ProfilePage } from './pages/ProfilePage';
 import { AdminPage } from './pages/AdminPage';
 import './index.css';
 
+const Protected: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <ProtectedRoute>
+    <Layout>{children}</Layout>
+  </ProtectedRoute>
+);
+
 function App() {
   return (
     <AuthProvider>
       <Router>
         <Routes>
-          <Route path="/login" element={<LoginPage />} />
+          <Route path="/login"    element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <DashboardPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/entity"
-            element={
-              <ProtectedRoute>
-                <EntityPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/income"
-            element={
-              <ProtectedRoute>
-                <IncomePage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/expenses"
-            element={
-              <ProtectedRoute>
-                <ExpensePage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/categories"
-            element={
-              <ProtectedRoute>
-                <CategoryPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/budgets"
-            element={
-              <ProtectedRoute>
-                <BudgetPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/members"
-            element={
-              <ProtectedRoute>
-                <MembersPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute>
-                <AdminPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/profile"
-            element={
-              <ProtectedRoute>
-                <ProfilePage />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/dashboard"  element={<Protected><DashboardPage /></Protected>} />
+          <Route path="/entity"     element={<Protected><EntityPage /></Protected>} />
+          <Route path="/income"     element={<Protected><IncomePage /></Protected>} />
+          <Route path="/expenses"   element={<Protected><ExpensePage /></Protected>} />
+          <Route path="/categories" element={<Protected><CategoryPage /></Protected>} />
+          <Route path="/budgets"    element={<Protected><BudgetPage /></Protected>} />
+          <Route path="/members"    element={<Protected><MembersPage /></Protected>} />
+          <Route path="/admin"      element={<Protected><AdminPage /></Protected>} />
+          <Route path="/profile"    element={<Protected><ProfilePage /></Protected>} />
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </Router>

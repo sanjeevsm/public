@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Edit2, Trash2, Lock, Users } from 'lucide-react';
+import { Trash2, Lock, Users, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 import { Transaction } from '../types/transaction';
 import { transactionService } from '../services/transactionService';
 import { format } from 'date-fns';
@@ -11,189 +11,145 @@ interface Props {
   showEntityInfo?: boolean;
 }
 
-export const TransactionList: React.FC<Props> = ({ refreshTrigger, onUpdate, onDelete, showEntityInfo = false }) => {
+export const TransactionList: React.FC<Props> = ({ refreshTrigger, onDelete, showEntityInfo = false }) => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<string>('all');
 
-  useEffect(() => {
-    fetchTransactions();
-  }, [refreshTrigger, filter]);
+  useEffect(() => { fetchTransactions(); }, [refreshTrigger, filter]);
 
   const fetchTransactions = async () => {
     setIsLoading(true);
     try {
       const params = filter !== 'all' ? { type: filter } : {};
-      const data = await transactionService.getTransactions(params);
-      setTransactions(data);
-    } catch (error) {
-      console.error('Failed to fetch transactions:', error);
+      setTransactions(await transactionService.getTransactions(params));
+    } catch (err) {
+      console.error('Failed to fetch transactions:', err);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this transaction?')) {
-      return;
-    }
-
+    if (!confirm('Delete this transaction?')) return;
     try {
       await transactionService.deleteTransaction(id);
       onDelete();
-    } catch (error) {
-      console.error('Failed to delete transaction:', error);
+    } catch {
       alert('Failed to delete transaction');
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(amount);
-  };
-
-  if (isLoading) {
-    return (
-      <div className="card">
-        <div className="flex items-center justify-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-        </div>
-      </div>
-    );
-  }
+  const fmt = (n: number) =>
+    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n);
 
   return (
-    <div className="card">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-semibold">Transaction History</h2>
-        
-        <div className="flex space-x-2">
-          <button
-            onClick={() => setFilter('all')}
-            className={`px-3 py-1 rounded-md text-sm ${
-              filter === 'all' ? 'bg-primary-600 text-white' : 'bg-gray-200 text-gray-700'
-            }`}
-          >
-            All
-          </button>
-          <button
-            onClick={() => setFilter('income')}
-            className={`px-3 py-1 rounded-md text-sm ${
-              filter === 'income' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700'
-            }`}
-          >
-            Income
-          </button>
-          <button
-            onClick={() => setFilter('expense')}
-            className={`px-3 py-1 rounded-md text-sm ${
-              filter === 'expense' ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-700'
-            }`}
-          >
-            Expenses
-          </button>
+    <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+      {/* Header */}
+      <div style={{
+        padding: '1.25rem 1.5rem',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem',
+        borderBottom: '1px solid var(--border-subtle)',
+      }}>
+        <h2 className="section-title" style={{ margin: 0 }}>Transaction History</h2>
+        <div style={{ display: 'flex', gap: '0.375rem' }}>
+          {(['all', 'income', 'expense'] as const).map(f => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`filter-pill${filter === f ? ' active' : ''}${f === 'income' ? ' filter-pill-green' : ''}${f === 'expense' ? ' filter-pill-red' : ''}`}
+            >
+              {f === 'all' ? 'All' : f === 'income' ? 'Income' : 'Expenses'}
+            </button>
+          ))}
         </div>
       </div>
 
-      {transactions.length === 0 ? (
-        <p className="text-center text-gray-500 py-8">No transactions found</p>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+      {/* Loading */}
+      {isLoading && (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '3rem' }}>
+          <div className="spinner spinner-lg" />
+        </div>
+      )}
+
+      {/* Empty */}
+      {!isLoading && transactions.length === 0 && (
+        <div className="empty-state">
+          <p>No transactions found</p>
+        </div>
+      )}
+
+      {/* Table */}
+      {!isLoading && transactions.length > 0 && (
+        <div style={{ overflowX: 'auto' }}>
+          <table className="table-root">
+            <thead>
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Date
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Description
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Category
-                </th>
-                {showEntityInfo && (
-                  <>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      User
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Mode
-                    </th>
-                  </>
-                )}
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Type
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Amount
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
+                <th>Date</th>
+                <th>Description</th>
+                <th>Category</th>
+                {showEntityInfo && <><th>User</th><th>Mode</th></>}
+                <th>Type</th>
+                <th style={{ textAlign: 'right' }}>Amount</th>
+                <th style={{ textAlign: 'right' }}></th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {transactions.map((transaction) => (
-                <tr key={transaction.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {format(new Date(transaction.date), 'MMM dd, yyyy')}
+            <tbody>
+              {transactions.map(tx => (
+                <tr key={tx.id}>
+                  <td style={{ color: 'var(--text-secondary)', whiteSpace: 'nowrap', fontSize: '0.875rem' }}>
+                    {format(new Date(tx.date), 'MMM dd, yyyy')}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-900">
-                    {transaction.description}
+                  <td style={{ fontWeight: 500, maxWidth: 240 }}>
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
+                      {tx.description}
+                    </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {transaction.category}
+                  <td>
+                    <span className="badge badge-muted">{tx.category}</span>
                   </td>
                   {showEntityInfo && (
                     <>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        {transaction.username || 'Unknown'}
+                      <td style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+                        {tx.username || 'Unknown'}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {transaction.mode === 'shared' ? (
-                          <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
-                            <Users size={12} className="mr-1" />
-                            Shared
+                      <td>
+                        {tx.mode === 'shared' ? (
+                          <span className="badge badge-blue">
+                            <Users size={11} /> Shared
                           </span>
                         ) : (
-                          <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">
-                            <Lock size={12} className="mr-1" />
-                            Private
+                          <span className="badge badge-muted">
+                            <Lock size={11} /> Private
                           </span>
                         )}
                       </td>
                     </>
                   )}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span
-                      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        transaction.type === 'income'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}
-                    >
-                      {transaction.type}
+                  <td>
+                    {tx.type === 'income' ? (
+                      <span className="badge badge-green">
+                        <ArrowUpRight size={11} /> Income
+                      </span>
+                    ) : (
+                      <span className="badge badge-red">
+                        <ArrowDownLeft size={11} /> Expense
+                      </span>
+                    )}
+                  </td>
+                  <td style={{ textAlign: 'right', whiteSpace: 'nowrap', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
+                    <span style={{ color: tx.type === 'income' ? 'var(--success)' : 'var(--error)' }}>
+                      {tx.type === 'income' ? '+' : '−'}{fmt(tx.amount)}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium">
-                    <span
-                      className={
-                        transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
-                      }
-                    >
-                      {transaction.type === 'income' ? '+' : '-'}
-                      {formatCurrency(transaction.amount)}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <td style={{ textAlign: 'right' }}>
                     <button
-                      onClick={() => handleDelete(transaction.id)}
-                      className="text-red-600 hover:text-red-900 ml-3"
+                      onClick={() => handleDelete(tx.id)}
+                      className="btn btn-ghost btn-icon btn-sm"
                       title="Delete"
+                      style={{ color: 'var(--error)', opacity: 0.7 }}
                     >
-                      <Trash2 size={16} />
+                      <Trash2 size={15} />
                     </button>
                   </td>
                 </tr>
