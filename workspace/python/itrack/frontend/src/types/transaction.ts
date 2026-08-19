@@ -40,3 +40,11 @@ export interface ImportResult {
   failed: number;
   errors: string[];
 }
+
+export interface MonthlyDataPoint {
+  year: number;
+  month: number;
+  income: number;
+  expense: number;
+  balance: number;
+}

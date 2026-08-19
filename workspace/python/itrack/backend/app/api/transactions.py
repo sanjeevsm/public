@@ -88,6 +88,15 @@ async def bulk_create_transactions(
     return await TransactionService(db).bulk_create_transactions(current_user.id, tx_dicts)
 
 
+@router.get("/history")
+async def get_monthly_history(
+    months: int = Query(default=6, ge=1, le=24),
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_database),
+):
+    return await TransactionService(db).get_monthly_history(str(current_user.id), months)
+
+
 @router.get("/{transaction_id}", response_model=TransactionResponse)
 async def get_transaction(
     transaction_id: str,
