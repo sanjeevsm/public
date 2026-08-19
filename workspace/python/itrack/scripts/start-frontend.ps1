@@ -19,4 +19,4 @@ if ($pids) {
 	exit 1
 } else { Write-Host "No listener on port $FRONTEND_PORT" -ForegroundColor Gray }
 
-Start-Process npm -ArgumentList 'run','dev','--','--port',$FRONTEND_PORT -NoNewWindow
+& npm run dev -- --port $FRONTEND_PORT

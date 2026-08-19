@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, X, TrendingUp, TrendingDown, Lock, Users } from 'lucide-react';
 import { TransactionInput, TransactionType, TransactionMode } from '../types/transaction';
 import { transactionService } from '../services/transactionService';
 
@@ -8,64 +8,38 @@ interface Props {
   hasEntity?: boolean;
 }
 
+const CATEGORIES = [
+  'Food & Dining','Transportation','Shopping','Entertainment',
+  'Bills & Utilities','Healthcare','Education',
+  'Salary','Freelance','Investment','Other',
+];
+
 export const TransactionForm: React.FC<Props> = ({ onSuccess, hasEntity = false }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
   const [formData, setFormData] = useState<TransactionInput>({
-    description: '',
-    amount: 0,
-    type: 'expense',
-    category: '',
+    description: '', amount: 0, type: 'expense', category: '',
     date: new Date().toISOString().split('T')[0],
-    mode: 'private', // Default to private for safety
-    is_recurring: false,
-    recurrence: undefined,
-    recurrence_start: undefined,
+    mode: 'private', is_recurring: false, recurrence: undefined, recurrence_start: undefined,
   });
 
-  const categories = [
-    'Food & Dining',
-    'Transportation',
-    'Shopping',
-    'Entertainment',
-    'Bills & Utilities',
-    'Healthcare',
-    'Education',
-    'Salary',
-    'Freelance',
-    'Investment',
-    'Other',
-  ];
+  const set = (patch: Partial<TransactionInput>) => setFormData(p => ({ ...p, ...patch }));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
-
     try {
       await transactionService.createTransaction({
         ...formData,
         date: new Date(formData.date).toISOString(),
-        is_recurring: formData.is_recurring,
         recurrence: formData.is_recurring ? 'monthly' : undefined,
-        recurrence_start: formData.is_recurring && formData.recurrence_start ? new Date(formData.recurrence_start).toISOString() : undefined,
+        recurrence_start: formData.is_recurring && formData.recurrence_start
+          ? new Date(formData.recurrence_start).toISOString() : undefined,
       });
-      
-      // Reset form
-      setFormData({
-        description: '',
-        amount: 0,
-        type: 'expense',
-        category: '',
-        date: new Date().toISOString().split('T')[0],
-          mode: 'private',
-          is_recurring: false,
-          recurrence: undefined,
-          recurrence_start: undefined,
-      });
-      
+      set({ description: '', amount: 0, type: 'expense', category: '', date: new Date().toISOString().split('T')[0], mode: 'private', is_recurring: false });
       setIsOpen(false);
       onSuccess();
     } catch (err: any) {
@@ -77,202 +51,161 @@ export const TransactionForm: React.FC<Props> = ({ onSuccess, hasEntity = false 
 
   if (!isOpen) {
     return (
-      <button
-        onClick={() => setIsOpen(true)}
-        className="btn btn-primary flex items-center space-x-2"
-      >
-        <PlusCircle size={20} />
-        <span>Add Transaction</span>
+      <button onClick={() => setIsOpen(true)} className="btn btn-primary">
+        <PlusCircle size={17} />
+        Add Transaction
       </button>
     );
   }
 
   return (
-    <div className="card">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold">Add New Transaction</h2>
-        <button
-          onClick={() => setIsOpen(false)}
-          className="text-gray-500 hover:text-gray-700"
-        >
-          ✕
+    <div className="card animate-slide-up">
+      {/* Card header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+        <h2 className="section-title" style={{ margin: 0 }}>New Transaction</h2>
+        <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setIsOpen(false)}>
+          <X size={17} />
         </button>
       </div>
 
-      {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
-          <p className="text-sm text-red-800">{error}</p>
-        </div>
-      )}
+      {error && <div className="alert alert-error" style={{ marginBottom: '1rem' }}>{error}</div>}
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        {/* Type toggle */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Type
-          </label>
-          <div className="flex space-x-4">
-            <label className="flex items-center">
-              <input
-                type="radio"
-                value="income"
-                checked={formData.type === 'income'}
-                onChange={(e) => setFormData({ ...formData, type: e.target.value as TransactionType })}
-                className="mr-2"
-              />
-              Income
-            </label>
-            <label className="flex items-center">
-              <input
-                type="radio"
-                value="expense"
-                checked={formData.type === 'expense'}
-                onChange={(e) => setFormData({ ...formData, type: e.target.value as TransactionType })}
-                className="mr-2"
-              />
-              Expense
-            </label>
+          <label className="label">Type</label>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            {(['income', 'expense'] as TransactionType[]).map(t => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => set({ type: t })}
+                style={{
+                  flex: 1,
+                  padding: '0.625rem',
+                  borderRadius: 8,
+                  border: `1px solid ${formData.type === t ? 'transparent' : 'var(--border)'}`,
+                  background: formData.type === t
+                    ? t === 'income' ? 'var(--success-soft)' : 'var(--error-soft)'
+                    : 'var(--surface)',
+                  color: formData.type === t
+                    ? t === 'income' ? 'var(--success)' : 'var(--error)'
+                    : 'var(--text-secondary)',
+                  fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                {t === 'income' ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
+                {t.charAt(0).toUpperCase() + t.slice(1)}
+              </button>
+            ))}
           </div>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Description
-          </label>
-          <input
-            type="text"
-            required
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            className="input"
-            placeholder="Enter description"
-          />
+        {/* Description + Amount on same row for wider screens */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '0.75rem', alignItems: 'start' }}>
+          <div>
+            <label className="label">Description</label>
+            <input
+              type="text" required
+              value={formData.description}
+              onChange={e => set({ description: e.target.value })}
+              className="input" placeholder="What was this for?"
+            />
+          </div>
+          <div style={{ minWidth: 130 }}>
+            <label className="label">Amount</label>
+            <input
+              type="number" required min="0.01" step="0.01"
+              value={formData.amount || ''}
+              onChange={e => set({ amount: parseFloat(e.target.value) })}
+              className="input" placeholder="0.00"
+            />
+          </div>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Amount
-          </label>
-          <input
-            type="number"
-            required
-            min="0.01"
-            step="0.01"
-            value={formData.amount || ''}
-            onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) })}
-            className="input"
-            placeholder="0.00"
-          />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+          <div>
+            <label className="label">Category</label>
+            <select required value={formData.category} onChange={e => set({ category: e.target.value })} className="input">
+              <option value="">Select…</option>
+              {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="label">Date</label>
+            <input type="date" required value={formData.date} onChange={e => set({ date: e.target.value })} className="input" />
+          </div>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Category
-          </label>
-          <select
-            required
-            value={formData.category}
-            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-            className="input"
-          >
-            <option value="">Select a category</option>
-            {categories.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Date
-          </label>
-          <input
-            type="date"
-            required
-            value={formData.date}
-            onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-            className="input"
-          />
-        </div>
-
-        {/* Transaction Mode (only show if user has entity) */}
+        {/* Visibility (entity only) */}
         {hasEntity && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Visibility
-            </label>
-            <div className="flex space-x-4">
-              <label className="flex items-center cursor-pointer">
-                <input
-                  type="radio"
-                  value="private"
-                  checked={formData.mode === 'private'}
-                  onChange={(e) => setFormData({ ...formData, mode: e.target.value as TransactionMode })}
-                  className="mr-2"
-                />
-                <span className="flex items-center">
-                  🔒 Private
-                  <span className="ml-2 text-xs text-gray-500">(Only you and admins)</span>
-                </span>
-              </label>
-              <label className="flex items-center cursor-pointer">
-                <input
-                  type="radio"
-                  value="shared"
-                  checked={formData.mode === 'shared'}
-                  onChange={(e) => setFormData({ ...formData, mode: e.target.value as TransactionMode })}
-                  className="mr-2"
-                />
-                <span className="flex items-center">
-                  👥 Shared
-                  <span className="ml-2 text-xs text-gray-500">(Visible to all members)</span>
-                </span>
-              </label>
+            <label className="label">Visibility</label>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              {(['private', 'shared'] as TransactionMode[]).map(m => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => set({ mode: m })}
+                  style={{
+                    flex: 1, padding: '0.5rem 0.75rem', borderRadius: 8,
+                    border: `1px solid ${formData.mode === m ? 'var(--primary)' : 'var(--border)'}`,
+                    background: formData.mode === m ? 'var(--primary-soft)' : 'var(--surface)',
+                    color: formData.mode === m ? 'var(--primary)' : 'var(--text-secondary)',
+                    fontWeight: 500, fontSize: '0.875rem', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  {m === 'private' ? <Lock size={14} /> : <Users size={14} />}
+                  {m.charAt(0).toUpperCase() + m.slice(1)}
+                </button>
+              ))}
             </div>
-            <p className="mt-2 text-xs text-gray-500">
-              💡 Private transactions are visible only to you and entity admins. Shared transactions are visible to all entity members.
-            </p>
           </div>
         )}
 
-        {/* Recurrence */}
+        {/* Recurring */}
         <div>
-          <label className="flex items-center cursor-pointer space-x-2">
-            <input
-              type="checkbox"
-              checked={!!formData.is_recurring}
-              onChange={(e) => setFormData({ ...formData, is_recurring: e.target.checked })}
-              className="mr-2"
-            />
-            <span className="font-medium">Monthly recurring</span>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', cursor: 'pointer', userSelect: 'none' }}>
+            <div
+              onClick={() => set({ is_recurring: !formData.is_recurring })}
+              style={{
+                width: 40, height: 22, borderRadius: 99,
+                background: formData.is_recurring ? 'var(--primary)' : 'var(--surface-2)',
+                border: `1px solid ${formData.is_recurring ? 'var(--primary)' : 'var(--border)'}`,
+                position: 'relative', transition: 'all 0.2s ease', cursor: 'pointer', flexShrink: 0,
+              }}
+            >
+              <div style={{
+                position: 'absolute', top: 2, left: formData.is_recurring ? 20 : 2,
+                width: 16, height: 16, borderRadius: '50%', background: '#fff',
+                transition: 'left 0.2s ease', boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
+              }} />
+            </div>
+            <span style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text)' }}>Monthly recurring</span>
           </label>
           {formData.is_recurring && (
-            <div className="mt-2">
-              <label className="block text-sm text-gray-700 mb-1">Recurrence start</label>
+            <div style={{ marginTop: '0.625rem' }}>
+              <label className="label">Recurrence start</label>
               <input
                 type="date"
                 value={formData.recurrence_start || new Date().toISOString().split('T')[0]}
-                onChange={(e) => setFormData({ ...formData, recurrence_start: e.target.value })}
+                onChange={e => set({ recurrence_start: e.target.value })}
                 className="input"
               />
             </div>
           )}
         </div>
 
-        <div className="flex space-x-3 pt-4">
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="btn btn-primary flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isLoading ? 'Adding...' : 'Add Transaction'}
+        {/* Actions */}
+        <div style={{ display: 'flex', gap: '0.625rem', paddingTop: '0.5rem' }}>
+          <button type="submit" disabled={isLoading} className="btn btn-primary" style={{ flex: 1 }}>
+            {isLoading ? <><span className="spinner" style={{ width: 16, height: 16 }} /> Adding…</> : 'Add Transaction'}
           </button>
-          <button
-            type="button"
-            onClick={() => setIsOpen(false)}
-            className="btn btn-secondary"
-          >
+          <button type="button" onClick={() => setIsOpen(false)} className="btn btn-secondary">
             Cancel
           </button>
         </div>

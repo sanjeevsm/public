@@ -4,12 +4,8 @@ import { useTheme } from '../contexts/ThemeContext';
 export const ThemeSelector: React.FC = () => {
   const { theme, setTheme } = useTheme();
   const options = [
-    'dark',
-    'light',
-    'midnight',
-    'forest',
-    'navy',
-    'warm',
+    'dark', 'midnight', 'forest', 'navy', 'rose', 'amber',
+    'light', 'warm', 'mint', 'lavender', 'ocean', 'blossom',
   ] as const;
 
   return (

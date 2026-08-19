@@ -109,7 +109,7 @@ export const AdminPage: React.FC = () => {
   };
 
   return (
-    <div className="p-6">
+    <div className="p-6" style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-2xl font-bold">Superadmin Dashboard</h1>
