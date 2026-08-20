@@ -10,6 +10,7 @@ import { CategoryChart } from '../components/CategoryChart';
 import { EntityStatusBanner } from '../components/EntityStatusBanner';
 import { ForecastView } from '../components/ForecastView';
 import { useAuth } from '../contexts/AuthContext';
+import { useSettings } from '../contexts/SettingsContext';
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
@@ -17,7 +18,10 @@ type ViewMode = 'all-time' | 'monthly' | 'forecast';
 
 export const DashboardPage: React.FC = () => {
   const { user } = useAuth();
-  const [summary, setSummary] = useState<TransactionSummary | null>(null);
+  const { selectedCurrencies, currency: primaryCurrency } = useSettings();
+  const [summaries, setSummaries] = useState<TransactionSummary[]>([]);
+  const [showMultiCurrency, setShowMultiCurrency] = useState(true);
+  const [selectedSingleCurrency, setSelectedSingleCurrency] = useState(primaryCurrency);
   const [viewMode, setViewMode] = useState<ViewMode>('all-time');
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
@@ -25,18 +29,40 @@ export const DashboardPage: React.FC = () => {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
-    if (viewMode !== 'forecast') fetchSummary();
-  }, [refreshTrigger, viewMode, selectedYear, selectedMonth]);
+    if (viewMode !== 'forecast') fetchSummaries();
+  }, [refreshTrigger, viewMode, selectedYear, selectedMonth, selectedCurrencies, selectedSingleCurrency, showMultiCurrency]);
 
-  const fetchSummary = async () => {
+  useEffect(() => {
+    setSelectedSingleCurrency(primaryCurrency);
+  }, [primaryCurrency]);
+
+  const fetchSummaries = async () => {
     setIsLoading(true);
     try {
-      const data = viewMode === 'monthly'
-        ? await transactionService.getMonthlySummary(selectedYear, selectedMonth)
-        : await transactionService.getSummary();
-      setSummary(data);
+      if (selectedCurrencies.length === 0) {
+        setSummaries([]);
+        setIsLoading(false);
+        return;
+      }
+
+      if (showMultiCurrency) {
+        // Fetch all selected currencies
+        const promises = selectedCurrencies.map(curr =>
+          viewMode === 'monthly'
+            ? transactionService.getMonthlySummary(selectedYear, selectedMonth, curr)
+            : transactionService.getSummary(curr)
+        );
+        const data = await Promise.all(promises);
+        setSummaries(data);
+      } else {
+        // Fetch only selected single currency
+        const data = viewMode === 'monthly'
+          ? await transactionService.getMonthlySummary(selectedYear, selectedMonth, selectedSingleCurrency)
+          : await transactionService.getSummary(selectedSingleCurrency);
+        setSummaries([data]);
+      }
     } catch (err) {
-      console.error('Failed to fetch summary:', err);
+      console.error('Failed to fetch summaries:', err);
     } finally {
       setIsLoading(false);
     }
@@ -44,7 +70,7 @@ export const DashboardPage: React.FC = () => {
 
   const handleRefresh = () => setRefreshTrigger(p => p + 1);
 
-  if (isLoading && !summary && viewMode !== 'forecast') {
+  if (isLoading && summaries.length === 0 && viewMode !== 'forecast') {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div className="spinner spinner-lg" />
@@ -64,8 +90,8 @@ export const DashboardPage: React.FC = () => {
               {viewMode === 'forecast'
                 ? 'Balance forecast by scenario'
                 : viewMode === 'monthly'
-                ? `${MONTHS[selectedMonth - 1]} ${selectedYear}`
-                : 'All-time overview'}
+                ? `${MONTHS[selectedMonth - 1]} ${selectedYear} • ${showMultiCurrency ? 'Multi-Currency' : selectedSingleCurrency}`
+                : `All-time overview • ${showMultiCurrency ? 'Multi-Currency' : selectedSingleCurrency}`}
             </p>
           </div>
 
@@ -138,23 +164,103 @@ export const DashboardPage: React.FC = () => {
         {/* ── Forecast view ─────────────────────────────────────── */}
         {viewMode === 'forecast' && (
           <div className="animate-slide-up">
-            <ForecastView />
+            <ForecastView currency={showMultiCurrency ? primaryCurrency : selectedSingleCurrency} />
           </div>
         )}
 
         {/* ── Normal views (all-time / monthly) ─────────────────── */}
         {viewMode !== 'forecast' && (
           <>
-            {summary && (
+            {/* Multi-Currency Toggle */}
+            {selectedCurrencies.length > 1 && (
+              <div className="card" style={{ padding: '1rem', marginBottom: '1.25rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+                  <span style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text)' }}>View Mode:</span>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <button
+                      onClick={() => setShowMultiCurrency(true)}
+                      style={{
+                        padding: '0.5rem 1rem',
+                        borderRadius: 8,
+                        border: `2px solid ${showMultiCurrency ? 'var(--primary)' : 'var(--border)'}`,
+                        background: showMultiCurrency ? 'var(--primary-soft)' : 'var(--surface)',
+                        color: showMultiCurrency ? 'var(--primary)' : 'var(--text-secondary)',
+                        fontWeight: 600,
+                        fontSize: '0.875rem',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s',
+                      }}
+                    >
+                      Multi-Currency
+                    </button>
+                    <button
+                      onClick={() => setShowMultiCurrency(false)}
+                      style={{
+                        padding: '0.5rem 1rem',
+                        borderRadius: 8,
+                        border: `2px solid ${!showMultiCurrency ? 'var(--primary)' : 'var(--border)'}`,
+                        background: !showMultiCurrency ? 'var(--primary-soft)' : 'var(--surface)',
+                        color: !showMultiCurrency ? 'var(--primary)' : 'var(--text-secondary)',
+                        fontWeight: 600,
+                        fontSize: '0.875rem',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s',
+                      }}
+                    >
+                      Single Currency
+                    </button>
+                    {!showMultiCurrency && (
+                      <select
+                        value={selectedSingleCurrency}
+                        onChange={(e) => setSelectedSingleCurrency(e.target.value)}
+                        style={{
+                          padding: '0.5rem 0.75rem',
+                          borderRadius: 8,
+                          border: '2px solid var(--primary)',
+                          background: 'var(--surface)',
+                          color: 'var(--text)',
+                          fontWeight: 600,
+                          fontSize: '0.875rem',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {selectedCurrencies.map(curr => (
+                          <option key={curr} value={curr}>{curr}</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Multi-Currency View */}
+            {showMultiCurrency && summaries.length > 0 && (
               <div className="animate-slide-up">
-                <DashboardSummary summary={summary} />
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem', marginBottom: '1.25rem' }}>
+                  {summaries.map(summary => (
+                    <div key={summary.currency} className="card" style={{ padding: '1.25rem', borderLeft: '4px solid var(--primary)' }}>
+                      <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text)', marginBottom: '1rem', textAlign: 'center' }}>
+                        {summary.currency}
+                      </h3>
+                      <DashboardSummary summary={summary} compact />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Single Currency View */}
+            {!showMultiCurrency && summaries.length > 0 && (
+              <div className="animate-slide-up">
+                <DashboardSummary summary={summaries[0]} />
               </div>
             )}
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '1.25rem', marginBottom: '1.25rem' }}>
-              {summary && (
+              {summaries.length > 0 && (
                 <div className="card animate-slide-up stagger-1">
-                  <CategoryChart summary={summary} />
+                  <CategoryChart summary={summaries[0]} />
                 </div>
               )}
               <div className="card animate-slide-up stagger-2">
@@ -173,6 +279,7 @@ export const DashboardPage: React.FC = () => {
                 onUpdate={handleRefresh}
                 onDelete={handleRefresh}
                 showEntityInfo={!!user?.entity_id}
+                currency={showMultiCurrency ? undefined : selectedSingleCurrency}
               />
             </div>
           </>

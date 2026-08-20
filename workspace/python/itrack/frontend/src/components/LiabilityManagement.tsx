@@ -1,20 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, Plus, Edit2, Trash2, Filter, Lock, Users } from 'lucide-react';
+import { TrendingDown, Plus, Edit2, Trash2, Filter, Lock, Users } from 'lucide-react';
 import { Transaction, TransactionInput, TransactionMode } from '../types/transaction';
 import { transactionService } from '../services/transactionService';
-import TransactionBulkInput from './TransactionBulkInput';
 import { useAuth } from '../contexts/AuthContext';
 import { useSettings } from '../contexts/SettingsContext';
 
-export const IncomeManagement: React.FC = () => {
+export const LiabilityManagement: React.FC = () => {
   const { formatCurrency, selectedCurrencies, currency: primaryCurrency } = useSettings();
   const { user } = useAuth();
   const hasEntity = !!user?.entity_id;
-  const [incomes, setIncomes] = useState<Transaction[]>([]);
+  const [liabilities, setLiabilities] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [showBulk, setShowBulk] = useState(false);
-  const [editingIncome, setEditingIncome] = useState<Transaction | null>(null);
+  const [editingLiability, setEditingLiability] = useState<Transaction | null>(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [filterCategory, setFilterCategory] = useState<string>('');
@@ -42,33 +40,29 @@ export const IncomeManagement: React.FC = () => {
   const [formData, setFormData] = useState<TransactionInput>({
     description: '',
     amount: 0,
-    type: 'income',
+    type: 'liability',
     category: '',
     date: new Date().toISOString().split('T')[0],
     mode: 'private',
     currency: activeCurrency,
-    is_recurring: false,
-    recurrence: undefined,
-    recurrence_start: undefined,
   });
 
-  const incomeCategories = ['Salary', 'Freelance', 'Investment', 'Business', 'Other'];
+  const liabilityCategories = ['Mortgages', 'Loans', 'Credit Cards', 'Other'];
 
   useEffect(() => {
-    loadIncomes();
+    loadLiabilities();
   }, [filterCategory, activeCurrency]);
 
-  const loadIncomes = async () => {
+  const loadLiabilities = async () => {
     try {
       setLoading(true);
       const data = await transactionService.getTransactions({
-        type: 'income',
+        type: 'liability',
         category: filterCategory || undefined,
-        currency: activeCurrency,
       });
-      setIncomes(data);
+      setLiabilities(data.filter(l => l.currency === activeCurrency));
     } catch (err: any) {
-      setError('Failed to load incomes');
+      setError('Failed to load liabilities');
     } finally {
       setLoading(false);
     }
@@ -82,57 +76,51 @@ export const IncomeManagement: React.FC = () => {
     try {
       const dataToSubmit = {
         ...formData,
-        type: 'income' as const,
+        type: 'liability' as const,
         date: new Date(formData.date).toISOString(),
         currency: activeCurrency,
-        is_recurring: formData.is_recurring,
-        recurrence: formData.is_recurring ? 'monthly' : undefined,
-        recurrence_start: formData.is_recurring && formData.recurrence_start ? new Date(formData.recurrence_start).toISOString() : undefined,
       };
 
-      if (editingIncome) {
-        await transactionService.updateTransaction(editingIncome.id, dataToSubmit);
-        setSuccess('Income updated successfully');
+      if (editingLiability) {
+        await transactionService.updateTransaction(editingLiability.id, dataToSubmit);
+        setSuccess('Liability updated successfully');
       } else {
         await transactionService.createTransaction(dataToSubmit);
-        setSuccess('Income added successfully');
+        setSuccess('Liability added successfully');
       }
 
       resetForm();
-      loadIncomes();
+      loadLiabilities();
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Operation failed');
     }
   };
 
-  const handleEdit = (income: Transaction) => {
-    setEditingIncome(income);
+  const handleEdit = (liability: Transaction) => {
+    setEditingLiability(liability);
     setFormData({
-      description: income.description,
-      amount: income.amount,
-      type: 'income',
-      category: income.category,
-      date: new Date(income.date).toISOString().split('T')[0],
-      mode: income.mode || 'private',
-      currency: income.currency,
-      is_recurring: (income as any).is_recurring || false,
-      recurrence: (income as any).recurrence,
-      recurrence_start: (income as any).recurrence_start ? new Date((income as any).recurrence_start).toISOString().split('T')[0] : undefined,
+      description: liability.description,
+      amount: liability.amount,
+      type: 'liability',
+      category: liability.category,
+      date: new Date(liability.date).toISOString().split('T')[0],
+      mode: liability.mode || 'private',
+      currency: liability.currency,
     });
     setShowForm(true);
   };
 
-  const handleDelete = async (incomeId: string) => {
-    if (!window.confirm('Are you sure you want to delete this income?')) {
+  const handleDelete = async (liabilityId: string) => {
+    if (!window.confirm('Are you sure you want to delete this liability?')) {
       return;
     }
 
     try {
-      await transactionService.deleteTransaction(incomeId);
-      setSuccess('Income deleted successfully');
-      loadIncomes();
+      await transactionService.deleteTransaction(liabilityId);
+      setSuccess('Liability deleted successfully');
+      loadLiabilities();
     } catch (err: any) {
-      setError('Failed to delete income');
+      setError('Failed to delete liability');
     }
   };
 
@@ -140,44 +128,36 @@ export const IncomeManagement: React.FC = () => {
     setFormData({
       description: '',
       amount: 0,
-      type: 'income',
+      type: 'liability',
       category: '',
       date: new Date().toISOString().split('T')[0],
       mode: 'private',
       currency: activeCurrency,
     });
-    setEditingIncome(null);
+    setEditingLiability(null);
     setShowForm(false);
   };
 
-  const totalIncome = incomes.reduce((sum, income) => sum + income.amount, 0);
+  const totalLiabilities = liabilities.reduce((sum, liability) => sum + liability.amount, 0);
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Header with Currency Tabs */}
       <div className="flex justify-between items-center">
         <div className="flex items-center space-x-3">
-          <TrendingUp className="text-green-600" size={32} />
+          <TrendingDown className="text-orange-600" size={32} />
           <div>
-            <h1 className="text-3xl font-bold text-gray-800">Income Management</h1>
-            <p className="text-gray-600">Track and manage your income sources</p>
+            <h1 className="text-3xl font-bold text-gray-800">Liability Management</h1>
+            <p className="text-gray-600">Track and manage your liabilities</p>
           </div>
         </div>
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={() => setShowForm(!showForm)}
-            className="btn btn-primary flex items-center space-x-2"
-          >
-            <Plus size={20} />
-            <span>{showForm ? 'Cancel' : 'Add Income'}</span>
-          </button>
-          <button
-            onClick={() => setShowBulk(!showBulk)}
-            className="btn btn-outline flex items-center"
-          >
-            Bulk Input
-          </button>
-        </div>
+        <button
+          onClick={() => setShowForm(!showForm)}
+          className="btn btn-primary flex items-center space-x-2"
+        >
+          <Plus size={20} />
+          <span>{showForm ? 'Cancel' : 'Add Liability'}</span>
+        </button>
       </div>
 
       {/* Currency Tabs */}
@@ -219,14 +199,14 @@ export const IncomeManagement: React.FC = () => {
       )}
 
       {/* Summary Card */}
-      <div className="card bg-gradient-to-r from-green-500 to-emerald-600 text-white">
+      <div className="card bg-gradient-to-r from-orange-500 to-red-600 text-white">
         <div className="flex justify-between items-center">
           <div>
-            <p className="text-green-100 text-sm">Total Income ({activeCurrency})</p>
-            <h2 className="text-4xl font-bold">{formatCurrency(totalIncome, activeCurrency, false)}</h2>
-            <p className="text-green-100 text-sm mt-1">{incomes.length} transactions</p>
+            <p className="text-orange-100 text-sm">Total Liabilities ({activeCurrency})</p>
+            <h2 className="text-4xl font-bold">{formatCurrency(totalLiabilities, activeCurrency)}</h2>
+            <p className="text-orange-100 text-sm mt-1">{liabilities.length} liabilities</p>
           </div>
-          <TrendingUp size={64} className="text-green-200 opacity-50" />
+          <TrendingDown size={64} className="text-orange-200 opacity-50" />
         </div>
       </div>
 
@@ -234,7 +214,7 @@ export const IncomeManagement: React.FC = () => {
       {showForm && (
         <div className="card">
           <h2 className="text-xl font-semibold mb-4">
-            {editingIncome ? 'Edit Income' : 'Add New Income'}
+            {editingLiability ? 'Edit Liability' : 'Add New Liability'}
           </h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -248,7 +228,7 @@ export const IncomeManagement: React.FC = () => {
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   className="input"
-                  placeholder="e.g., Monthly Salary"
+                  placeholder="e.g., Home Mortgage"
                 />
               </div>
 
@@ -279,7 +259,7 @@ export const IncomeManagement: React.FC = () => {
                   className="input"
                 >
                   <option value="">Select category</option>
-                  {incomeCategories.map((cat) => (
+                  {liabilityCategories.map((cat) => (
                     <option key={cat} value={cat}>{cat}</option>
                   ))}
                 </select>
@@ -297,32 +277,9 @@ export const IncomeManagement: React.FC = () => {
                   className="input"
                 />
               </div>
-
-              <div>
-                <label className="flex items-center cursor-pointer space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={!!formData.is_recurring}
-                    onChange={(e) => setFormData({ ...formData, is_recurring: e.target.checked })}
-                    className="mr-2"
-                  />
-                  <span className="font-medium">Monthly recurring</span>
-                </label>
-                {formData.is_recurring && (
-                  <div className="mt-2">
-                    <label className="block text-sm text-gray-700 mb-1">Recurrence start</label>
-                    <input
-                      type="date"
-                      value={formData.recurrence_start || new Date().toISOString().split('T')[0]}
-                      onChange={(e) => setFormData({ ...formData, recurrence_start: e.target.value })}
-                      className="input"
-                    />
-                  </div>
-                )}
-              </div>
             </div>
 
-            {/* Visibility — only shown when user belongs to an entity */}
+            {/* Visibility */}
             {hasEntity && (
               <div>
                 <label className="label">Entity Visibility</label>
@@ -347,33 +304,18 @@ export const IncomeManagement: React.FC = () => {
                     </button>
                   ))}
                 </div>
-                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.375rem' }}>
-                  {formData.mode === 'shared'
-                    ? 'This transaction will be visible to all entity members.'
-                    : 'This transaction is only visible to you.'}
-                </p>
               </div>
             )}
 
             <div className="flex space-x-3">
               <button type="submit" className="btn btn-primary flex-1">
-                {editingIncome ? 'Update Income' : 'Add Income'}
+                {editingLiability ? 'Update Liability' : 'Add Liability'}
               </button>
-              <button
-                type="button"
-                onClick={resetForm}
-                className="btn btn-secondary"
-              >
+              <button type="button" onClick={resetForm} className="btn btn-secondary">
                 Cancel
               </button>
             </div>
           </form>
-        </div>
-      )}
-
-      {showBulk && (
-        <div>
-          <TransactionBulkInput defaultType="income" onDone={() => { setShowBulk(false); loadIncomes(); }} />
         </div>
       )}
 
@@ -388,47 +330,47 @@ export const IncomeManagement: React.FC = () => {
             className="input max-w-xs"
           >
             <option value="">All Categories</option>
-            {incomeCategories.map((cat) => (
+            {liabilityCategories.map((cat) => (
               <option key={cat} value={cat}>{cat}</option>
             ))}
           </select>
         </div>
       </div>
 
-      {/* Income List */}
+      {/* Liability List */}
       <div className="card">
-        <h2 className="text-xl font-semibold mb-4">Income History</h2>
+        <h2 className="text-xl font-semibold mb-4">Liability List</h2>
         {loading ? (
-          <p className="text-gray-600">Loading incomes...</p>
-        ) : incomes.length === 0 ? (
-          <p className="text-gray-600">No income transactions found. Add your first income!</p>
+          <p className="text-gray-600">Loading liabilities...</p>
+        ) : liabilities.length === 0 ? (
+          <p className="text-gray-600">No liabilities found. Add your first liability!</p>
         ) : (
           <div className="space-y-3">
-            {incomes.map((income) => (
+            {liabilities.map((liability) => (
               <div
-                key={income.id}
+                key={liability.id}
                 className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
               >
                 <div className="flex-1">
                   <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                      <TrendingUp size={20} className="text-green-600" />
+                    <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+                      <TrendingDown size={20} className="text-orange-600" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-gray-800">{income.description}</h3>
+                      <h3 className="font-semibold text-gray-800">{liability.description}</h3>
                       <p className="text-sm text-gray-600" style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexWrap: 'wrap' }}>
-                        {income.category} • {new Date(income.date).toLocaleDateString()}
-                        {hasEntity && income.mode && (
+                        {liability.category} • {new Date(liability.date).toLocaleDateString()}
+                        {hasEntity && liability.mode && (
                           <span style={{
                             display: 'inline-flex', alignItems: 'center', gap: '0.2rem',
                             fontSize: '0.6875rem', fontWeight: 600,
                             padding: '0.1rem 0.45rem', borderRadius: 99,
-                            background: income.mode === 'shared' ? 'var(--primary-soft)' : 'var(--surface-2)',
-                            color: income.mode === 'shared' ? 'var(--primary)' : 'var(--text-muted)',
-                            border: `1px solid ${income.mode === 'shared' ? 'var(--primary)' : 'var(--border)'}`,
+                            background: liability.mode === 'shared' ? 'var(--primary-soft)' : 'var(--surface-2)',
+                            color: liability.mode === 'shared' ? 'var(--primary)' : 'var(--text-muted)',
+                            border: `1px solid ${liability.mode === 'shared' ? 'var(--primary)' : 'var(--border)'}`,
                           }}>
-                            {income.mode === 'shared' ? <Users size={9} /> : <Lock size={9} />}
-                            {income.mode}
+                            {liability.mode === 'shared' ? <Users size={9} /> : <Lock size={9} />}
+                            {liability.mode}
                           </span>
                         )}
                       </p>
@@ -436,19 +378,19 @@ export const IncomeManagement: React.FC = () => {
                   </div>
                 </div>
                 <div className="flex items-center space-x-4">
-                  <span className="text-xl font-bold text-green-600">
-                    +{formatCurrency(income.amount, income.currency, false)}
+                  <span className="text-xl font-bold text-orange-600">
+                    {formatCurrency(liability.amount, liability.currency)}
                   </span>
                   <div className="flex space-x-2">
                     <button
-                      onClick={() => handleEdit(income)}
+                      onClick={() => handleEdit(liability)}
                       className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
                       title="Edit"
                     >
                       <Edit2 size={18} />
                     </button>
                     <button
-                      onClick={() => handleDelete(income.id)}
+                      onClick={() => handleDelete(liability.id)}
                       className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
                       title="Delete"
                     >

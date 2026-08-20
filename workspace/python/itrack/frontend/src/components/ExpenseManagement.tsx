@@ -7,7 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useSettings } from '../contexts/SettingsContext';
 
 export const ExpenseManagement: React.FC = () => {
-  const { formatCurrency } = useSettings();
+  const { formatCurrency, selectedCurrencies, currency: primaryCurrency } = useSettings();
   const { user } = useAuth();
   const hasEntity = !!user?.entity_id;
   const [expenses, setExpenses] = useState<Transaction[]>([]);
@@ -19,6 +19,26 @@ export const ExpenseManagement: React.FC = () => {
   const [success, setSuccess] = useState('');
   const [filterCategory, setFilterCategory] = useState<string>('');
 
+  // Sort currencies: primary first, then alphabetically
+  const sortedCurrencies = React.useMemo(() => {
+    const sorted = [...selectedCurrencies];
+    sorted.sort((a, b) => {
+      if (a === primaryCurrency) return -1;
+      if (b === primaryCurrency) return 1;
+      return a.localeCompare(b);
+    });
+    return sorted;
+  }, [selectedCurrencies, primaryCurrency]);
+
+  const [activeCurrency, setActiveCurrency] = useState(sortedCurrencies[0] || primaryCurrency || 'USD');
+
+  // Update active currency when sorted currencies change
+  useEffect(() => {
+    if (sortedCurrencies.length > 0 && !sortedCurrencies.includes(activeCurrency)) {
+      setActiveCurrency(sortedCurrencies[0]);
+    }
+  }, [sortedCurrencies, activeCurrency]);
+
   const [formData, setFormData] = useState<TransactionInput>({
     description: '',
     amount: 0,
@@ -26,6 +46,7 @@ export const ExpenseManagement: React.FC = () => {
     category: '',
     date: new Date().toISOString().split('T')[0],
     mode: 'private',
+    currency: activeCurrency,
     is_recurring: false,
     recurrence: undefined,
     recurrence_start: undefined,
@@ -45,7 +66,7 @@ export const ExpenseManagement: React.FC = () => {
 
   useEffect(() => {
     loadExpenses();
-  }, [filterCategory]);
+  }, [filterCategory, activeCurrency]);
 
   const loadExpenses = async () => {
     try {
@@ -53,6 +74,7 @@ export const ExpenseManagement: React.FC = () => {
       const data = await transactionService.getTransactions({
         type: 'expense',
         category: filterCategory || undefined,
+        currency: activeCurrency,
       });
       setExpenses(data);
     } catch (err: any) {
@@ -72,6 +94,7 @@ export const ExpenseManagement: React.FC = () => {
         ...formData,
         type: 'expense' as const,
         date: new Date(formData.date).toISOString(),
+        currency: activeCurrency,
         is_recurring: formData.is_recurring,
         recurrence: formData.is_recurring ? 'monthly' : undefined,
         recurrence_start: formData.is_recurring && formData.recurrence_start ? new Date(formData.recurrence_start).toISOString() : undefined,
@@ -101,6 +124,7 @@ export const ExpenseManagement: React.FC = () => {
       category: expense.category,
       date: new Date(expense.date).toISOString().split('T')[0],
       mode: expense.mode || 'private',
+      currency: expense.currency,
       is_recurring: (expense as any).is_recurring || false,
       recurrence: (expense as any).recurrence,
       recurrence_start: (expense as any).recurrence_start ? new Date((expense as any).recurrence_start).toISOString().split('T')[0] : undefined,
@@ -130,6 +154,7 @@ export const ExpenseManagement: React.FC = () => {
       category: '',
       date: new Date().toISOString().split('T')[0],
       mode: 'private',
+      currency: activeCurrency,
     });
     setEditingExpense(null);
     setShowForm(false);
@@ -165,6 +190,32 @@ export const ExpenseManagement: React.FC = () => {
         </div>
       </div>
 
+      {/* Currency Tabs */}
+      {selectedCurrencies.length > 1 && (
+        <div className="card" style={{ padding: '1rem' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            {sortedCurrencies.map(curr => (
+              <button
+                key={curr}
+                onClick={() => setActiveCurrency(curr)}
+                style={{
+                  padding: '0.5rem 1rem',
+                  borderRadius: 8,
+                  border: `2px solid ${activeCurrency === curr ? 'var(--primary)' : 'var(--border)'}`,
+                  background: activeCurrency === curr ? 'var(--primary-soft)' : 'var(--surface)',
+                  color: activeCurrency === curr ? 'var(--primary)' : 'var(--text-secondary)',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s',
+                }}
+              >
+                {curr}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Messages */}
       {error && (
         <div className="p-4 bg-red-50 border border-red-200 rounded-md text-red-700">
@@ -181,8 +232,8 @@ export const ExpenseManagement: React.FC = () => {
       <div className="card bg-gradient-to-r from-red-500 to-pink-600 text-white">
         <div className="flex justify-between items-center">
           <div>
-            <p className="text-red-100 text-sm">Total Expenses</p>
-            <h2 className="text-4xl font-bold">{formatCurrency(totalExpense, false)}</h2>
+            <p className="text-red-100 text-sm">Total Expenses ({activeCurrency})</p>
+            <h2 className="text-4xl font-bold">{formatCurrency(totalExpense, activeCurrency, false)}</h2>
             <p className="text-red-100 text-sm mt-1">{expenses.length} transactions</p>
           </div>
           <TrendingDown size={64} className="text-red-200 opacity-50" />
@@ -396,7 +447,7 @@ export const ExpenseManagement: React.FC = () => {
                 </div>
                 <div className="flex items-center space-x-4">
                   <span className="text-xl font-bold text-red-600">
-                    -{formatCurrency(expense.amount, false)}
+                    -{formatCurrency(expense.amount, expense.currency, false)}
                   </span>
                   <div className="flex space-x-2">
                     <button
