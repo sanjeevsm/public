@@ -1,11 +1,9 @@
 import React from 'react';
 import { TrendingUp, TrendingDown, Wallet, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { TransactionSummary } from '../types/transaction';
+import { useSettings } from '../contexts/SettingsContext';
 
 interface Props { summary: TransactionSummary; }
-
-const fmt = (n: number) =>
-  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(n);
 
 interface StatCardProps {
   label: string;
@@ -47,6 +45,8 @@ const StatCard: React.FC<StatCardProps> = ({ label, value, sub, icon, gradientCl
 );
 
 export const DashboardSummary: React.FC<Props> = ({ summary }) => {
+  const { formatCurrency } = useSettings();
+  const fmt = formatCurrency;
   const balance = summary.total_balance;
 
   return (

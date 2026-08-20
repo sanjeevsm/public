@@ -34,4 +34,14 @@ check_and_free_port() {
 
 check_and_free_port "$BACKEND_PORT"
 
-uvicorn app.main:app --host 0.0.0.0 --port "$BACKEND_PORT" --reload
+mkdir -p "$REPO_ROOT/logs" "$REPO_ROOT/.pids"
+
+nohup uvicorn app.main:app --host 0.0.0.0 --port "$BACKEND_PORT" --reload \
+    >"$REPO_ROOT/logs/backend.log" 2>"$REPO_ROOT/logs/backend-error.log" &
+echo $! > "$REPO_ROOT/.pids/backend.pid"
+
+echo "Backend started (PID $(cat "$REPO_ROOT/.pids/backend.pid"))."
+echo "  URL:  http://localhost:$BACKEND_PORT"
+echo "  Docs: http://localhost:$BACKEND_PORT/docs"
+echo "  Logs: $REPO_ROOT/logs/backend.log"
+echo "To stop: ./scripts/stop-local.sh"

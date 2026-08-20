@@ -6,7 +6,7 @@ export const categoryService = {
    * Initialize default categories
    */
   initializeDefaults: async (): Promise<{ message: string }> => {
-    const response = await api.post('/categories/initialize');
+    const response = await api.post('/api/categories/initialize');
     return response.data;
   },
 
@@ -14,7 +14,7 @@ export const categoryService = {
    * Create a new custom category
    */
   createCategory: async (data: CategoryCreate): Promise<Category> => {
-    const response = await api.post('/categories', data);
+    const response = await api.post('/api/categories', data);
     return response.data;
   },
 
@@ -23,7 +23,7 @@ export const categoryService = {
    */
   getCategories: async (type?: 'income' | 'expense'): Promise<Category[]> => {
     const params = type ? { type } : {};
-    const response = await api.get('/categories', { params });
+    const response = await api.get('/api/categories', { params });
     return response.data;
   },
 
@@ -31,7 +31,7 @@ export const categoryService = {
    * Get category usage statistics
    */
   getCategoryStats: async (): Promise<CategoryStats> => {
-    const response = await api.get('/categories/stats');
+    const response = await api.get('/api/categories/stats');
     return response.data;
   },
 
@@ -39,7 +39,7 @@ export const categoryService = {
    * Get a specific category
    */
   getCategory: async (categoryId: string): Promise<Category> => {
-    const response = await api.get(`/categories/${categoryId}`);
+    const response = await api.get(`/api/categories/${categoryId}`);
     return response.data;
   },
 
@@ -50,7 +50,7 @@ export const categoryService = {
     categoryId: string,
     data: CategoryUpdate
   ): Promise<Category> => {
-    const response = await api.put(`/categories/${categoryId}`, data);
+    const response = await api.put(`/api/categories/${categoryId}`, data);
     return response.data;
   },
 
@@ -58,6 +58,6 @@ export const categoryService = {
    * Delete a custom category
    */
   deleteCategory: async (categoryId: string): Promise<void> => {
-    await api.delete(`/categories/${categoryId}`);
+    await api.delete(`/api/categories/${categoryId}`);
   },
 };

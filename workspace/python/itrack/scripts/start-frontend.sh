@@ -29,4 +29,13 @@ check_and_free_port() {
 
 check_and_free_port "$FRONTEND_PORT"
 
-npm run dev -- --port "$FRONTEND_PORT"
+mkdir -p "$REPO_ROOT/logs" "$REPO_ROOT/.pids"
+
+nohup npm run dev -- --port "$FRONTEND_PORT" \
+    >"$REPO_ROOT/logs/frontend.log" 2>"$REPO_ROOT/logs/frontend-error.log" &
+echo $! > "$REPO_ROOT/.pids/frontend.pid"
+
+echo "Frontend started (PID $(cat "$REPO_ROOT/.pids/frontend.pid"))."
+echo "  URL:  http://localhost:$FRONTEND_PORT"
+echo "  Logs: $REPO_ROOT/logs/frontend.log"
+echo "To stop: ./scripts/stop-local.sh"

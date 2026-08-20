@@ -48,3 +48,11 @@ export interface MonthlyDataPoint {
   expense: number;
   balance: number;
 }
+
+export interface RecurringTransaction {
+  id: string;
+  type: 'income' | 'expense';
+  amount: number;
+  description: string;
+  recurrence_start: string | null;
+}

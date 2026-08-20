@@ -39,21 +39,11 @@ echo "🔥 Backend server starting on http://localhost:8002"
 echo "📚 API Documentation: http://localhost:8002/docs"
 echo ""
 
-# Start backend in a new terminal or background
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    # macOS
-    osascript -e 'tell app "Terminal" to do script "cd \"'"$(pwd)"'\" && source venv/bin/activate && uvicorn app.main:app --host 0.0.0.0 --port 8002 --reload"'
-elif command -v gnome-terminal &> /dev/null; then
-    # Linux with gnome-terminal
-    gnome-terminal -- bash -c "source venv/bin/activate && uvicorn app.main:app --host 0.0.0.0 --port 8002 --reload; exec bash"
-elif command -v xterm &> /dev/null; then
-    # Linux with xterm
-    xterm -e "source venv/bin/activate && uvicorn app.main:app --host 0.0.0.0 --port 8002 --reload" &
-else
-    # Fallback: run in background
-    nohup uvicorn app.main:app --host 0.0.0.0 --port 8002 --reload > "$REPO_ROOT/backend.log" 2>&1 &
-    echo "⚠️  Backend started in background. Check backend.log for logs."
-fi
+mkdir -p "$REPO_ROOT/logs" "$REPO_ROOT/.pids"
+nohup uvicorn app.main:app --host 0.0.0.0 --port 8002 --reload \
+    >"$REPO_ROOT/logs/backend.log" 2>"$REPO_ROOT/logs/backend-error.log" &
+echo $! > "$REPO_ROOT/.pids/backend.pid"
+echo "Backend started (PID $(cat "$REPO_ROOT/.pids/backend.pid")). Logs: $REPO_ROOT/logs/backend.log"
 
 cd "$REPO_ROOT" || exit 1
 
@@ -71,21 +61,9 @@ cd frontend || exit 1
 echo "🎨 Frontend server starting on http://localhost:3000"
 echo ""
 
-# Start frontend in a new terminal or background
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    # macOS
-    osascript -e 'tell app "Terminal" to do script "cd \"'"$(pwd)"'\" && npm run dev"'
-elif command -v gnome-terminal &> /dev/null; then
-    # Linux with gnome-terminal
-    gnome-terminal -- bash -c "npm run dev; exec bash"
-elif command -v xterm &> /dev/null; then
-    # Linux with xterm
-    xterm -e "npm run dev" &
-else
-    # Fallback: run in background
-    nohup npm run dev > "$REPO_ROOT/frontend.log" 2>&1 &
-    echo "⚠️  Frontend started in background. Check frontend.log for logs."
-fi
+nohup npm run dev >"$REPO_ROOT/logs/frontend.log" 2>"$REPO_ROOT/logs/frontend-error.log" &
+echo $! > "$REPO_ROOT/.pids/frontend.pid"
+echo "Frontend started (PID $(cat "$REPO_ROOT/.pids/frontend.pid")). Logs: $REPO_ROOT/logs/frontend.log"
 
 cd "$REPO_ROOT" || exit 1
 
@@ -103,6 +81,5 @@ echo "   API Docs: http://localhost:8002/docs"
 echo ""
 echo "⏱️  Please wait 10-15 seconds for all services to start..."
 echo ""
-echo "🛑 To stop: Run ./scripts/stop-local.sh"
-echo "   Or close the terminal windows"
+echo "To stop: ./scripts/stop-local.sh"
 echo ""

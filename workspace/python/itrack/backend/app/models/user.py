@@ -37,6 +37,7 @@ class UserResponse(BaseModel):
     username: str
     email: str
     entity_id: Optional[str] = None
+    entity_name: Optional[str] = None
     entity_role: Optional[str] = None
     is_superadmin: bool | None = False
     created_at: datetime
