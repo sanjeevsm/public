@@ -75,9 +75,10 @@ export const entityService = {
     includePrivate: boolean = false,
     month?: number,
     year?: number,
+    currency?: string,
   ): Promise<EntitySummary> {
     const response = await api.get(`/api/entities/${entityId}/summary`, {
-      params: { include_private: includePrivate, month, year },
+      params: { include_private: includePrivate, month, year, currency },
     });
     return response.data;
   },
@@ -89,16 +90,16 @@ export const entityService = {
   },
 
   // Monthly history for forecast
-  async getEntityHistory(entityId: string, months = 6, includePrivate = false): Promise<MonthlyDataPoint[]> {
+  async getEntityHistory(entityId: string, months = 6, includePrivate = false, currency?: string): Promise<MonthlyDataPoint[]> {
     const response = await api.get<MonthlyDataPoint[]>(`/api/entities/${entityId}/history`, {
-      params: { months, include_private: includePrivate },
+      params: { months, include_private: includePrivate, currency },
     });
     return response.data;
   },
 
-  async getEntityRecurringTransactions(entityId: string, includePrivate = false): Promise<RecurringTransaction[]> {
+  async getEntityRecurringTransactions(entityId: string, includePrivate = false, currency?: string): Promise<RecurringTransaction[]> {
     const response = await api.get<RecurringTransaction[]>(`/api/entities/${entityId}/recurring-transactions`, {
-      params: { include_private: includePrivate },
+      params: { include_private: includePrivate, currency },
     });
     return response.data;
   },

@@ -27,10 +27,12 @@ class CategoryService:
 
     async def initialize_default_categories(self):
         default_categories = [
+            # Income categories
             {"name": "Salary", "type": "income", "icon": "💰", "color": "#10B981", "is_default": True},
             {"name": "Freelance", "type": "income", "icon": "💼", "color": "#059669", "is_default": True},
             {"name": "Investment", "type": "income", "icon": "📈", "color": "#34D399", "is_default": True},
             {"name": "Business", "type": "income", "icon": "🏢", "color": "#6EE7B7", "is_default": True},
+            # Expense categories
             {"name": "Food & Dining", "type": "expense", "icon": "🍔", "color": "#EF4444", "is_default": True},
             {"name": "Transportation", "type": "expense", "icon": "🚗", "color": "#F97316", "is_default": True},
             {"name": "Shopping", "type": "expense", "icon": "🛍️", "color": "#F59E0B", "is_default": True},
@@ -39,6 +41,16 @@ class CategoryService:
             {"name": "Healthcare", "type": "expense", "icon": "⚕️", "color": "#EC4899", "is_default": True},
             {"name": "Education", "type": "expense", "icon": "📚", "color": "#14B8A6", "is_default": True},
             {"name": "Housing", "type": "expense", "icon": "🏠", "color": "#6366F1", "is_default": True},
+            # Asset categories
+            {"name": "Cash", "type": "asset", "icon": "💵", "color": "#10B981", "is_default": True},
+            {"name": "Investments", "type": "asset", "icon": "📊", "color": "#059669", "is_default": True},
+            {"name": "Property", "type": "asset", "icon": "🏡", "color": "#34D399", "is_default": True},
+            {"name": "Valuables", "type": "asset", "icon": "💎", "color": "#6EE7B7", "is_default": True},
+            # Liability categories
+            {"name": "Mortgages", "type": "liability", "icon": "🏦", "color": "#EF4444", "is_default": True},
+            {"name": "Loans", "type": "liability", "icon": "💳", "color": "#F97316", "is_default": True},
+            {"name": "Credit Cards", "type": "liability", "icon": "💸", "color": "#F59E0B", "is_default": True},
+            # General
             {"name": "Other", "type": "both", "icon": "📌", "color": "#6B7280", "is_default": True},
         ]
         for cat_data in default_categories:
