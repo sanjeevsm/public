@@ -4,7 +4,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.models.base import PyObjectId
 
 
-CategoryType = Literal["income", "expense", "both"]
+CategoryType = Literal["income", "expense", "asset", "liability", "both"]
 
 
 class CategoryBase(BaseModel):

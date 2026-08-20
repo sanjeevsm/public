@@ -10,20 +10,24 @@ interface Props {
   onUpdate: () => void;
   onDelete: () => void;
   showEntityInfo?: boolean;
+  currency?: string;
 }
 
-export const TransactionList: React.FC<Props> = ({ refreshTrigger, onDelete, showEntityInfo = false }) => {
+export const TransactionList: React.FC<Props> = ({ refreshTrigger, onDelete, showEntityInfo = false, currency }) => {
   const { formatCurrency } = useSettings();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<string>('all');
 
-  useEffect(() => { fetchTransactions(); }, [refreshTrigger, filter]);
+  useEffect(() => { fetchTransactions(); }, [refreshTrigger, filter, currency]);
 
   const fetchTransactions = async () => {
     setIsLoading(true);
     try {
-      const params = filter !== 'all' ? { type: filter } : {};
+      const params: any = filter !== 'all' ? { type: filter } : {};
+      if (currency) {
+        params.currency = currency;
+      }
       setTransactions(await transactionService.getTransactions(params));
     } catch (err) {
       console.error('Failed to fetch transactions:', err);
@@ -140,7 +144,7 @@ export const TransactionList: React.FC<Props> = ({ refreshTrigger, onDelete, sho
                   </td>
                   <td style={{ textAlign: 'right', whiteSpace: 'nowrap', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
                     <span style={{ color: tx.type === 'income' ? 'var(--success)' : 'var(--error)' }}>
-                      {tx.type === 'income' ? '+' : '−'}{fmt(tx.amount)}
+                      {tx.type === 'income' ? '+' : '−'}{formatCurrency(tx.amount, tx.currency || 'USD')}
                     </span>
                   </td>
                   <td style={{ textAlign: 'right' }}>

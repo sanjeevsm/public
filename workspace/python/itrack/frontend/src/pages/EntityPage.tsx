@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Activity, CalendarDays, RefreshCw, Settings2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useSettings } from '../contexts/SettingsContext';
 import { EntityCreateForm } from '../components/EntityCreateForm';
 import { EntityDashboardSummary } from '../components/EntityDashboardSummary';
 import { EntityManagement } from '../components/EntityManagement';
@@ -15,6 +16,7 @@ type MainTab = 'dashboard' | 'management';
 
 export const EntityPage: React.FC = () => {
   const { user, refreshUser } = useAuth();
+  const { selectedCurrencies, currency: primaryCurrency } = useSettings();
   const [entity, setEntity] = useState<Entity | null>(null);
   const [summary, setSummary] = useState<EntitySummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -27,6 +29,12 @@ export const EntityPage: React.FC = () => {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [refreshTick, setRefreshTick] = useState(0);
+  const [selectedCurrency, setSelectedCurrency] = useState(primaryCurrency);
+
+  // Update selected currency when primary changes
+  useEffect(() => {
+    setSelectedCurrency(primaryCurrency);
+  }, [primaryCurrency]);
 
   const isAdmin = user?.entity_role === 'admin';
 
@@ -34,7 +42,7 @@ export const EntityPage: React.FC = () => {
 
   useEffect(() => {
     if (entity && dashView !== 'forecast') loadSummary();
-  }, [entity, includePrivate, dashView, selectedYear, selectedMonth, refreshTick]);
+  }, [entity, includePrivate, dashView, selectedYear, selectedMonth, refreshTick, selectedCurrency]);
 
   const loadEntityData = async () => {
     setLoading(true);
@@ -59,6 +67,7 @@ export const EntityPage: React.FC = () => {
         isAdmin ? includePrivate : false,
         dashView === 'monthly' ? selectedMonth : undefined,
         dashView === 'monthly' ? selectedYear : undefined,
+        selectedCurrency,
       );
       setSummary(data);
     } catch (err: any) {
@@ -194,6 +203,23 @@ export const EntityPage: React.FC = () => {
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                {/* Currency Selector (if multiple currencies) */}
+                {selectedCurrencies.length > 1 && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>Currency:</span>
+                    <select
+                      value={selectedCurrency}
+                      onChange={e => setSelectedCurrency(e.target.value)}
+                      className="input"
+                      style={{ width: 'auto', padding: '0.375rem 0.75rem' }}
+                    >
+                      {selectedCurrencies.map(curr => (
+                        <option key={curr} value={curr}>{curr}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
                 {/* Month/year selectors */}
                 {dashView === 'monthly' && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -251,7 +277,7 @@ export const EntityPage: React.FC = () => {
             {/* Forecast view */}
             {dashView === 'forecast' && (
               <div className="animate-slide-up">
-                <ForecastView entityId={entity.id} includePrivate={isAdmin ? includePrivate : false} />
+                <ForecastView entityId={entity.id} includePrivate={isAdmin ? includePrivate : false} currency={selectedCurrency} />
               </div>
             )}
 

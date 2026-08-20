@@ -81,20 +81,51 @@ function buildForecast(
   const monthsForward = (targetYear - nowY) * 12 + (targetMonth - nowM);
   if (monthsForward <= 0) return EMPTY;
 
-  // Use last month's actual values as the projection baseline to avoid sparse-data distortion.
-  // Compute slope only from months that have real activity (>= 2 active months needed).
+  // Calculate baseline from average of all history (not just last month which might be zero)
+  const activeHistory = history.filter(d => d.income > 0 || d.expense > 0);
+
+  // If history is too sparse, use recurring transactions to calculate baseline
+  let baselineIncome = 0;
+  let baselineExpense = 0;
+
+  if (activeHistory.length >= 2) {
+    // Good history - use average
+    const totalIncome = history.reduce((sum, d) => sum + d.income, 0);
+    const totalExpense = history.reduce((sum, d) => sum + d.expense, 0);
+    baselineIncome = totalIncome / history.length;
+    baselineExpense = totalExpense / history.length;
+  } else {
+    // Sparse or no history - calculate from recurring transactions
+    for (const tx of recurringTxs) {
+      if (tx.type === 'income') {
+        baselineIncome += tx.amount;
+      } else if (tx.type === 'expense') {
+        baselineExpense += tx.amount;
+      }
+    }
+  }
+
   const last = history[history.length - 1];
-  const baselineExpense = last.expense;
-  const baselineIncome  = last.income;
   const baselineTm = last.year * 12 + (last.month - 1);
 
-  const activeHistory = history.filter(d => d.income > 0 || d.expense > 0);
   const hasEnoughForSlope = activeHistory.length >= 2;
   const incomeSlope  = hasEnoughForSlope ? slope(activeHistory.map(d => d.income))  : 0;
   const expenseSlope = hasEnoughForSlope ? slope(activeHistory.map(d => d.expense)) : 0;
 
-  // Pre-process future recurring transactions: those that start after the baseline month.
-  // Each carries a tm (year*12 + month-1) marking when it becomes active.
+  // Pre-process recurring transactions: include all that are already active or will start during forecast.
+  // Each carries a tm (year*12 + month-1) marking when it starts.
+  // Separate already-active from future ones
+  const nowTm = now.getFullYear() * 12 + now.getMonth();
+
+  const alreadyActiveRecurring = recurringTxs
+    .filter(tx => tx.recurrence_start != null)
+    .map(tx => {
+      const d = new Date(tx.recurrence_start!);
+      const tm = d.getFullYear() * 12 + d.getMonth();
+      return { ...tx, tm };
+    })
+    .filter(tx => tx.tm <= nowTm); // Already active
+
   const futureRecurring = recurringTxs
     .filter(tx => tx.recurrence_start != null)
     .map(tx => {
@@ -102,7 +133,20 @@ function buildForecast(
       const tm = d.getFullYear() * 12 + d.getMonth();
       return { ...tx, tm };
     })
-    .filter(tx => tx.tm > baselineTm);
+    .filter(tx => tx.tm > nowTm && tx.tm <= baselineTm + monthsForward); // Starts in future during forecast
+
+  // If history is sparse, use already-active recurring as baseline
+  if (activeHistory.length < 2 && alreadyActiveRecurring.length > 0) {
+    baselineIncome = 0;
+    baselineExpense = 0;
+    for (const tx of alreadyActiveRecurring) {
+      if (tx.type === 'income') {
+        baselineIncome += tx.amount;
+      } else if (tx.type === 'expense') {
+        baselineExpense += tx.amount;
+      }
+    }
+  }
 
   const points: ForecastPoint[] = [{
     label: `${MO[nowM - 1]} '${String(nowY).slice(2)}`,
@@ -118,12 +162,12 @@ function buildForecast(
     const pY = Math.floor(pTm / 12);
     const pM = (pTm % 12) + 1;
 
-    // Sum up extra monthly amounts from future recurring transactions active by this month
+    // Sum up monthly amounts from NEW recurring transactions (future ones) active by this month
     let extraIncome = 0, extraExpense = 0;
     for (const tx of futureRecurring) {
       if (tx.tm <= pTm) {
         if (tx.type === 'income') extraIncome += tx.amount;
-        else extraExpense += tx.amount;
+        else if (tx.type === 'expense') extraExpense += tx.amount;
       }
     }
 
@@ -190,12 +234,19 @@ const C = { optimistic: '#22c55e', base: '#6366f1', pessimistic: '#f43f5e' };
 interface ForecastViewProps {
   entityId?: string;
   includePrivate?: boolean;
+  currency?: string;
 }
 
-export const ForecastView: React.FC<ForecastViewProps> = ({ entityId, includePrivate = false }) => {
-  const { formatCurrency } = useSettings();
+export const ForecastView: React.FC<ForecastViewProps> = ({ entityId, includePrivate = false, currency: initialCurrency = 'USD' }) => {
+  const { formatCurrency, selectedCurrencies } = useSettings();
+  const [selectedForecastCurrency, setSelectedForecastCurrency] = useState(initialCurrency);
   const fmt = (n: number) => formatCurrency(n, false);
   const fmtDelta = (n: number) => `${n >= 0 ? '+' : ''}${fmt(n)}`;
+
+  // Update selected currency when prop changes
+  useEffect(() => {
+    setSelectedForecastCurrency(initialCurrency);
+  }, [initialCurrency]);
 
   const now = new Date();
   const pad = (x: number) => String(x).padStart(2, '0');
@@ -228,8 +279,8 @@ export const ForecastView: React.FC<ForecastViewProps> = ({ entityId, includePri
         if (entityId) {
           const [summary, hist, recurring] = await Promise.all([
             entityService.getEntitySummary(entityId, includePrivate),
-            entityService.getEntityHistory(entityId, historyMonths, includePrivate),
-            entityService.getEntityRecurringTransactions(entityId, includePrivate),
+            entityService.getEntityHistory(entityId, historyMonths, includePrivate, selectedForecastCurrency),
+            entityService.getEntityRecurringTransactions(entityId, includePrivate, selectedForecastCurrency),
           ]);
           if (!cancelled) {
             setCurrentBalance(summary.total_balance);
@@ -238,9 +289,9 @@ export const ForecastView: React.FC<ForecastViewProps> = ({ entityId, includePri
           }
         } else {
           const [summary, hist, recurring] = await Promise.all([
-            transactionService.getSummary(),
-            transactionService.getMonthlyHistory(historyMonths),
-            transactionService.getRecurringTransactions(),
+            transactionService.getSummary(selectedForecastCurrency),
+            transactionService.getMonthlyHistory(historyMonths, selectedForecastCurrency),
+            transactionService.getRecurringTransactions(selectedForecastCurrency),
           ]);
           if (!cancelled) {
             setCurrentBalance(summary.total_balance);
@@ -255,22 +306,27 @@ export const ForecastView: React.FC<ForecastViewProps> = ({ entityId, includePri
       }
     })();
     return () => { cancelled = true; };
-  }, [historyMonths, entityId, includePrivate]);
+  }, [historyMonths, entityId, includePrivate, selectedForecastCurrency]);
 
   const [targetYear, targetMonth] = useMemo(() => {
     if (!targetDate) return [0, 0];
     return targetDate.split('-').map(Number);
   }, [targetDate]);
 
-  const { points, assumptions } = useMemo(
-    () => buildForecast(
+  const { points, assumptions } = useMemo(() => {
+    // Debug logging
+    console.log('Forecast Input:', {
+      currency: selectedForecastCurrency,
+      recurringCount: recurringTxs.length,
+      recurring: recurringTxs.map(tx => ({ type: tx.type, amount: tx.amount, desc: tx.description })),
+    });
+    return buildForecast(
       currentBalance, history, targetYear, targetMonth,
       toMonthlyRate(incomeChangePct, deviationPeriod),
       toMonthlyRate(expenseChangePct, deviationPeriod),
       recurringTxs,
-    ),
-    [currentBalance, history, targetYear, targetMonth, incomeChangePct, expenseChangePct, deviationPeriod, recurringTxs],
-  );
+    );
+  }, [currentBalance, history, targetYear, targetMonth, incomeChangePct, expenseChangePct, deviationPeriod, recurringTxs, selectedForecastCurrency]);
 
   const last = points.length > 1 ? points[points.length - 1] : null;
   const hasData = points.length > 1;
@@ -372,6 +428,23 @@ export const ForecastView: React.FC<ForecastViewProps> = ({ entityId, includePri
       {/* ── Controls ─────────────────────────────────────────────── */}
       <div className="card" style={{ padding: '1.25rem' }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', alignItems: 'flex-end' }}>
+
+          {/* Currency Selector (show if multiple currencies available) */}
+          {selectedCurrencies.length > 1 && (
+            <div>
+              <label className="label">Forecast Currency</label>
+              <select
+                value={selectedForecastCurrency}
+                onChange={(e) => setSelectedForecastCurrency(e.target.value)}
+                className="input"
+                style={{ width: 'auto', minWidth: 100 }}
+              >
+                {selectedCurrencies.map(curr => (
+                  <option key={curr} value={curr}>{curr}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Target date */}
           <div>

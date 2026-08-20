@@ -7,7 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useSettings } from '../contexts/SettingsContext';
 
 export const IncomeManagement: React.FC = () => {
-  const { formatCurrency } = useSettings();
+  const { formatCurrency, selectedCurrencies, currency: primaryCurrency } = useSettings();
   const { user } = useAuth();
   const hasEntity = !!user?.entity_id;
   const [incomes, setIncomes] = useState<Transaction[]>([]);
@@ -19,6 +19,26 @@ export const IncomeManagement: React.FC = () => {
   const [success, setSuccess] = useState('');
   const [filterCategory, setFilterCategory] = useState<string>('');
 
+  // Sort currencies: primary first, then alphabetically
+  const sortedCurrencies = React.useMemo(() => {
+    const sorted = [...selectedCurrencies];
+    sorted.sort((a, b) => {
+      if (a === primaryCurrency) return -1;
+      if (b === primaryCurrency) return 1;
+      return a.localeCompare(b);
+    });
+    return sorted;
+  }, [selectedCurrencies, primaryCurrency]);
+
+  const [activeCurrency, setActiveCurrency] = useState(sortedCurrencies[0] || primaryCurrency || 'USD');
+
+  // Update active currency when sorted currencies change
+  useEffect(() => {
+    if (sortedCurrencies.length > 0 && !sortedCurrencies.includes(activeCurrency)) {
+      setActiveCurrency(sortedCurrencies[0]);
+    }
+  }, [sortedCurrencies, activeCurrency]);
+
   const [formData, setFormData] = useState<TransactionInput>({
     description: '',
     amount: 0,
@@ -26,6 +46,7 @@ export const IncomeManagement: React.FC = () => {
     category: '',
     date: new Date().toISOString().split('T')[0],
     mode: 'private',
+    currency: activeCurrency,
     is_recurring: false,
     recurrence: undefined,
     recurrence_start: undefined,
@@ -35,7 +56,7 @@ export const IncomeManagement: React.FC = () => {
 
   useEffect(() => {
     loadIncomes();
-  }, [filterCategory]);
+  }, [filterCategory, activeCurrency]);
 
   const loadIncomes = async () => {
     try {
@@ -43,6 +64,7 @@ export const IncomeManagement: React.FC = () => {
       const data = await transactionService.getTransactions({
         type: 'income',
         category: filterCategory || undefined,
+        currency: activeCurrency,
       });
       setIncomes(data);
     } catch (err: any) {
@@ -62,6 +84,7 @@ export const IncomeManagement: React.FC = () => {
         ...formData,
         type: 'income' as const,
         date: new Date(formData.date).toISOString(),
+        currency: activeCurrency,
         is_recurring: formData.is_recurring,
         recurrence: formData.is_recurring ? 'monthly' : undefined,
         recurrence_start: formData.is_recurring && formData.recurrence_start ? new Date(formData.recurrence_start).toISOString() : undefined,
@@ -91,6 +114,7 @@ export const IncomeManagement: React.FC = () => {
       category: income.category,
       date: new Date(income.date).toISOString().split('T')[0],
       mode: income.mode || 'private',
+      currency: income.currency,
       is_recurring: (income as any).is_recurring || false,
       recurrence: (income as any).recurrence,
       recurrence_start: (income as any).recurrence_start ? new Date((income as any).recurrence_start).toISOString().split('T')[0] : undefined,
@@ -120,6 +144,7 @@ export const IncomeManagement: React.FC = () => {
       category: '',
       date: new Date().toISOString().split('T')[0],
       mode: 'private',
+      currency: activeCurrency,
     });
     setEditingIncome(null);
     setShowForm(false);
@@ -155,6 +180,32 @@ export const IncomeManagement: React.FC = () => {
         </div>
       </div>
 
+      {/* Currency Tabs */}
+      {selectedCurrencies.length > 1 && (
+        <div className="card" style={{ padding: '1rem' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            {sortedCurrencies.map(curr => (
+              <button
+                key={curr}
+                onClick={() => setActiveCurrency(curr)}
+                style={{
+                  padding: '0.5rem 1rem',
+                  borderRadius: 8,
+                  border: `2px solid ${activeCurrency === curr ? 'var(--primary)' : 'var(--border)'}`,
+                  background: activeCurrency === curr ? 'var(--primary-soft)' : 'var(--surface)',
+                  color: activeCurrency === curr ? 'var(--primary)' : 'var(--text-secondary)',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s',
+                }}
+              >
+                {curr}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Messages */}
       {error && (
         <div className="p-4 bg-red-50 border border-red-200 rounded-md text-red-700">
@@ -171,8 +222,8 @@ export const IncomeManagement: React.FC = () => {
       <div className="card bg-gradient-to-r from-green-500 to-emerald-600 text-white">
         <div className="flex justify-between items-center">
           <div>
-            <p className="text-green-100 text-sm">Total Income</p>
-            <h2 className="text-4xl font-bold">{formatCurrency(totalIncome, false)}</h2>
+            <p className="text-green-100 text-sm">Total Income ({activeCurrency})</p>
+            <h2 className="text-4xl font-bold">{formatCurrency(totalIncome, activeCurrency, false)}</h2>
             <p className="text-green-100 text-sm mt-1">{incomes.length} transactions</p>
           </div>
           <TrendingUp size={64} className="text-green-200 opacity-50" />
@@ -386,7 +437,7 @@ export const IncomeManagement: React.FC = () => {
                 </div>
                 <div className="flex items-center space-x-4">
                   <span className="text-xl font-bold text-green-600">
-                    +{formatCurrency(income.amount, false)}
+                    +{formatCurrency(income.amount, income.currency, false)}
                   </span>
                   <div className="flex space-x-2">
                     <button

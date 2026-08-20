@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Tag, Plus, Edit2, Trash2, TrendingUp, TrendingDown } from 'lucide-react';
+import { Tag, Plus, Edit2, Trash2, TrendingUp, TrendingDown, Wallet, PieChart } from 'lucide-react';
 import { Category, CategoryCreate, CategoryUpdate, CategoryType } from '../types/category';
 import { categoryService } from '../services/categoryService';
 
@@ -21,7 +21,7 @@ export const CategoryManagement: React.FC = () => {
     is_default: false,
   });
 
-  const iconOptions = ['💰', '💼', '📈', '🏢', '🍔', '🚗', '🛍️', '🎬', '💡', '⚕️', '📚', '🏠', '📌', '🎯', '💳'];
+  const iconOptions = ['💰', '💼', '📈', '🏢', '🍔', '🚗', '🛍️', '🎬', '💡', '⚕️', '📚', '🏠', '📌', '🎯', '💳', '💵', '📊', '🏡', '💎', '🏦', '💸'];
   const colorOptions = [
     '#EF4444', '#F97316', '#F59E0B', '#10B981', '#059669', '#14B8A6',
     '#3B82F6', '#6366F1', '#8B5CF6', '#EC4899', '#F43F5E', '#6B7280',
@@ -192,6 +192,8 @@ export const CategoryManagement: React.FC = () => {
                 >
                   <option value="income">Income</option>
                   <option value="expense">Expense</option>
+                  <option value="asset">Asset</option>
+                  <option value="liability">Liability</option>
                   <option value="both">Both</option>
                 </select>
               </div>
@@ -299,6 +301,28 @@ export const CategoryManagement: React.FC = () => {
               <TrendingDown size={16} />
               <span>Expense</span>
             </button>
+            <button
+              onClick={() => setFilterType('asset')}
+              className={`px-4 py-2 rounded-md transition flex items-center space-x-2 ${
+                filterType === 'asset'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              <Wallet size={16} />
+              <span>Asset</span>
+            </button>
+            <button
+              onClick={() => setFilterType('liability')}
+              className={`px-4 py-2 rounded-md transition flex items-center space-x-2 ${
+                filterType === 'liability'
+                  ? 'bg-orange-600 text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              <PieChart size={16} />
+              <span>Liability</span>
+            </button>
           </div>
         </div>
       </div>
@@ -328,6 +352,8 @@ export const CategoryManagement: React.FC = () => {
                       <p className="text-xs text-gray-500">
                         {category.type === 'income' && <TrendingUp size={12} className="inline mr-1" />}
                         {category.type === 'expense' && <TrendingDown size={12} className="inline mr-1" />}
+                        {category.type === 'asset' && <Wallet size={12} className="inline mr-1" />}
+                        {category.type === 'liability' && <PieChart size={12} className="inline mr-1" />}
                         {category.type.charAt(0).toUpperCase() + category.type.slice(1)}
                       </p>
                     </div>

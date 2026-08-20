@@ -151,11 +151,12 @@ async def get_entity_summary(
     include_private: bool = False,
     month: Optional[int] = Query(default=None, ge=1, le=12),
     year: Optional[int] = Query(default=None, ge=2000, le=2100),
+    currency: Optional[str] = Query(default=None),
     current_user: UserResponse = Depends(get_current_user),
     db: AsyncIOMotorDatabase = Depends(get_database),
 ):
     return await EntityService(db).get_entity_summary(
-        entity_id, current_user.id, include_private, month=month, year=year
+        entity_id, current_user.id, include_private, month=month, year=year, currency=currency
     )
 
 
@@ -163,11 +164,12 @@ async def get_entity_summary(
 async def get_entity_recurring_transactions(
     entity_id: str,
     include_private: bool = False,
+    currency: Optional[str] = Query(default=None),
     current_user: UserResponse = Depends(get_current_user),
     db: AsyncIOMotorDatabase = Depends(get_database),
 ):
     return await EntityService(db).get_entity_recurring_transactions(
-        entity_id, current_user.id, include_private
+        entity_id, current_user.id, include_private, currency=currency
     )
 
 
@@ -176,9 +178,10 @@ async def get_entity_monthly_history(
     entity_id: str,
     months: int = Query(default=6, ge=1, le=24),
     include_private: bool = False,
+    currency: Optional[str] = Query(default=None),
     current_user: UserResponse = Depends(get_current_user),
     db: AsyncIOMotorDatabase = Depends(get_database),
 ):
     return await EntityService(db).get_entity_monthly_history(
-        entity_id, current_user.id, months, include_private
+        entity_id, current_user.id, months, include_private, currency=currency
     )

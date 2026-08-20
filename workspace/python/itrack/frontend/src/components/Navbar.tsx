@@ -3,17 +3,20 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, TrendingUp, TrendingDown, Tag, PieChart,
   Building2, Users, UserCircle, LogOut, ShieldCheck, Menu, X,
-  Wallet, Settings,
+  Wallet, Settings, DollarSign,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import ThemeToggle from './ThemeToggle';
 
 const navItems = [
-  { to: '/dashboard',  icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/income',     icon: TrendingUp,      label: 'Income' },
-  { to: '/expenses',   icon: TrendingDown,    label: 'Expenses' },
-  { to: '/categories', icon: Tag,             label: 'Categories' },
-  { to: '/budgets',    icon: PieChart,        label: 'Budgets' },
+  { to: '/dashboard',     icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/consolidated',  icon: DollarSign,      label: 'Net Worth' },
+  { to: '/income',        icon: TrendingUp,      label: 'Income' },
+  { to: '/expenses',      icon: TrendingDown,    label: 'Expenses' },
+  { to: '/assets',        icon: Wallet,          label: 'Assets' },
+  { to: '/liabilities',   icon: PieChart,        label: 'Liabilities' },
+  { to: '/categories',    icon: Tag,             label: 'Categories' },
+  { to: '/budgets',       icon: PieChart,        label: 'Budgets' },
 ];
 
 const entityItems = [

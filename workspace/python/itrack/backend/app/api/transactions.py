@@ -33,6 +33,7 @@ async def get_transactions(
     limit: int = Query(default=50, ge=1, le=200),
     transaction_type: Optional[str] = Query(default=None, alias="type"),
     category: Optional[str] = None,
+    currency: Optional[str] = None,
     current_user: UserResponse = Depends(get_current_user),
     db: AsyncIOMotorDatabase = Depends(get_database),
 ):
@@ -42,6 +43,7 @@ async def get_transactions(
         limit=limit,
         type_filter=transaction_type,
         category_filter=category,
+        currency_filter=currency,
     )
 
 
@@ -51,8 +53,29 @@ async def get_summary(
     db: AsyncIOMotorDatabase = Depends(get_database),
     year: int | None = Query(default=None),
     month: int | None = Query(default=None),
+    currency: str = Query(default="USD"),
 ):
-    return await TransactionService(db).get_summary(current_user.id, year=year, month=month)
+    return await TransactionService(db).get_summary(current_user.id, year=year, month=month, currency=currency)
+
+
+@router.get("/summary/multi-currency")
+async def get_multi_currency_summary(
+    currencies: str = Query(..., description="Comma-separated currency codes"),
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_database),
+):
+    currency_list = [c.strip().upper() for c in currencies.split(",")]
+    return await TransactionService(db).get_multi_currency_summary(current_user.id, currency_list)
+
+
+@router.get("/summary/consolidated")
+async def get_consolidated_summary(
+    currencies: str = Query(..., description="Comma-separated currency codes"),
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_database),
+):
+    currency_list = [c.strip().upper() for c in currencies.split(",")]
+    return await TransactionService(db).get_consolidated_summary(current_user.id, currency_list)
 
 
 @router.get("/export")
@@ -91,18 +114,20 @@ async def bulk_create_transactions(
 @router.get("/history")
 async def get_monthly_history(
     months: int = Query(default=6, ge=1, le=24),
+    currency: str = Query(default="USD"),
     current_user: UserResponse = Depends(get_current_user),
     db: AsyncIOMotorDatabase = Depends(get_database),
 ):
-    return await TransactionService(db).get_monthly_history(str(current_user.id), months)
+    return await TransactionService(db).get_monthly_history(str(current_user.id), months, currency)
 
 
 @router.get("/recurring")
 async def get_recurring_transactions(
+    currency: Optional[str] = Query(default=None),
     current_user: UserResponse = Depends(get_current_user),
     db: AsyncIOMotorDatabase = Depends(get_database),
 ):
-    return await TransactionService(db).get_recurring_transactions(str(current_user.id))
+    return await TransactionService(db).get_recurring_transactions(str(current_user.id), currency)
 
 
 @router.get("/{transaction_id}", response_model=TransactionResponse)

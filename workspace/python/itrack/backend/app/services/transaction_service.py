@@ -45,12 +45,15 @@ class TransactionService:
         limit: int = 50,
         type_filter: Optional[str] = None,
         category_filter: Optional[str] = None,
+        currency_filter: Optional[str] = None,
     ) -> List[TransactionResponse]:
         query: dict = {"user_id": ObjectId(user_id)}
         if type_filter:
             query["type"] = type_filter
         if category_filter:
             query["category"] = category_filter
+        if currency_filter:
+            query["currency"] = currency_filter
         # Enforce a reasonable maximum limit to prevent large memory consumption
         MAX_LIMIT = 200
         if limit > MAX_LIMIT:
@@ -94,9 +97,9 @@ class TransactionService:
         )
         return result.deleted_count > 0
 
-    async def get_summary(self, user_id: str, year: int | None = None, month: int | None = None) -> TransactionSummary:
+    async def get_summary(self, user_id: str, year: int | None = None, month: int | None = None, currency: str = "USD") -> TransactionSummary:
         """Return summary. If year and month are provided, compute totals for that month including monthly recurring items."""
-        match_base = {"user_id": ObjectId(user_id)}
+        match_base = {"user_id": ObjectId(user_id), "currency": currency}
 
         # If monthly view is requested, compute start/end for the month and include recurring monthly items
         if year and month:
@@ -147,12 +150,17 @@ class TransactionService:
             ]
             results = await self.collection.aggregate(pipeline).to_list(length=10)
 
-        income_total = expense_total = income_count = expense_count = 0
+        income_total = expense_total = asset_total = liability_total = 0
+        income_count = expense_count = asset_count = liability_count = 0
         for r in results:
             if r["_id"] == "income":
                 income_total, income_count = r["total"], r["count"]
             elif r["_id"] == "expense":
                 expense_total, expense_count = r["total"], r["count"]
+            elif r["_id"] == "asset":
+                asset_total, asset_count = r["total"], r["count"]
+            elif r["_id"] == "liability":
+                liability_total, liability_count = r["total"], r["count"]
 
         # categories breakdown: for monthly view consider same inclusion logic
         if year and month:
@@ -184,23 +192,33 @@ class TransactionService:
 
         categories_breakdown = {r["_id"]: round(r["total"], 2) for r in cat_results}
 
+        # Calculate net worth: (income - expense) + (assets - liabilities)
+        balance = income_total - expense_total
+        net_worth = balance + asset_total - liability_total
+
         return TransactionSummary(
-            total_balance=round(income_total - expense_total, 2),
+            total_balance=round(balance, 2),
             total_income=round(income_total, 2),
             total_expense=round(expense_total, 2),
+            total_assets=round(asset_total, 2),
+            total_liabilities=round(liability_total, 2),
+            net_worth=round(net_worth, 2),
             income_count=int(income_count),
             expense_count=int(expense_count),
+            asset_count=int(asset_count),
+            liability_count=int(liability_count),
             categories_breakdown=categories_breakdown,
+            currency=currency,
         )
 
-    async def get_monthly_history(self, user_id: str, months: int = 6) -> list[dict]:
+    async def get_monthly_history(self, user_id: str, months: int = 6, currency: str = "USD") -> list[dict]:
         """Return per-month income/expense/balance for the last N months, newest last."""
         now = datetime.now(timezone.utc)
         result = []
         for i in range(months - 1, -1, -1):
             total_m = now.year * 12 + (now.month - 1) - i
             y, m = total_m // 12, (total_m % 12) + 1
-            summary = await self.get_summary(user_id, y, m)
+            summary = await self.get_summary(user_id, y, m, currency)
             result.append({
                 "year": y,
                 "month": m,
@@ -275,6 +293,22 @@ class TransactionService:
 
         return {"imported": imported_count, "failed": failed_count, "errors": errors[:10]}
 
+    async def get_multi_currency_summary(self, user_id: str, currencies: List[str]) -> List[TransactionSummary]:
+        """Get summary for multiple currencies."""
+        summaries = []
+        for currency in currencies:
+            summary = await self.get_summary(user_id, currency=currency)
+            summaries.append(summary)
+        return summaries
+
+    async def get_consolidated_summary(self, user_id: str, currencies: List[str]) -> dict:
+        """Get consolidated view across all currencies (no conversion, just list)."""
+        summaries = await self.get_multi_currency_summary(user_id, currencies)
+        return {
+            "currencies": summaries,
+            "note": "Each currency shown separately. No conversion applied."
+        }
+
     def _transaction_to_response(self, transaction: dict) -> TransactionResponse:
         return TransactionResponse(
             id=str(transaction["_id"]),
@@ -284,18 +318,22 @@ class TransactionService:
             category=transaction["category"],
             date=transaction["date"],
             mode=transaction.get("mode", "private"),
+            currency=transaction.get("currency", "USD"),
             created_at=transaction["created_at"],
             user_id=str(transaction["user_id"]),
             entity_id=str(transaction["entity_id"]) if transaction.get("entity_id") else None,
         )
 
-    async def get_recurring_transactions(self, user_id: str) -> list[dict]:
+    async def get_recurring_transactions(self, user_id: str, currency: Optional[str] = None) -> list[dict]:
         """Return all active monthly recurring transactions for the user."""
-        cursor = self.collection.find({
+        query = {
             "user_id": ObjectId(user_id),
             "is_recurring": True,
             "recurrence": "monthly",
-        })
+        }
+        if currency:
+            query["currency"] = currency
+        cursor = self.collection.find(query)
         result = []
         async for doc in cursor:
             rs = doc.get("recurrence_start")
@@ -304,6 +342,7 @@ class TransactionService:
                 "type": doc.get("type"),
                 "amount": doc.get("amount", 0),
                 "description": doc.get("description", ""),
+                "currency": doc.get("currency", "USD"),  # Add currency field
                 "recurrence_start": rs.isoformat() if rs else None,
             })
         return result

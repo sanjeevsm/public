@@ -4,7 +4,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from app.models.base import PyObjectId
 
 
-TransactionType = Literal["income", "expense"]
+TransactionType = Literal["income", "expense", "asset", "liability"]
 TransactionMode = Literal["shared", "private"]
 
 
@@ -15,6 +15,7 @@ class TransactionBase(BaseModel):
     category: str = Field(..., min_length=1, max_length=50)
     date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     mode: TransactionMode = "private"
+    currency: str = Field(default="USD", min_length=3, max_length=3)  # Currency code (USD, EUR, GBP, etc.)
     # Recurrence
     is_recurring: bool = False
     recurrence: Optional[Literal["monthly"]] = None
@@ -37,6 +38,7 @@ class TransactionUpdate(BaseModel):
     category: Optional[str] = Field(None, min_length=1, max_length=50)
     date: Optional[datetime] = None
     mode: Optional[TransactionMode] = None
+    currency: Optional[str] = Field(None, min_length=3, max_length=3)
 
     @field_validator("amount")
     @classmethod
@@ -56,6 +58,7 @@ class TransactionResponse(BaseModel):
     category: str
     date: datetime
     mode: TransactionMode
+    currency: str
     created_at: datetime
     user_id: str
     username: Optional[str] = None
@@ -66,9 +69,15 @@ class TransactionSummary(BaseModel):
     total_balance: float
     total_income: float
     total_expense: float
+    total_assets: float
+    total_liabilities: float
+    net_worth: float  # (income - expense) + (assets - liabilities)
     income_count: int
     expense_count: int
+    asset_count: int
+    liability_count: int
     categories_breakdown: dict[str, float]
+    currency: str  # Currency for this summary
 
 
 class TransactionImportRow(BaseModel):
@@ -77,6 +86,7 @@ class TransactionImportRow(BaseModel):
     type: TransactionType
     category: str
     date: str
+    currency: str = "USD"
 
     @field_validator("amount")
     @classmethod

@@ -25,7 +25,25 @@ const Section: React.FC<{ icon: React.ReactNode; title: string; description: str
 );
 
 export const SettingsPage: React.FC = () => {
-  const { currency, setCurrency, dateFormat, setDateFormat, transactionsPerPage, setTransactionsPerPage, formatCurrency, currencies } = useSettings();
+  const { 
+    currency, setCurrency, 
+    selectedCurrencies, setSelectedCurrencies,
+    dateFormat, setDateFormat, 
+    transactionsPerPage, setTransactionsPerPage, 
+    formatCurrency, 
+    currencies 
+  } = useSettings();
+
+  const toggleCurrency = (code: string) => {
+    if (selectedCurrencies.includes(code)) {
+      // Don't allow removing the last currency
+      if (selectedCurrencies.length > 1) {
+        setSelectedCurrencies(selectedCurrencies.filter(c => c !== code));
+      }
+    } else {
+      setSelectedCurrencies([...selectedCurrencies, code]);
+    }
+  };
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', padding: '2rem 1.5rem' }}>
@@ -41,28 +59,98 @@ export const SettingsPage: React.FC = () => {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
 
-          {/* Currency */}
+          {/* Currency Selection */}
           <Section
             icon={<DollarSign size={20} />}
-            title="Currency"
-            description="Select the currency used to display all amounts in the app"
+            title="Active Currencies"
+            description="Select one or more currencies to use in the app. Data will be tracked separately for each currency."
           >
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '0.625rem' }}>
-              {currencies.map(cur => (
-                <button
-                  key={cur.code}
-                  onClick={() => setCurrency(cur.code)}
-                  style={{
-                    padding: '0.75rem 1rem',
-                    borderRadius: 10,
-                    border: `2px solid ${currency === cur.code ? 'var(--primary)' : 'var(--border)'}`,
-                    background: currency === cur.code ? 'var(--primary-soft)' : 'var(--surface-2)',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                    transition: 'all 0.15s',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+              {currencies.map(cur => {
+                const isSelected = selectedCurrencies.includes(cur.code);
+                const isPrimary = currency === cur.code;
+                return (
+                  <button
+                    key={cur.code}
+                    onClick={() => toggleCurrency(cur.code)}
+                    style={{
+                      padding: '0.75rem 1rem',
+                      borderRadius: 10,
+                      border: `2px solid ${isSelected ? 'var(--primary)' : 'var(--border)'}`,
+                      background: isSelected ? 'var(--primary-soft)' : 'var(--surface-2)',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      transition: 'all 0.15s',
+                      position: 'relative',
+                    }}
+                  >
+                    {isPrimary && (
+                      <div style={{
+                        position: 'absolute',
+                        top: 4,
+                        right: 4,
+                        background: 'var(--primary)',
+                        color: 'white',
+                        fontSize: '0.6rem',
+                        padding: '2px 6px',
+                        borderRadius: 4,
+                        fontWeight: 700,
+                      }}>
+                        PRIMARY
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                      <span style={{
+                        fontSize: '1.125rem', fontWeight: 700,
+                        color: isSelected ? 'var(--primary)' : 'var(--text)',
+                      }}>
+                        {cur.symbol}
+                      </span>
+                      <span style={{
+                        fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.04em',
+                        color: isSelected ? 'var(--primary)' : 'var(--text-secondary)',
+                      }}>
+                        {cur.code}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{cur.label}</div>
+                  </button>
+                );
+              })}
+            </div>
+            <div style={{ marginTop: '1rem', padding: '0.75rem 1rem', background: 'var(--surface-2)', borderRadius: 8, fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
+              <strong>Selected: </strong>{selectedCurrencies.length} {selectedCurrencies.length === 1 ? 'currency' : 'currencies'} 
+              ({selectedCurrencies.map(c => currencies.find(cur => cur.code === c)?.code).join(', ')})
+            </div>
+          </Section>
+
+          {/* Primary Currency */}
+          <Section
+            icon={<DollarSign size={20} />}
+            title="Primary Currency"
+            description="Choose your main currency for display. You can only select from active currencies."
+          >
+            <div style={{ display: 'flex', gap: '0.625rem', flexWrap: 'wrap' }}>
+              {selectedCurrencies.map(code => {
+                const cur = currencies.find(c => c.code === code);
+                if (!cur) return null;
+                return (
+                  <button
+                    key={cur.code}
+                    onClick={() => setCurrency(cur.code)}
+                    style={{
+                      padding: '0.75rem 1rem',
+                      borderRadius: 10,
+                      border: `2px solid ${currency === cur.code ? 'var(--primary)' : 'var(--border)'}`,
+                      background: currency === cur.code ? 'var(--primary-soft)' : 'var(--surface-2)',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      transition: 'all 0.15s',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                    }}
+                  >
                     <span style={{
                       fontSize: '1.125rem', fontWeight: 700,
                       color: currency === cur.code ? 'var(--primary)' : 'var(--text)',
@@ -70,18 +158,17 @@ export const SettingsPage: React.FC = () => {
                       {cur.symbol}
                     </span>
                     <span style={{
-                      fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.04em',
+                      fontSize: '0.875rem', fontWeight: 600,
                       color: currency === cur.code ? 'var(--primary)' : 'var(--text-secondary)',
                     }}>
                       {cur.code}
                     </span>
-                  </div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{cur.label}</div>
-                </button>
-              ))}
+                  </button>
+                );
+              })}
             </div>
             <div style={{ marginTop: '1rem', padding: '0.75rem 1rem', background: 'var(--surface-2)', borderRadius: 8, fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
-              Preview: {formatCurrency(1234.56)} &nbsp;·&nbsp; {formatCurrency(-500)}
+              Preview: {formatCurrency(1234.56)} • {formatCurrency(-500)}
             </div>
           </Section>
 
