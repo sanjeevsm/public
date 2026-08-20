@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { PieChart, Plus, Edit2, Trash2, AlertTriangle, CheckCircle } from 'lucide-react';
 import { Budget, BudgetCreate, BudgetUpdate, BudgetProgress, BudgetPeriod, BudgetType } from '../types/budget';
 import { budgetService } from '../services/budgetService';
+import { useSettings } from '../contexts/SettingsContext';
 
 export const BudgetManagement: React.FC = () => {
+  const { formatCurrency } = useSettings();
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [progress, setProgress] = useState<BudgetProgress[]>([]);
   const [loading, setLoading] = useState(true);
@@ -345,16 +347,16 @@ export const BudgetManagement: React.FC = () => {
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Spent</span>
-                      <span className="font-semibold">${p.spent_amount.toFixed(2)}</span>
+                      <span className="font-semibold">{formatCurrency(p.spent_amount, false)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Budget</span>
-                      <span className="font-semibold">${p.budget_amount.toFixed(2)}</span>
+                      <span className="font-semibold">{formatCurrency(p.budget_amount, false)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Remaining</span>
                       <span className={`font-semibold ${p.remaining_amount < 0 ? 'text-red-600' : 'text-green-600'}`}>
-                        ${p.remaining_amount.toFixed(2)}
+                        {formatCurrency(p.remaining_amount, false)}
                       </span>
                     </div>
 

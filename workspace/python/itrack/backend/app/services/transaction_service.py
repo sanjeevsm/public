@@ -289,6 +289,25 @@ class TransactionService:
             entity_id=str(transaction["entity_id"]) if transaction.get("entity_id") else None,
         )
 
+    async def get_recurring_transactions(self, user_id: str) -> list[dict]:
+        """Return all active monthly recurring transactions for the user."""
+        cursor = self.collection.find({
+            "user_id": ObjectId(user_id),
+            "is_recurring": True,
+            "recurrence": "monthly",
+        })
+        result = []
+        async for doc in cursor:
+            rs = doc.get("recurrence_start")
+            result.append({
+                "id": str(doc["_id"]),
+                "type": doc.get("type"),
+                "amount": doc.get("amount", 0),
+                "description": doc.get("description", ""),
+                "recurrence_start": rs.isoformat() if rs else None,
+            })
+        return result
+
     async def bulk_create_transactions(self, user_id: str, transactions: list[dict]) -> dict:
         """Create many transactions in a single DB operation. Returns summary with inserted count and errors.
 

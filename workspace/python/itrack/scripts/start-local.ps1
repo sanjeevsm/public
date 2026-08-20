@@ -5,12 +5,9 @@ Write-Host "=================================" -ForegroundColor Cyan
 Write-Host ""
 
 # Resolve script and repo paths
+$originalLocation = Get-Location
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$repoRoot = Join-Path $scriptDir '..'
-Set-Location $repoRoot
-
-Write-Host "Working directory: $repoRoot" -ForegroundColor Gray
-Write-Host ""
+$repoRoot = Resolve-Path (Join-Path $scriptDir '..')
 
 # Check if MongoDB service is running
 Write-Host "Checking MongoDB service..." -ForegroundColor Yellow
@@ -48,13 +45,14 @@ uvicorn app.main:app --host 0.0.0.0 --port 8002 --reload
 $backendScriptPath = Join-Path $repoRoot "scripts\start-backend.ps1"
 if (-Not (Test-Path $backendScriptPath)) {
     Set-Content $backendScriptPath $backendScript -Encoding UTF8
-    Start-Process powershell -ArgumentList "-NoExit", "-ExecutionPolicy", "Bypass", "-File", $backendScriptPath
-} else {
-    Write-Host "Skipping generation; $backendScriptPath already exists." -ForegroundColor Yellow
-    Start-Process powershell -ArgumentList "-NoExit", "-ExecutionPolicy", "Bypass", "-File", $backendScriptPath
 }
+$logsDir = Join-Path $repoRoot "logs"
+New-Item -ItemType Directory -Path $logsDir -Force | Out-Null
+Start-Process powershell `
+    -ArgumentList @("-ExecutionPolicy", "Bypass", "-NonInteractive", "-File", $backendScriptPath) `
+    -WindowStyle Hidden
 
-Write-Host "Backend started in new window" -ForegroundColor Green
+Write-Host "Backend started" -ForegroundColor Green
 Write-Host "   URL: http://localhost:8002" -ForegroundColor Cyan
 
 Start-Sleep -Seconds 3
@@ -74,13 +72,12 @@ npm run dev
 $frontendScriptPath = Join-Path $repoRoot "scripts\start-frontend.ps1"
 if (-Not (Test-Path $frontendScriptPath)) {
     Set-Content $frontendScriptPath $frontendScript -Encoding UTF8
-    Start-Process powershell -ArgumentList "-NoExit", "-ExecutionPolicy", "Bypass", "-File", $frontendScriptPath
-} else {
-    Write-Host "Skipping generation; $frontendScriptPath already exists." -ForegroundColor Yellow
-    Start-Process powershell -ArgumentList "-NoExit", "-ExecutionPolicy", "Bypass", "-File", $frontendScriptPath
 }
+Start-Process powershell `
+    -ArgumentList @("-ExecutionPolicy", "Bypass", "-NonInteractive", "-File", $frontendScriptPath) `
+    -WindowStyle Hidden
 
-Write-Host "Frontend started in new window" -ForegroundColor Green
+Write-Host "Frontend started" -ForegroundColor Green
 Write-Host "   URL: http://localhost:3000" -ForegroundColor Cyan
 
 Write-Host ""
@@ -94,6 +91,7 @@ Write-Host "   API Docs: http://localhost:8002/docs" -ForegroundColor White
 Write-Host ""
 Write-Host "Please wait 10-15 seconds for all services to start..." -ForegroundColor Yellow
 Write-Host ""
-Write-Host "To stop: Close the backend and frontend PowerShell windows" -ForegroundColor Yellow
-Write-Host "   Or run: .\scripts\stop-local.ps1" -ForegroundColor Yellow
+Write-Host "To stop: .\scripts\stop-local.ps1" -ForegroundColor Yellow
 Write-Host ""
+
+Set-Location $originalLocation

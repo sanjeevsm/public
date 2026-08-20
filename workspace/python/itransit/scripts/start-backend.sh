@@ -40,4 +40,13 @@ source .venv/bin/activate
 
 check_and_free_port "$BACKEND_PORT"
 
-exec python -m uvicorn app.main:app --reload --host 0.0.0.0 --port "$BACKEND_PORT" --app-dir app
+mkdir -p "$ROOT_DIR/logs" "$ROOT_DIR/.pids"
+
+nohup python -m uvicorn app.main:app --reload --host 0.0.0.0 --port "$BACKEND_PORT" --app-dir app \
+    >"$ROOT_DIR/logs/backend.log" 2>"$ROOT_DIR/logs/backend-error.log" &
+echo $! > "$ROOT_DIR/.pids/backend.pid"
+
+echo "Backend started (PID $(cat "$ROOT_DIR/.pids/backend.pid"))."
+echo "  URL:  http://localhost:$BACKEND_PORT"
+echo "  Logs: $ROOT_DIR/logs/backend.log"
+echo "To stop: ./scripts/stop-all.sh"

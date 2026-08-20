@@ -5,6 +5,7 @@ import {
   TransactionSummary,
   ImportResult,
   MonthlyDataPoint,
+  RecurringTransaction,
 } from '../types/transaction';
 
 export const transactionService = {
@@ -75,6 +76,11 @@ export const transactionService = {
 
   async getMonthlyHistory(months = 6): Promise<MonthlyDataPoint[]> {
     const response = await apiClient.get<MonthlyDataPoint[]>('/api/transactions/history', { params: { months } });
+    return response.data;
+  },
+
+  async getRecurringTransactions(): Promise<RecurringTransaction[]> {
+    const response = await apiClient.get<RecurringTransaction[]>('/api/transactions/recurring');
     return response.data;
   },
 };

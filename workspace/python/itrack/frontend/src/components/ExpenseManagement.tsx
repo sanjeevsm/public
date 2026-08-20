@@ -1,10 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { TrendingDown, Plus, Edit2, Trash2, Filter } from 'lucide-react';
-import { Transaction, TransactionInput } from '../types/transaction';
+import { TrendingDown, Plus, Edit2, Trash2, Filter, Lock, Users } from 'lucide-react';
+import { Transaction, TransactionInput, TransactionMode } from '../types/transaction';
 import { transactionService } from '../services/transactionService';
 import TransactionBulkInput from './TransactionBulkInput';
+import { useAuth } from '../contexts/AuthContext';
+import { useSettings } from '../contexts/SettingsContext';
 
 export const ExpenseManagement: React.FC = () => {
+  const { formatCurrency } = useSettings();
+  const { user } = useAuth();
+  const hasEntity = !!user?.entity_id;
   const [expenses, setExpenses] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -177,7 +182,7 @@ export const ExpenseManagement: React.FC = () => {
         <div className="flex justify-between items-center">
           <div>
             <p className="text-red-100 text-sm">Total Expenses</p>
-            <h2 className="text-4xl font-bold">${totalExpense.toFixed(2)}</h2>
+            <h2 className="text-4xl font-bold">{formatCurrency(totalExpense, false)}</h2>
             <p className="text-red-100 text-sm mt-1">{expenses.length} transactions</p>
           </div>
           <TrendingDown size={64} className="text-red-200 opacity-50" />
@@ -276,6 +281,39 @@ export const ExpenseManagement: React.FC = () => {
               </div>
             </div>
 
+            {/* Visibility — only shown when user belongs to an entity */}
+            {hasEntity && (
+              <div>
+                <label className="label">Entity Visibility</label>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  {(['private', 'shared'] as TransactionMode[]).map(m => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, mode: m })}
+                      style={{
+                        flex: 1, padding: '0.5rem 0.75rem', borderRadius: 8,
+                        border: `1px solid ${formData.mode === m ? 'var(--primary)' : 'var(--border)'}`,
+                        background: formData.mode === m ? 'var(--primary-soft)' : 'var(--surface)',
+                        color: formData.mode === m ? 'var(--primary)' : 'var(--text-secondary)',
+                        fontWeight: 500, fontSize: '0.875rem', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      {m === 'private' ? <Lock size={14} /> : <Users size={14} />}
+                      {m === 'private' ? 'Private' : 'Shared with Entity'}
+                    </button>
+                  ))}
+                </div>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.375rem' }}>
+                  {formData.mode === 'shared'
+                    ? 'This transaction will be visible to all entity members.'
+                    : 'This transaction is only visible to you.'}
+                </p>
+              </div>
+            )}
+
             <div className="flex space-x-3">
               <button type="submit" className="btn btn-primary flex-1">
                 {editingExpense ? 'Update Expense' : 'Add Expense'}
@@ -337,15 +375,28 @@ export const ExpenseManagement: React.FC = () => {
                     </div>
                     <div>
                       <h3 className="font-semibold text-gray-800">{expense.description}</h3>
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm text-gray-600" style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexWrap: 'wrap' }}>
                         {expense.category} • {new Date(expense.date).toLocaleDateString()}
+                        {hasEntity && expense.mode && (
+                          <span style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '0.2rem',
+                            fontSize: '0.6875rem', fontWeight: 600,
+                            padding: '0.1rem 0.45rem', borderRadius: 99,
+                            background: expense.mode === 'shared' ? 'var(--primary-soft)' : 'var(--surface-2)',
+                            color: expense.mode === 'shared' ? 'var(--primary)' : 'var(--text-muted)',
+                            border: `1px solid ${expense.mode === 'shared' ? 'var(--primary)' : 'var(--border)'}`,
+                          }}>
+                            {expense.mode === 'shared' ? <Users size={9} /> : <Lock size={9} />}
+                            {expense.mode}
+                          </span>
+                        )}
                       </p>
                     </div>
                   </div>
                 </div>
                 <div className="flex items-center space-x-4">
                   <span className="text-xl font-bold text-red-600">
-                    -${expense.amount.toFixed(2)}
+                    -{formatCurrency(expense.amount, false)}
                   </span>
                   <div className="flex space-x-2">
                     <button
