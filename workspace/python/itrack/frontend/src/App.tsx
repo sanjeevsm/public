@@ -14,6 +14,7 @@ import { BudgetPage } from './pages/BudgetPage';
 import { MembersPage } from './pages/MembersPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { AdminPage } from './pages/AdminPage';
+import { SettingsPage } from './pages/SettingsPage';
 import './index.css';
 
 const Protected: React.FC<{ children: React.ReactNode }> = ({ children }) => (
@@ -38,6 +39,7 @@ function App() {
           <Route path="/members"    element={<Protected><MembersPage /></Protected>} />
           <Route path="/admin"      element={<Protected><AdminPage /></Protected>} />
           <Route path="/profile"    element={<Protected><ProfilePage /></Protected>} />
+          <Route path="/settings"   element={<Protected><SettingsPage /></Protected>} />
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </Router>

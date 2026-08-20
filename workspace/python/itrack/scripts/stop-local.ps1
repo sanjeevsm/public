@@ -33,7 +33,7 @@ Write-Host "Stopping Backend Server (Port 8002)..." -ForegroundColor Cyan
 if (Stop-ProcessByPort -Port 8002) {
     Write-Host "Backend stopped" -ForegroundColor Green
 } else {
-    Write-Host "Backend not running on port 8000" -ForegroundColor Gray
+    Write-Host "Backend not running on port 8002" -ForegroundColor Gray
 }
 
 # Stop Frontend (Port 3000)

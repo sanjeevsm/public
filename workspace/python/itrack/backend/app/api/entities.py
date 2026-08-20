@@ -1,5 +1,5 @@
-from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status
+from typing import List, Optional
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.core.database import get_database
@@ -149,7 +149,36 @@ async def get_entity_members(
 async def get_entity_summary(
     entity_id: str,
     include_private: bool = False,
+    month: Optional[int] = Query(default=None, ge=1, le=12),
+    year: Optional[int] = Query(default=None, ge=2000, le=2100),
     current_user: UserResponse = Depends(get_current_user),
     db: AsyncIOMotorDatabase = Depends(get_database),
 ):
-    return await EntityService(db).get_entity_summary(entity_id, current_user.id, include_private)
+    return await EntityService(db).get_entity_summary(
+        entity_id, current_user.id, include_private, month=month, year=year
+    )
+
+
+@router.get("/{entity_id}/recurring-transactions")
+async def get_entity_recurring_transactions(
+    entity_id: str,
+    include_private: bool = False,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_database),
+):
+    return await EntityService(db).get_entity_recurring_transactions(
+        entity_id, current_user.id, include_private
+    )
+
+
+@router.get("/{entity_id}/history")
+async def get_entity_monthly_history(
+    entity_id: str,
+    months: int = Query(default=6, ge=1, le=24),
+    include_private: bool = False,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_database),
+):
+    return await EntityService(db).get_entity_monthly_history(
+        entity_id, current_user.id, months, include_private
+    )

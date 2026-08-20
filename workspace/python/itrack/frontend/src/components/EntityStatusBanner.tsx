@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Users, ChevronRight, X } from 'lucide-react';
+import { Users, ChevronRight } from 'lucide-react';
 import { Entity } from '../types/entity';
 import { entityService } from '../services/entityService';
 
@@ -10,14 +10,13 @@ interface EntityStatusBannerProps {
 
 export const EntityStatusBanner: React.FC<EntityStatusBannerProps> = ({ hasEntity }) => {
   const [entity, setEntity] = useState<Entity | null>(null);
-  const [dismissed, setDismissed] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (hasEntity && !dismissed) {
+    if (hasEntity) {
       loadEntity();
     }
-  }, [hasEntity, dismissed]);
+  }, [hasEntity]);
 
   const loadEntity = async () => {
     setLoading(true);
@@ -31,29 +30,7 @@ export const EntityStatusBanner: React.FC<EntityStatusBannerProps> = ({ hasEntit
     }
   };
 
-  const handleDismiss = () => {
-    setDismissed(true);
-    // Store in localStorage to persist dismissal
-    localStorage.setItem('entityBannerDismissed', 'true');
-  };
-
-  // Check if banner was previously dismissed
-  useEffect(() => {
-    const wasDismissed = localStorage.getItem('entityBannerDismissed');
-    if (wasDismissed === 'true') {
-      setDismissed(true);
-    }
-  }, []);
-
-  // Reset dismissal when entity changes
-  useEffect(() => {
-    if (hasEntity) {
-      localStorage.removeItem('entityBannerDismissed');
-      setDismissed(false);
-    }
-  }, [hasEntity]);
-
-  if (dismissed || !hasEntity || loading) {
+  if (!hasEntity || loading) {
     return null;
   }
 
@@ -61,14 +38,6 @@ export const EntityStatusBanner: React.FC<EntityStatusBannerProps> = ({ hasEntit
   if (!entity) {
     return (
       <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg shadow-lg p-6 mb-6 relative">
-        <button
-          onClick={handleDismiss}
-          className="absolute top-4 right-4 text-white hover:text-gray-200 transition"
-          aria-label="Dismiss"
-        >
-          <X size={20} />
-        </button>
-        
         <div className="flex items-start space-x-4">
           <div className="flex-shrink-0">
             <div className="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
@@ -100,14 +69,6 @@ export const EntityStatusBanner: React.FC<EntityStatusBannerProps> = ({ hasEntit
   // Has entity banner
   return (
     <div className="bg-gradient-to-r from-green-500 to-teal-600 text-white rounded-lg shadow-lg p-6 mb-6 relative">
-      <button
-        onClick={handleDismiss}
-        className="absolute top-4 right-4 text-white hover:text-gray-200 transition"
-        aria-label="Dismiss"
-      >
-        <X size={20} />
-      </button>
-      
       <div className="flex items-start space-x-4">
         <div className="flex-shrink-0">
           <div className="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center">

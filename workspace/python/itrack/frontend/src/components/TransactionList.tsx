@@ -3,6 +3,7 @@ import { Trash2, Lock, Users, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 import { Transaction } from '../types/transaction';
 import { transactionService } from '../services/transactionService';
 import { format } from 'date-fns';
+import { useSettings } from '../contexts/SettingsContext';
 
 interface Props {
   refreshTrigger: number;
@@ -12,6 +13,7 @@ interface Props {
 }
 
 export const TransactionList: React.FC<Props> = ({ refreshTrigger, onDelete, showEntityInfo = false }) => {
+  const { formatCurrency } = useSettings();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<string>('all');
@@ -40,8 +42,7 @@ export const TransactionList: React.FC<Props> = ({ refreshTrigger, onDelete, sho
     }
   };
 
-  const fmt = (n: number) =>
-    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n);
+  const fmt = (n: number) => formatCurrency(n, false);
 
   return (
     <div className="card" style={{ padding: 0, overflow: 'hidden' }}>

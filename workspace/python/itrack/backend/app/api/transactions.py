@@ -97,6 +97,14 @@ async def get_monthly_history(
     return await TransactionService(db).get_monthly_history(str(current_user.id), months)
 
 
+@router.get("/recurring")
+async def get_recurring_transactions(
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_database),
+):
+    return await TransactionService(db).get_recurring_transactions(str(current_user.id))
+
+
 @router.get("/{transaction_id}", response_model=TransactionResponse)
 async def get_transaction(
     transaction_id: str,

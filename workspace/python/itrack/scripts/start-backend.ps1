@@ -21,4 +21,25 @@ if ($pids) {
 	exit 1
 } else { Write-Host "No listener on port $BACKEND_PORT" -ForegroundColor Gray }
 
-uvicorn app.main:app --host 0.0.0.0 --port $BACKEND_PORT --reload
+$ROOT = Split-Path -Parent (Get-Location).Path
+$logsDir = Join-Path $ROOT "logs"
+$pidsDir = Join-Path $ROOT ".pids"
+New-Item -ItemType Directory -Path $logsDir -Force | Out-Null
+New-Item -ItemType Directory -Path $pidsDir -Force | Out-Null
+
+$uvicorn = Join-Path (Get-Location).Path "venv\Scripts\uvicorn.exe"
+if (-not (Test-Path $uvicorn)) { $uvicorn = "uvicorn" }
+
+$proc = Start-Process -FilePath $uvicorn `
+    -ArgumentList @("app.main:app", "--host", "0.0.0.0", "--port", "$BACKEND_PORT", "--reload") `
+    -WorkingDirectory (Get-Location).Path `
+    -WindowStyle Hidden -PassThru `
+    -RedirectStandardOutput (Join-Path $logsDir "backend.log") `
+    -RedirectStandardError  (Join-Path $logsDir "backend-error.log")
+
+$proc.Id | Out-File (Join-Path $pidsDir "backend.pid") -Encoding ascii
+Write-Host "Backend started (PID $($proc.Id))." -ForegroundColor Green
+Write-Host "  URL:  http://localhost:$BACKEND_PORT" -ForegroundColor Cyan
+Write-Host "  Docs: http://localhost:$BACKEND_PORT/docs" -ForegroundColor Cyan
+Write-Host "  Logs: $logsDir\backend.log" -ForegroundColor Gray
+Write-Host "To stop: .\scripts\stop-local.ps1" -ForegroundColor Gray

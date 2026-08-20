@@ -1,10 +1,17 @@
 import React, { useState, useEffect } from 'react';
+import { Activity, CalendarDays, RefreshCw, Settings2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { EntityCreateForm } from '../components/EntityCreateForm';
 import { EntityDashboardSummary } from '../components/EntityDashboardSummary';
 import { EntityManagement } from '../components/EntityManagement';
+import { CategoryChart } from '../components/CategoryChart';
+import { ForecastView } from '../components/ForecastView';
 import { Entity, EntitySummary } from '../types/entity';
 import { entityService } from '../services/entityService';
+
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+type DashView = 'all-time' | 'monthly' | 'forecast';
+type MainTab = 'dashboard' | 'management';
 
 export const EntityPage: React.FC = () => {
   const { user, refreshUser } = useAuth();
@@ -13,35 +20,31 @@ export const EntityPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [includePrivate, setIncludePrivate] = useState(false);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'management'>('dashboard');
+  const [includePrivate, setIncludePrivate] = useState(true);
+  const [mainTab, setMainTab] = useState<MainTab>('dashboard');
+  const [dashView, setDashView] = useState<DashView>('all-time');
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [refreshTick, setRefreshTick] = useState(0);
 
   const isAdmin = user?.entity_role === 'admin';
 
-  useEffect(() => {
-    loadEntityData();
-  }, []);
+  useEffect(() => { loadEntityData(); }, []);
 
   useEffect(() => {
-    if (entity) {
-      loadSummary();
-    }
-  }, [entity, includePrivate]);
+    if (entity && dashView !== 'forecast') loadSummary();
+  }, [entity, includePrivate, dashView, selectedYear, selectedMonth, refreshTick]);
 
   const loadEntityData = async () => {
     setLoading(true);
     setError('');
-
     try {
       const entityData = await entityService.getMyEntity();
       setEntity(entityData);
     } catch (err: any) {
-      if (err.response?.status === 404) {
-        // User doesn't have an entity
-        setEntity(null);
-      } else {
-        setError(err.response?.data?.detail || 'Failed to load entity');
-      }
+      if (err.response?.status !== 404) setError(err.response?.data?.detail || 'Failed to load entity');
+      else setEntity(null);
     } finally {
       setLoading(false);
     }
@@ -49,12 +52,19 @@ export const EntityPage: React.FC = () => {
 
   const loadSummary = async () => {
     if (!entity) return;
-
+    setSummaryLoading(true);
     try {
-      const summaryData = await entityService.getEntitySummary(entity.id, includePrivate);
-      setSummary(summaryData);
+      const data = await entityService.getEntitySummary(
+        entity.id,
+        isAdmin ? includePrivate : false,
+        dashView === 'monthly' ? selectedMonth : undefined,
+        dashView === 'monthly' ? selectedYear : undefined,
+      );
+      setSummary(data);
     } catch (err: any) {
       console.error('Failed to load summary:', err);
+    } finally {
+      setSummaryLoading(false);
     }
   };
 
@@ -71,179 +81,218 @@ export const EntityPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-        <div className="container mx-auto px-4 py-8">
-          <div className="flex justify-center items-center h-64">
-            <div className="text-center">
-              <div className="spinner spinner-lg mx-auto"></div>
-              <p className="mt-4" style={{ color: 'var(--text-secondary)' }}>Loading...</p>
-            </div>
-          </div>
-        </div>
+      <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="spinner spinner-lg" />
       </div>
     );
   }
 
-  // No entity - show create form
+  // No entity — show create form
   if (!entity) {
     return (
-      <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-        <div className="container mx-auto px-4 py-8">
-          <div className="max-w-2xl mx-auto">
-            {error && (
-              <div className="mb-4 p-4 bg-red-100 text-red-700 rounded-lg">
-                {error}
+      <div style={{ minHeight: '100vh', background: 'var(--bg)', padding: '2rem 1.5rem' }}>
+        <div style={{ maxWidth: 640, margin: '0 auto' }}>
+          {error && <div className="alert alert-error" style={{ marginBottom: '1rem' }}>{error}</div>}
+
+          {!showCreateForm ? (
+            <div className="card" style={{ padding: '2.5rem', textAlign: 'center' }}>
+              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🏠</div>
+              <h1 className="page-title">Create Your Entity</h1>
+              <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', fontSize: '0.9375rem' }}>
+                You're not part of any entity yet. Create a household, office, or custom group to collaborate while maintaining privacy.
+              </p>
+              <button className="btn btn-primary" onClick={() => setShowCreateForm(true)}>
+                Create Entity
+              </button>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginTop: '2rem', textAlign: 'left' }}>
+                {[
+                  { emoji: '👨‍👩‍👧‍👦', title: 'Family',  desc: 'Track household expenses and income together' },
+                  { emoji: '💼',       title: 'Office',  desc: 'Manage team expenses and budgets' },
+                  { emoji: '🎨',       title: 'Custom',  desc: 'Create your own type for any group' },
+                ].map(({ emoji, title, desc }) => (
+                  <div key={title} style={{ background: 'var(--surface-2)', borderRadius: 10, padding: '1rem' }}>
+                    <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>{emoji}</div>
+                    <div style={{ fontWeight: 600, color: 'var(--text)', marginBottom: '0.25rem' }}>{title}</div>
+                    <div style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>{desc}</div>
+                  </div>
+                ))}
               </div>
-            )}
-
-            {!showCreateForm && (
-              <div className="bg-white rounded-lg shadow-lg p-8 text-center">
-                <div className="text-6xl mb-4">🏠</div>
-                <h1 className="text-3xl font-bold text-gray-800 mb-4">
-                  Create Your Entity
-                </h1>
-                <p className="text-gray-600 mb-6">
-                  You're not part of any entity yet. Create a household, office, or custom group
-                  to start collaborating with others while maintaining your privacy.
-                </p>
-                <button
-                  onClick={() => setShowCreateForm(true)}
-                  className="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition text-lg font-semibold"
-                >
-                  Create Entity
-                </button>
-
-                <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
-                  <div className="p-4 bg-blue-50 rounded-lg">
-                    <div className="text-2xl mb-2">👨‍👩‍👧‍👦</div>
-                    <h3 className="font-semibold text-gray-800 mb-1">Family</h3>
-                    <p className="text-sm text-gray-600">
-                      Track household expenses and income together
-                    </p>
-                  </div>
-                  <div className="p-4 bg-purple-50 rounded-lg">
-                    <div className="text-2xl mb-2">💼</div>
-                    <h3 className="font-semibold text-gray-800 mb-1">Office</h3>
-                    <p className="text-sm text-gray-600">
-                      Manage team expenses and budgets
-                    </p>
-                  </div>
-                  <div className="p-4 bg-green-50 rounded-lg">
-                    <div className="text-2xl mb-2">🎨</div>
-                    <h3 className="font-semibold text-gray-800 mb-1">Custom</h3>
-                    <p className="text-sm text-gray-600">
-                      Create your own type for any group
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {showCreateForm && (
-              <EntityCreateForm
-                onSuccess={handleEntityCreated}
-                onCancel={() => setShowCreateForm(false)}
-              />
-            )}
-          </div>
+            </div>
+          ) : (
+            <EntityCreateForm onSuccess={handleEntityCreated} onCancel={() => setShowCreateForm(false)} />
+          )}
         </div>
       </div>
     );
   }
 
-  // Has entity - show dashboard
+  // Has entity
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-      <div className="container mx-auto px-4 py-8">
-        {error && (
-          <div className="mb-4 p-4 bg-red-100 text-red-700 rounded-lg">
-            {error}
-          </div>
-        )}
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', padding: '2rem 1.5rem' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+        {error && <div className="alert alert-error" style={{ marginBottom: '1rem' }}>{error}</div>}
 
-        {/* Tabs */}
-        <div className="mb-6 border-b border-gray-200">
-          <nav className="flex space-x-8">
-            <button
-              onClick={() => setActiveTab('dashboard')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'dashboard'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              📊 Dashboard
-            </button>
-            <button
-              onClick={() => setActiveTab('management')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'management'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              ⚙️ Management
-            </button>
-          </nav>
+        {/* Page header */}
+        <div className="page-header" style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+          <div>
+            <h1 className="page-title">{entity.name}</h1>
+            <p className="page-subtitle">{entity.entity_type} · {entity.members.length} member{entity.members.length !== 1 ? 's' : ''}</p>
+          </div>
+
+          {/* Main tabs */}
+          <div style={{
+            display: 'flex', background: 'var(--surface-2)',
+            border: '1px solid var(--border)', borderRadius: 10, padding: '3px',
+          }}>
+            {(['dashboard', 'management'] as const).map(tab => (
+              <button
+                key={tab}
+                onClick={() => setMainTab(tab)}
+                style={{
+                  padding: '0.375rem 0.875rem', borderRadius: 7, border: 'none', cursor: 'pointer',
+                  fontSize: '0.8125rem', fontWeight: 500, transition: 'all 0.15s',
+                  background: mainTab === tab ? 'var(--primary)' : 'transparent',
+                  color: mainTab === tab ? '#fff' : 'var(--text-secondary)',
+                  display: 'flex', alignItems: 'center', gap: '0.375rem',
+                }}
+              >
+                {tab === 'management' && <Settings2 size={13} />}
+                {tab === 'dashboard' ? 'Dashboard' : 'Management'}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Dashboard Tab */}
-        {activeTab === 'dashboard' && (
-          <div>
-            {/* Admin Toggle */}
-            {isAdmin && (
-              <div className="mb-6 bg-white rounded-lg shadow p-4 flex items-center justify-between">
-                <div>
-                  <h3 className="font-semibold text-gray-800">Admin View</h3>
-                  <p className="text-sm text-gray-600">
-                    Toggle to see all transactions including private ones
-                  </p>
-                </div>
-                <label className="flex items-center cursor-pointer">
-                  <span className="mr-3 text-sm font-medium text-gray-700">
-                    {includePrivate ? 'All Transactions' : 'Shared Only'}
-                  </span>
-                  <div className="relative">
+        {/* ── Dashboard tab ────────────────────────────────────── */}
+        {mainTab === 'dashboard' && (
+          <div style={{ marginTop: '1.5rem' }}>
+
+            {/* Dashboard controls bar */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.25rem' }}>
+
+              {/* View mode toggle */}
+              <div style={{
+                display: 'flex', background: 'var(--surface-2)',
+                border: '1px solid var(--border)', borderRadius: 10, padding: '3px',
+              }}>
+                {(['all-time', 'monthly', 'forecast'] as const).map(mode => (
+                  <button
+                    key={mode}
+                    onClick={() => setDashView(mode)}
+                    style={{
+                      padding: '0.375rem 0.875rem', borderRadius: 7, border: 'none', cursor: 'pointer',
+                      fontSize: '0.8125rem', fontWeight: 500, transition: 'all 0.15s',
+                      background: dashView === mode ? 'var(--primary)' : 'transparent',
+                      color: dashView === mode ? '#fff' : 'var(--text-secondary)',
+                      display: 'flex', alignItems: 'center', gap: '0.375rem',
+                    }}
+                  >
+                    {mode === 'forecast' && <Activity size={13} />}
+                    {mode === 'all-time' ? 'All-time' : mode === 'monthly' ? 'Monthly' : 'Forecast'}
+                  </button>
+                ))}
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                {/* Month/year selectors */}
+                {dashView === 'monthly' && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <CalendarDays size={15} style={{ color: 'var(--text-muted)' }} />
+                    <select
+                      value={selectedMonth}
+                      onChange={e => setSelectedMonth(+e.target.value)}
+                      className="input"
+                      style={{ width: 'auto', paddingTop: '0.375rem', paddingBottom: '0.375rem' }}
+                    >
+                      {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+                    </select>
                     <input
-                      type="checkbox"
-                      checked={includePrivate}
-                      onChange={(e) => setIncludePrivate(e.target.checked)}
-                      className="sr-only"
+                      type="number"
+                      value={selectedYear}
+                      onChange={e => setSelectedYear(+e.target.value)}
+                      className="input"
+                      style={{ width: 90, paddingTop: '0.375rem', paddingBottom: '0.375rem' }}
                     />
-                    <div
-                      className={`block w-14 h-8 rounded-full ${
-                        includePrivate ? 'bg-blue-600' : 'bg-gray-300'
-                      }`}
-                    ></div>
-                    <div
-                      className={`dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition ${
-                        includePrivate ? 'transform translate-x-6' : ''
-                      }`}
-                    ></div>
                   </div>
-                </label>
+                )}
+
+                {/* Admin toggle */}
+                {isAdmin && (
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', userSelect: 'none' }}>
+                    <span style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
+                      {includePrivate ? 'All Transactions' : 'Shared Only'}
+                    </span>
+                    <div
+                      onClick={() => setIncludePrivate(p => !p)}
+                      style={{
+                        width: 40, height: 22, borderRadius: 11,
+                        background: includePrivate ? 'var(--primary)' : 'var(--border)',
+                        position: 'relative', transition: 'background 0.2s', cursor: 'pointer',
+                      }}
+                    >
+                      <div style={{
+                        position: 'absolute', top: 3,
+                        left: includePrivate ? 21 : 3,
+                        width: 16, height: 16, borderRadius: 8,
+                        background: '#fff', transition: 'left 0.2s',
+                      }} />
+                    </div>
+                  </label>
+                )}
+
+                {dashView !== 'forecast' && (
+                  <button className="btn btn-ghost btn-sm" onClick={() => setRefreshTick(p => p + 1)} title="Refresh">
+                    <RefreshCw size={15} />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Forecast view */}
+            {dashView === 'forecast' && (
+              <div className="animate-slide-up">
+                <ForecastView entityId={entity.id} includePrivate={isAdmin ? includePrivate : false} />
               </div>
             )}
 
-            {/* Summary */}
-            {summary && (
-              <EntityDashboardSummary
-                summary={summary}
-                isAdmin={isAdmin}
-                includePrivate={includePrivate}
-              />
+            {/* All-time / Monthly views */}
+            {dashView !== 'forecast' && (
+              <>
+                {summaryLoading && !summary && (
+                  <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem' }}>
+                    <div className="spinner spinner-lg" />
+                  </div>
+                )}
+
+                {summary && (
+                  <>
+                    <div className="animate-slide-up">
+                      <EntityDashboardSummary summary={summary} isAdmin={isAdmin} includePrivate={includePrivate} isMonthly={dashView === 'monthly'} />
+                    </div>
+
+                    {/* Category chart */}
+                    {Object.keys(summary.categories_breakdown).length > 0 && (
+                      <div className="card animate-slide-up stagger-1" style={{ marginTop: '1.25rem' }}>
+                        <CategoryChart categoriesBreakdown={summary.categories_breakdown} />
+                      </div>
+                    )}
+                  </>
+                )}
+              </>
             )}
           </div>
         )}
 
-        {/* Management Tab */}
-        {activeTab === 'management' && user && (
-          <EntityManagement
-            entity={entity}
-            currentUserId={user.id}
-            isAdmin={isAdmin}
-            onUpdate={handleEntityUpdated}
-          />
+        {/* ── Management tab ───────────────────────────────────── */}
+        {mainTab === 'management' && user && (
+          <div style={{ marginTop: '1.5rem' }}>
+            <EntityManagement
+              entity={entity}
+              currentUserId={user.id}
+              isAdmin={isAdmin}
+              onUpdate={handleEntityUpdated}
+            />
+          </div>
         )}
       </div>
     </div>

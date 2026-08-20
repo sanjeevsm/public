@@ -140,7 +140,7 @@ export const AdminPage: React.FC = () => {
                 <tr key={u.id} className="border-t">
                   <td className="px-4 py-2">{u.username}</td>
                   <td className="px-4 py-2">{u.email}</td>
-                  <td className="px-4 py-2">{u.entity_id ?? '-'}</td>
+                  <td className="px-4 py-2">{u.entity_name ?? u.entity_id ?? '-'}</td>
                   <td className="px-4 py-2">{u.entity_role ?? '-'}</td>
                   <td className="px-4 py-2">{u.is_superadmin ? 'Yes' : 'No'}</td>
                   <td className="px-4 py-2">

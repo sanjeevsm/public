@@ -8,6 +8,7 @@ import {
   EntityMember,
   MemberRole
 } from '../types/entity';
+import { MonthlyDataPoint, RecurringTransaction } from '../types/transaction';
 
 export const entityService = {
   // Create a new entity
@@ -68,10 +69,15 @@ export const entityService = {
     return response.data;
   },
 
-  // Get entity summary
-  async getEntitySummary(entityId: string, includePrivate: boolean = false): Promise<EntitySummary> {
+  // Get entity summary (optionally scoped to a specific month)
+  async getEntitySummary(
+    entityId: string,
+    includePrivate: boolean = false,
+    month?: number,
+    year?: number,
+  ): Promise<EntitySummary> {
     const response = await api.get(`/api/entities/${entityId}/summary`, {
-      params: { include_private: includePrivate }
+      params: { include_private: includePrivate, month, year },
     });
     return response.data;
   },
@@ -80,5 +86,20 @@ export const entityService = {
   async deleteEntity(entityId: string): Promise<{ message: string }> {
     const response = await api.delete(`/api/entities/${entityId}`);
     return response.data;
-  }
+  },
+
+  // Monthly history for forecast
+  async getEntityHistory(entityId: string, months = 6, includePrivate = false): Promise<MonthlyDataPoint[]> {
+    const response = await api.get<MonthlyDataPoint[]>(`/api/entities/${entityId}/history`, {
+      params: { months, include_private: includePrivate },
+    });
+    return response.data;
+  },
+
+  async getEntityRecurringTransactions(entityId: string, includePrivate = false): Promise<RecurringTransaction[]> {
+    const response = await api.get<RecurringTransaction[]>(`/api/entities/${entityId}/recurring-transactions`, {
+      params: { include_private: includePrivate },
+    });
+    return response.data;
+  },
 };

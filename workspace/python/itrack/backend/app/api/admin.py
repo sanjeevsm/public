@@ -27,7 +27,22 @@ async def list_users(
 ):
     _require_superadmin(current_user)
     users = await db.users.find().to_list(length=1000)
-    return [AuthService(db)._to_response(u) for u in users]
+
+    # Batch-fetch entity names so we can display labels instead of raw IDs
+    entity_ids = [u["entity_id"] for u in users if u.get("entity_id")]
+    entity_map: dict[str, str] = {}
+    if entity_ids:
+        async for ent in db.entities.find({"_id": {"$in": entity_ids}}, {"name": 1}):
+            entity_map[str(ent["_id"])] = ent["name"]
+
+    svc = AuthService(db)
+    result = []
+    for u in users:
+        entity_id_str = str(u["entity_id"]) if u.get("entity_id") else None
+        resp = svc._to_response(u)
+        resp.entity_name = entity_map.get(entity_id_str) if entity_id_str else None
+        result.append(resp)
+    return result
 
 
 @router.put("/users/{user_id}", response_model=UserResponse)

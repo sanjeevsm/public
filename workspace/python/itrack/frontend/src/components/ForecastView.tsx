@@ -12,17 +12,13 @@ import {
 import { Line } from 'react-chartjs-2';
 import { ArrowRight, Info, TrendingDown, TrendingUp } from 'lucide-react';
 import { transactionService } from '../services/transactionService';
-import { MonthlyDataPoint } from '../types/transaction';
+import { entityService } from '../services/entityService';
+import { MonthlyDataPoint, RecurringTransaction } from '../types/transaction';
+import { useSettings } from '../contexts/SettingsContext';
 
 ChartJS.register(CategoryScale, LinearScale, LineElement, PointElement, Tooltip, Legend, Filler);
 
 const MO = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-
-const fmt = (n: number) =>
-  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n);
-
-const fmtDelta = (n: number) =>
-  `${n >= 0 ? '+' : ''}${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n)}`;
 
 // Least-squares linear slope ($ change per period)
 function slope(vals: number[]): number {
@@ -35,16 +31,30 @@ function slope(vals: number[]): number {
   return den === 0 ? 0 : num / den;
 }
 
+// Convert a percentage to a monthly compound rate
+// yearly 5% → (1.05)^(1/12) - 1 ≈ 0.00407;  monthly 5% → 0.05
+function toMonthlyRate(pct: number, period: 'monthly' | 'yearly'): number {
+  const r = pct / 100;
+  return period === 'yearly' ? Math.pow(1 + r, 1 / 12) - 1 : r;
+}
+
 interface ForecastPoint {
   label: string;
   optimistic: number;
   base: number;
   pessimistic: number;
+  // Monthly figures per scenario (absent for the starting-balance row)
+  baseIncome?: number;
+  baseExpense?: number;
+  optIncome?: number;
+  optExpense?: number;
+  pessIncome?: number;
+  pessExpense?: number;
 }
 
 interface Assumptions {
-  avgIncome: number;
-  avgExpense: number;
+  baselineIncome: number;
+  baselineExpense: number;
   incomeSlope: number;
   expenseSlope: number;
   monthsForward: number;
@@ -55,19 +65,15 @@ function buildForecast(
   history: MonthlyDataPoint[],
   targetYear: number,
   targetMonth: number,
-  expenseRate: number,  // fraction/month for pessimistic/optimistic compound change
+  incomeRate: number,
+  expenseRate: number,
+  recurringTxs: RecurringTransaction[] = [],
 ): { points: ForecastPoint[]; assumptions: Assumptions } {
   const EMPTY = {
     points: [],
-    assumptions: { avgIncome: 0, avgExpense: 0, incomeSlope: 0, expenseSlope: 0, monthsForward: 0 },
+    assumptions: { baselineIncome: 0, baselineExpense: 0, incomeSlope: 0, expenseSlope: 0, monthsForward: 0 },
   };
   if (!history.length || !targetYear || !targetMonth) return EMPTY;
-
-  const n = history.length;
-  const avgIncome  = history.reduce((s, d) => s + d.income,  0) / n;
-  const avgExpense = history.reduce((s, d) => s + d.expense, 0) / n;
-  const incomeSlope  = slope(history.map(d => d.income));
-  const expenseSlope = slope(history.map(d => d.expense));
 
   const now = new Date();
   const nowY = now.getFullYear();
@@ -75,7 +81,29 @@ function buildForecast(
   const monthsForward = (targetYear - nowY) * 12 + (targetMonth - nowM);
   if (monthsForward <= 0) return EMPTY;
 
-  // Starting point = current balance
+  // Use last month's actual values as the projection baseline to avoid sparse-data distortion.
+  // Compute slope only from months that have real activity (>= 2 active months needed).
+  const last = history[history.length - 1];
+  const baselineExpense = last.expense;
+  const baselineIncome  = last.income;
+  const baselineTm = last.year * 12 + (last.month - 1);
+
+  const activeHistory = history.filter(d => d.income > 0 || d.expense > 0);
+  const hasEnoughForSlope = activeHistory.length >= 2;
+  const incomeSlope  = hasEnoughForSlope ? slope(activeHistory.map(d => d.income))  : 0;
+  const expenseSlope = hasEnoughForSlope ? slope(activeHistory.map(d => d.expense)) : 0;
+
+  // Pre-process future recurring transactions: those that start after the baseline month.
+  // Each carries a tm (year*12 + month-1) marking when it becomes active.
+  const futureRecurring = recurringTxs
+    .filter(tx => tx.recurrence_start != null)
+    .map(tx => {
+      const d = new Date(tx.recurrence_start!);
+      const tm = d.getFullYear() * 12 + d.getMonth();
+      return { ...tx, tm };
+    })
+    .filter(tx => tx.tm > baselineTm);
+
   const points: ForecastPoint[] = [{
     label: `${MO[nowM - 1]} '${String(nowY).slice(2)}`,
     optimistic: currentBalance,
@@ -86,38 +114,89 @@ function buildForecast(
   let bOpt = currentBalance, bBase = currentBalance, bPess = currentBalance;
 
   for (let i = 1; i <= monthsForward; i++) {
-    const tm = nowY * 12 + (nowM - 1) + i;
-    const pY = Math.floor(tm / 12);
-    const pM = (tm % 12) + 1;
+    const pTm = nowY * 12 + (nowM - 1) + i;
+    const pY = Math.floor(pTm / 12);
+    const pM = (pTm % 12) + 1;
 
-    // Income: linear projection (same across all 3 scenarios)
-    const income = Math.max(0, avgIncome + incomeSlope * i);
+    // Sum up extra monthly amounts from future recurring transactions active by this month
+    let extraIncome = 0, extraExpense = 0;
+    for (const tx of futureRecurring) {
+      if (tx.tm <= pTm) {
+        if (tx.type === 'income') extraIncome += tx.amount;
+        else extraExpense += tx.amount;
+      }
+    }
 
-    // Expense scenarios
-    const eBase = Math.max(0, avgExpense + expenseSlope * i);           // follows historical trend
-    const eOpt  = Math.max(0, avgExpense * (1 - expenseRate) ** i);     // compound decrease
-    const ePess = avgExpense * (1 + expenseRate) ** i;                  // compound increase
+    // Base: flat baseline + any new recurring contributions
+    bBase += (baselineIncome + extraIncome) - (baselineExpense + extraExpense);
 
-    bOpt  += income - eOpt;
-    bBase += income - eBase;
-    bPess += income - ePess;
+    // Optimistic: baseline grows/shrinks by compound rate; new recurring added at face value
+    const iOpt  = baselineIncome  * (1 + incomeRate)  ** i + extraIncome;
+    const eOpt  = Math.max(0, baselineExpense * (1 - expenseRate) ** i) + extraExpense;
+    bOpt += iOpt - eOpt;
+
+    // Pessimistic: baseline shrinks/grows by compound rate; new recurring added at face value
+    const iPess = Math.max(0, baselineIncome * (1 - incomeRate)  ** i) + extraIncome;
+    const ePess = baselineExpense * (1 + expenseRate) ** i + extraExpense;
+    bPess += iPess - ePess;
 
     points.push({
       label: `${MO[pM - 1]} '${String(pY).slice(2)}`,
-      optimistic:  +(bOpt.toFixed(2)),
-      base:        +(bBase.toFixed(2)),
-      pessimistic: +(bPess.toFixed(2)),
+      optimistic:   +(bOpt.toFixed(2)),
+      base:         +(bBase.toFixed(2)),
+      pessimistic:  +(bPess.toFixed(2)),
+      baseIncome:   +(( baselineIncome + extraIncome).toFixed(2)),
+      baseExpense:  +(( baselineExpense + extraExpense).toFixed(2)),
+      optIncome:    +(iOpt.toFixed(2)),
+      optExpense:   +(eOpt.toFixed(2)),
+      pessIncome:   +(iPess.toFixed(2)),
+      pessExpense:  +(ePess.toFixed(2)),
     });
   }
 
-  return { points, assumptions: { avgIncome, avgExpense, incomeSlope, expenseSlope, monthsForward } };
+  return { points, assumptions: { baselineIncome, baselineExpense, incomeSlope, expenseSlope, monthsForward } };
+}
+
+// ─── Table style helpers ────────────────────────────────────────────────────
+
+function thStyle(align: 'left' | 'right', color?: string): React.CSSProperties {
+  return {
+    padding: '0.5rem 0.75rem',
+    textAlign: align,
+    fontWeight: 600,
+    fontSize: '0.6875rem',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+    color: color ?? 'var(--text-muted)',
+    whiteSpace: 'nowrap',
+  };
+}
+
+function tdStyle(align: 'left' | 'right', bold?: boolean): React.CSSProperties {
+  return {
+    padding: '0.45rem 0.75rem',
+    textAlign: align,
+    fontWeight: bold ? 600 : 400,
+    color: 'var(--text)',
+    whiteSpace: 'nowrap',
+    borderBottom: '1px solid var(--border)',
+  };
 }
 
 // ─── Component ─────────────────────────────────────────────────────────────
 
 const C = { optimistic: '#22c55e', base: '#6366f1', pessimistic: '#f43f5e' };
 
-export const ForecastView: React.FC = () => {
+interface ForecastViewProps {
+  entityId?: string;
+  includePrivate?: boolean;
+}
+
+export const ForecastView: React.FC<ForecastViewProps> = ({ entityId, includePrivate = false }) => {
+  const { formatCurrency } = useSettings();
+  const fmt = (n: number) => formatCurrency(n, false);
+  const fmtDelta = (n: number) => `${n >= 0 ? '+' : ''}${fmt(n)}`;
+
   const now = new Date();
   const pad = (x: number) => String(x).padStart(2, '0');
 
@@ -130,10 +209,13 @@ export const ForecastView: React.FC = () => {
   const maxDate = `${now.getFullYear() + 5}-${pad(now.getMonth() + 1)}`;
 
   const [history, setHistory] = useState<MonthlyDataPoint[]>([]);
+  const [recurringTxs, setRecurringTxs] = useState<RecurringTransaction[]>([]);
   const [currentBalance, setCurrentBalance] = useState(0);
   const [historyMonths, setHistoryMonths] = useState(6);
   const [targetDate, setTargetDate] = useState(defaultTargetStr);
+  const [incomeChangePct, setIncomeChangePct] = useState(5);
   const [expenseChangePct, setExpenseChangePct] = useState(5);
+  const [deviationPeriod, setDeviationPeriod] = useState<'monthly' | 'yearly'>('monthly');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -143,13 +225,28 @@ export const ForecastView: React.FC = () => {
       setLoading(true);
       setError('');
       try {
-        const [summary, hist] = await Promise.all([
-          transactionService.getSummary(),
-          transactionService.getMonthlyHistory(historyMonths),
-        ]);
-        if (!cancelled) {
-          setCurrentBalance(summary.total_balance);
-          setHistory(hist);
+        if (entityId) {
+          const [summary, hist, recurring] = await Promise.all([
+            entityService.getEntitySummary(entityId, includePrivate),
+            entityService.getEntityHistory(entityId, historyMonths, includePrivate),
+            entityService.getEntityRecurringTransactions(entityId, includePrivate),
+          ]);
+          if (!cancelled) {
+            setCurrentBalance(summary.total_balance);
+            setHistory(hist);
+            setRecurringTxs(recurring);
+          }
+        } else {
+          const [summary, hist, recurring] = await Promise.all([
+            transactionService.getSummary(),
+            transactionService.getMonthlyHistory(historyMonths),
+            transactionService.getRecurringTransactions(),
+          ]);
+          if (!cancelled) {
+            setCurrentBalance(summary.total_balance);
+            setHistory(hist);
+            setRecurringTxs(recurring);
+          }
         }
       } catch {
         if (!cancelled) setError('Failed to load forecast data. Make sure transactions exist.');
@@ -158,7 +255,7 @@ export const ForecastView: React.FC = () => {
       }
     })();
     return () => { cancelled = true; };
-  }, [historyMonths]);
+  }, [historyMonths, entityId, includePrivate]);
 
   const [targetYear, targetMonth] = useMemo(() => {
     if (!targetDate) return [0, 0];
@@ -166,19 +263,26 @@ export const ForecastView: React.FC = () => {
   }, [targetDate]);
 
   const { points, assumptions } = useMemo(
-    () => buildForecast(currentBalance, history, targetYear, targetMonth, expenseChangePct / 100),
-    [currentBalance, history, targetYear, targetMonth, expenseChangePct],
+    () => buildForecast(
+      currentBalance, history, targetYear, targetMonth,
+      toMonthlyRate(incomeChangePct, deviationPeriod),
+      toMonthlyRate(expenseChangePct, deviationPeriod),
+      recurringTxs,
+    ),
+    [currentBalance, history, targetYear, targetMonth, incomeChangePct, expenseChangePct, deviationPeriod, recurringTxs],
   );
 
   const last = points.length > 1 ? points[points.length - 1] : null;
   const hasData = points.length > 1;
   const manyPoints = points.length > 18;
 
+  const pLabel = deviationPeriod === 'monthly' ? 'mo' : 'yr';
+
   const chartData = useMemo(() => ({
     labels: points.map(p => p.label),
     datasets: [
       {
-        label: `Optimistic (−${expenseChangePct}%/mo)`,
+        label: `Optimistic (inc +${incomeChangePct}%, exp −${expenseChangePct}%/${pLabel})`,
         data: points.map(p => p.optimistic),
         borderColor: C.optimistic,
         borderWidth: 2,
@@ -187,7 +291,7 @@ export const ForecastView: React.FC = () => {
         tension: 0.35,
       },
       {
-        label: 'Base (historical trend)',
+        label: 'Base (no change)',
         data: points.map(p => p.base),
         borderColor: C.base,
         borderWidth: 2.5,
@@ -196,7 +300,7 @@ export const ForecastView: React.FC = () => {
         tension: 0.35,
       },
       {
-        label: `Pessimistic (+${expenseChangePct}%/mo)`,
+        label: `Pessimistic (inc −${incomeChangePct}%, exp +${expenseChangePct}%/${pLabel})`,
         data: points.map(p => p.pessimistic),
         borderColor: C.pessimistic,
         borderWidth: 2,
@@ -205,7 +309,7 @@ export const ForecastView: React.FC = () => {
         tension: 0.35,
       },
     ],
-  }), [points, expenseChangePct, manyPoints]);
+  }), [points, incomeChangePct, expenseChangePct, pLabel, manyPoints]);
 
   const chartOptions = useMemo(() => ({
     responsive: true,
@@ -250,7 +354,7 @@ export const ForecastView: React.FC = () => {
         },
       },
     },
-  }), []);
+  }), [fmt]);
 
   if (loading) return (
     <div style={{ display: 'flex', justifyContent: 'center', padding: '4rem' }}>
@@ -307,28 +411,80 @@ export const ForecastView: React.FC = () => {
             </div>
           </div>
 
-          {/* Scenario deviation slider */}
-          <div style={{ flex: 1, minWidth: 240 }}>
+          {/* Deviation period toggle */}
+          <div>
+            <label className="label">Deviation per</label>
+            <div style={{
+              display: 'flex', background: 'var(--surface-2)',
+              border: '1px solid var(--border)', borderRadius: 8, padding: 2,
+            }}>
+              {(['monthly', 'yearly'] as const).map(p => (
+                <button
+                  key={p}
+                  onClick={() => setDeviationPeriod(p)}
+                  style={{
+                    padding: '0.3rem 0.75rem', borderRadius: 6, border: 'none', cursor: 'pointer',
+                    fontSize: '0.8125rem', fontWeight: 500, transition: 'all 0.15s',
+                    background: deviationPeriod === p ? 'var(--primary)' : 'transparent',
+                    color: deviationPeriod === p ? '#fff' : 'var(--text-secondary)',
+                  }}
+                >
+                  {p === 'monthly' ? 'Monthly' : 'Yearly'}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Sliders row */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', marginTop: '0.75rem' }}>
+          {/* Income change slider */}
+          <div style={{ flex: 1, minWidth: 220 }}>
             <label className="label">
-              Scenario deviation:{' '}
-              <strong style={{ color: 'var(--primary)' }}>{expenseChangePct}% / month</strong>
+              Income change:{' '}
+              <strong style={{ color: C.optimistic }}>{incomeChangePct}% / {pLabel}</strong>
             </label>
             <input
               type="range"
-              min={1}
+              min={0}
               max={20}
               step={1}
-              value={expenseChangePct}
-              onChange={e => setExpenseChangePct(+e.target.value)}
-              style={{ width: '100%', accentColor: 'var(--primary)', marginBottom: 4 }}
+              value={incomeChangePct}
+              onChange={e => setIncomeChangePct(+e.target.value)}
+              style={{ width: '100%', accentColor: C.optimistic, marginBottom: 4 }}
             />
             <div style={{
               display: 'flex', justifyContent: 'space-between',
               fontSize: '0.6875rem', color: 'var(--text-muted)',
             }}>
-              <span style={{ color: C.optimistic }}>Optimistic −{expenseChangePct}%/mo</span>
-              <span style={{ color: 'var(--text-muted)' }}>Base = trend</span>
-              <span style={{ color: C.pessimistic }}>Pessimistic +{expenseChangePct}%/mo</span>
+              <span style={{ color: C.optimistic }}>Opt: +{incomeChangePct}%/{pLabel}</span>
+              <span>Base: no change</span>
+              <span style={{ color: C.pessimistic }}>Pess: −{incomeChangePct}%/{pLabel}</span>
+            </div>
+          </div>
+
+          {/* Expense change slider */}
+          <div style={{ flex: 1, minWidth: 220 }}>
+            <label className="label">
+              Expense change:{' '}
+              <strong style={{ color: C.pessimistic }}>{expenseChangePct}% / {pLabel}</strong>
+            </label>
+            <input
+              type="range"
+              min={0}
+              max={20}
+              step={1}
+              value={expenseChangePct}
+              onChange={e => setExpenseChangePct(+e.target.value)}
+              style={{ width: '100%', accentColor: C.pessimistic, marginBottom: 4 }}
+            />
+            <div style={{
+              display: 'flex', justifyContent: 'space-between',
+              fontSize: '0.6875rem', color: 'var(--text-muted)',
+            }}>
+              <span style={{ color: C.optimistic }}>Opt: −{expenseChangePct}%/{pLabel}</span>
+              <span>Base: no change</span>
+              <span style={{ color: C.pessimistic }}>Pess: +{expenseChangePct}%/{pLabel}</span>
             </div>
           </div>
         </div>
@@ -353,114 +509,120 @@ export const ForecastView: React.FC = () => {
             gap: '1rem',
           }}>
             {([
-              {
-                key: 'optimistic' as const,
-                label: 'Optimistic',
-                desc: `Expenses shrink ${expenseChangePct}%/mo`,
-                color: C.optimistic,
-                Icon: TrendingDown,
-              },
-              {
-                key: 'base' as const,
-                label: 'Base (Trend)',
-                desc: 'Follows historical pattern',
-                color: C.base,
-                Icon: ArrowRight,
-              },
-              {
-                key: 'pessimistic' as const,
-                label: 'Pessimistic',
-                desc: `Expenses grow ${expenseChangePct}%/mo`,
-                color: C.pessimistic,
-                Icon: TrendingUp,
-              },
+              { key: 'optimistic'  as const, label: 'Optimistic', desc: `Inc +${incomeChangePct}%, Exp −${expenseChangePct}%/${pLabel}`, color: C.optimistic, Icon: TrendingDown },
+              { key: 'base'        as const, label: 'Base',        desc: 'No change in current scenario',                              color: C.base,       Icon: ArrowRight  },
+              { key: 'pessimistic' as const, label: 'Pessimistic', desc: `Inc −${incomeChangePct}%, Exp +${expenseChangePct}%/${pLabel}`, color: C.pessimistic, Icon: TrendingUp  },
             ] as const).map(({ key, label, desc, color, Icon }) => {
               const val = last?.[key] ?? 0;
-              const positive = val >= 0;
               return (
                 <div
                   key={key}
                   className="stat-card"
                   style={{ '--accent-gradient': `linear-gradient(135deg, ${color}, ${color}66)` } as React.CSSProperties}
                 >
-                  <div style={{
-                    display: 'flex', justifyContent: 'space-between',
-                    alignItems: 'center', marginBottom: '0.75rem',
-                  }}>
-                    <span style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--text-secondary)' }}>
-                      {label}
-                    </span>
-                    <div style={{
-                      width: 34, height: 34, borderRadius: 8,
-                      background: `${color}18`,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color,
-                    }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                    <span style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--text-secondary)' }}>{label}</span>
+                    <div style={{ width: 34, height: 34, borderRadius: 8, background: `${color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', color }}>
                       <Icon size={16} strokeWidth={2} />
                     </div>
                   </div>
-                  <div className="stat-value" style={{ color: positive ? 'var(--success)' : 'var(--error)' }}>
+                  <div className="stat-value" style={{ color: val >= 0 ? 'var(--success)' : 'var(--error)' }}>
                     {fmt(val)}
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.375rem' }}>
-                    {desc}
-                  </div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.375rem' }}>{desc}</div>
                 </div>
               );
             })}
           </div>
 
+          {/* ── Monthly breakdown table ─────────────────────────── */}
+          <div className="card" style={{ padding: '1.25rem' }}>
+            <h2 className="section-title" style={{ marginBottom: '1rem' }}>Monthly Projection Breakdown</h2>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem' }}>
+                <thead>
+                  <tr style={{ borderBottom: '2px solid var(--border)' }}>
+                    {/* Base scenario columns */}
+                    <th style={thStyle('left')}>Month</th>
+                    <th style={thStyle('right', C.base)}>Income</th>
+                    <th style={thStyle('right', C.base)}>Expense</th>
+                    <th style={thStyle('right', C.base)}>Net/mo</th>
+                    <th style={thStyle('right', C.base)}>Balance</th>
+                    {/* Separator */}
+                    <th style={{ width: 1, background: 'var(--border)', padding: 0 }} />
+                    {/* Optimistic */}
+                    <th style={thStyle('right', C.optimistic)}>Opt Income</th>
+                    <th style={thStyle('right', C.optimistic)}>Opt Expense</th>
+                    <th style={thStyle('right', C.optimistic)}>Opt Balance</th>
+                    {/* Separator */}
+                    <th style={{ width: 1, background: 'var(--border)', padding: 0 }} />
+                    {/* Pessimistic */}
+                    <th style={thStyle('right', C.pessimistic)}>Pess Income</th>
+                    <th style={thStyle('right', C.pessimistic)}>Pess Expense</th>
+                    <th style={thStyle('right', C.pessimistic)}>Pess Balance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {points.map((p, idx) => {
+                    const isStart = idx === 0;
+                    const baseNet = p.baseIncome != null && p.baseExpense != null
+                      ? p.baseIncome - p.baseExpense : null;
+                    const rowBg = idx % 2 === 0 ? 'var(--surface)' : 'var(--surface-2)';
+                    return (
+                      <tr key={p.label} style={{ background: rowBg }}>
+                        <td style={tdStyle('left', true)}>{p.label}</td>
+                        <td style={tdStyle('right')}>{isStart ? '—' : fmt(p.baseIncome!)}</td>
+                        <td style={tdStyle('right')}>{isStart ? '—' : fmt(p.baseExpense!)}</td>
+                        <td style={tdStyle('right')}>
+                          {isStart ? '—' : (
+                            <span style={{ color: baseNet! >= 0 ? 'var(--success)' : 'var(--error)', fontWeight: 600 }}>
+                              {baseNet! >= 0 ? '+' : ''}{fmt(baseNet!)}
+                            </span>
+                          )}
+                        </td>
+                        <td style={{ ...tdStyle('right'), fontWeight: 700, color: p.base >= 0 ? 'var(--success)' : 'var(--error)' }}>
+                          {fmt(p.base)}
+                        </td>
+                        <td style={{ width: 1, background: 'var(--border)', padding: 0 }} />
+                        <td style={tdStyle('right')}>{isStart ? '—' : fmt(p.optIncome!)}</td>
+                        <td style={tdStyle('right')}>{isStart ? '—' : fmt(p.optExpense!)}</td>
+                        <td style={{ ...tdStyle('right'), fontWeight: 700, color: p.optimistic >= 0 ? 'var(--success)' : 'var(--error)' }}>
+                          {fmt(p.optimistic)}
+                        </td>
+                        <td style={{ width: 1, background: 'var(--border)', padding: 0 }} />
+                        <td style={tdStyle('right')}>{isStart ? '—' : fmt(p.pessIncome!)}</td>
+                        <td style={tdStyle('right')}>{isStart ? '—' : fmt(p.pessExpense!)}</td>
+                        <td style={{ ...tdStyle('right'), fontWeight: 700, color: p.pessimistic >= 0 ? 'var(--success)' : 'var(--error)' }}>
+                          {fmt(p.pessimistic)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
           {/* ── Assumptions ─────────────────────────────────────── */}
           <div className="card" style={{ padding: '1.25rem' }}>
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.875rem',
-            }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.875rem' }}>
               <Info size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
               <span className="section-title" style={{ margin: 0 }}>Forecast Assumptions</span>
             </div>
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(155px, 1fr))',
-              gap: '0.625rem',
-            }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(155px, 1fr))', gap: '0.625rem' }}>
               {[
-                { label: 'Starting balance',    value: fmt(currentBalance) },
-                {
-                  label: 'Avg monthly income',
-                  value: fmt(assumptions.avgIncome),
-                  sub: `trend: ${fmtDelta(assumptions.incomeSlope)}/mo`,
-                },
-                {
-                  label: 'Avg monthly expense',
-                  value: fmt(assumptions.avgExpense),
-                  sub: `trend: ${fmtDelta(assumptions.expenseSlope)}/mo`,
-                },
-                { label: 'History used',        value: `${historyMonths} months` },
-                { label: 'Months projected',    value: String(assumptions.monthsForward) },
+                { label: 'Starting balance',      value: fmt(currentBalance) },
+                { label: 'Monthly income (base)', value: fmt(assumptions.baselineIncome),  sub: `trend: ${fmtDelta(assumptions.incomeSlope)}/mo` },
+                { label: 'Monthly expense (base)',value: fmt(assumptions.baselineExpense), sub: `trend: ${fmtDelta(assumptions.expenseSlope)}/mo` },
+                { label: 'History used',          value: `${historyMonths} months` },
+                { label: 'Months projected',      value: String(assumptions.monthsForward) },
               ].map(item => (
-                <div
-                  key={item.label}
-                  style={{
-                    background: 'var(--surface-2)', borderRadius: 8,
-                    padding: '0.625rem 0.875rem',
-                    display: 'flex', flexDirection: 'column', gap: '0.125rem',
-                  }}
-                >
-                  <span style={{
-                    fontSize: '0.6875rem', fontWeight: 600,
-                    textTransform: 'uppercase', letterSpacing: '0.06em',
-                    color: 'var(--text-muted)',
-                  }}>
+                <div key={item.label} style={{ background: 'var(--surface-2)', borderRadius: 8, padding: '0.625rem 0.875rem', display: 'flex', flexDirection: 'column', gap: '0.125rem' }}>
+                  <span style={{ fontSize: '0.6875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)' }}>
                     {item.label}
                   </span>
-                  <span style={{ fontWeight: 700, color: 'var(--text)', fontSize: '0.9375rem' }}>
-                    {item.value}
-                  </span>
-                  {item.sub && (
-                    <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
-                      {item.sub}
-                    </span>
-                  )}
+                  <span style={{ fontWeight: 700, color: 'var(--text)', fontSize: '0.9375rem' }}>{item.value}</span>
+                  {item.sub && <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{item.sub}</span>}
                 </div>
               ))}
             </div>

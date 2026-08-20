@@ -1,3 +1,4 @@
+from calendar import monthrange as cal_monthrange
 from datetime import datetime, timezone
 from typing import List, Optional
 from fastapi import HTTPException, status
@@ -229,7 +230,8 @@ class EntityService:
         return members
 
     async def get_entity_summary(
-        self, entity_id: str, user_id: str, include_private: bool = False
+        self, entity_id: str, user_id: str, include_private: bool = False,
+        month: Optional[int] = None, year: Optional[int] = None,
     ) -> EntitySummary:
         is_admin = await self._is_admin(entity_id, user_id)
         if include_private and not is_admin:
@@ -241,9 +243,40 @@ class EntityService:
         if not entity:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Entity not found")
 
-        query = {"entity_id": ObjectId(entity_id)}
+        # Build date filter when month+year are specified (use datetime, not strings)
+        date_filter: dict = {}
+        start_dt: Optional[datetime] = None
+        end_dt: Optional[datetime] = None
+        if month and year:
+            last_day = cal_monthrange(year, month)[1]
+            start_dt = datetime(year, month, 1, tzinfo=timezone.utc)
+            end_dt = datetime(year, month, last_day, 23, 59, 59, tzinfo=timezone.utc)
+            # Include transactions with a date in this month (covers all types),
+            # PLUS recurring monthly transactions created before this month whose
+            # recurrence is still active (avoids double-counting via date < start_dt).
+            date_filter = {
+                "$or": [
+                    {"date": {"$gte": start_dt, "$lte": end_dt}},
+                    {
+                        "is_recurring": True,
+                        "recurrence": "monthly",
+                        "date": {"$lt": start_dt},
+                        "$or": [
+                            {"recurrence_start": {"$exists": False}},
+                            {"recurrence_start": None},
+                            {"recurrence_start": {"$lte": end_dt}},
+                        ],
+                    },
+                ]
+            }
+
+        base_query: dict = {"entity_id": ObjectId(entity_id)}
         if not (is_admin and include_private):
-            query["mode"] = "shared"
+            base_query["mode"] = "shared"
+
+        query: dict = {**base_query}
+        if date_filter:
+            query["$and"] = [date_filter]
 
         # All-transactions totals
         pipeline = [
@@ -259,9 +292,12 @@ class EntityService:
                 total_expense = r["total"]
             transaction_count += r["count"]
 
-        # Shared-only totals
+        # Shared-only totals (also date-scoped when filtering)
+        shared_match: dict = {"entity_id": ObjectId(entity_id), "mode": "shared"}
+        if date_filter:
+            shared_match["$and"] = [date_filter]
         shared_pipeline = [
-            {"$match": {"entity_id": ObjectId(entity_id), "mode": "shared"}},
+            {"$match": shared_match},
             {"$group": {"_id": "$type", "total": {"$sum": "$amount"}, "count": {"$sum": 1}}},
         ]
         shared_results = await self.transactions_collection.aggregate(shared_pipeline).to_list(length=10)
@@ -336,6 +372,52 @@ class EntityService:
             categories_breakdown=categories_breakdown,
             member_breakdown=member_breakdown,
         )
+
+    async def get_entity_monthly_history(
+        self, entity_id: str, user_id: str, months: int = 6, include_private: bool = False
+    ) -> list[dict]:
+        # Delegate to get_entity_summary per month — same proven code path used by
+        # the monthly dashboard tab (confirmed returning correct values).
+        now = datetime.now(timezone.utc)
+        result = []
+        for i in range(months - 1, -1, -1):
+            total_m = now.year * 12 + (now.month - 1) - i
+            y, m = total_m // 12, (total_m % 12) + 1
+            summary = await self.get_entity_summary(
+                entity_id, user_id, include_private, month=m, year=y
+            )
+            result.append({
+                "year": y,
+                "month": m,
+                "income": summary.total_income,
+                "expense": summary.total_expense,
+                "balance": summary.total_balance,
+            })
+        return result
+
+    async def get_entity_recurring_transactions(
+        self, entity_id: str, user_id: str, include_private: bool = False
+    ) -> list[dict]:
+        """Return all active monthly recurring transactions for the entity."""
+        query: dict = {
+            "entity_id": ObjectId(entity_id),
+            "is_recurring": True,
+            "recurrence": "monthly",
+        }
+        if not include_private:
+            query["mode"] = "shared"
+        cursor = self.transactions_collection.find(query)
+        result = []
+        async for doc in cursor:
+            rs = doc.get("recurrence_start")
+            result.append({
+                "id": str(doc["_id"]),
+                "type": doc.get("type"),
+                "amount": doc.get("amount", 0),
+                "description": doc.get("description", ""),
+                "recurrence_start": rs.isoformat() if rs else None,
+            })
+        return result
 
     async def delete_entity(self, entity_id: str, user_id: str) -> bool:
         """Delete entity (admin only). Clears all member records and detaches transactions."""

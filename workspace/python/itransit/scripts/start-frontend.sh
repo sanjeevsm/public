@@ -30,4 +30,13 @@ check_and_free_port() {
 npm install
 check_and_free_port "$FRONTEND_PORT"
 
-exec npm run dev -- --port "$FRONTEND_PORT"
+mkdir -p "$ROOT_DIR/logs" "$ROOT_DIR/.pids"
+
+nohup npm run dev -- --port "$FRONTEND_PORT" \
+    >"$ROOT_DIR/logs/frontend.log" 2>"$ROOT_DIR/logs/frontend-error.log" &
+echo $! > "$ROOT_DIR/.pids/frontend.pid"
+
+echo "Frontend started (PID $(cat "$ROOT_DIR/.pids/frontend.pid"))."
+echo "  URL:  http://localhost:$FRONTEND_PORT"
+echo "  Logs: $ROOT_DIR/logs/frontend.log"
+echo "To stop: ./scripts/stop-all.sh"

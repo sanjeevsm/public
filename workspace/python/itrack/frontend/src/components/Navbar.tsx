@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, TrendingUp, TrendingDown, Tag, PieChart,
   Building2, Users, UserCircle, LogOut, ShieldCheck, Menu, X,
-  Wallet,
+  Wallet, Settings,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import ThemeToggle from './ThemeToggle';
@@ -114,6 +114,16 @@ export const Navbar: React.FC = () => {
       <div style={{ padding: '0.75rem', borderTop: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: '2px' }}>
         {/* Theme toggle */}
         <ThemeToggle />
+
+        {/* Settings */}
+        <NavLink
+          to="/settings"
+          onClick={() => setMobileOpen(false)}
+          className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
+        >
+          <Settings size={17} strokeWidth={1.75} />
+          <span>Settings</span>
+        </NavLink>
 
         {/* Profile */}
         <NavLink

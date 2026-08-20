@@ -19,4 +19,21 @@ if ($pids) {
 	exit 1
 } else { Write-Host "No listener on port $FRONTEND_PORT" -ForegroundColor Gray }
 
-& npm run dev -- --port $FRONTEND_PORT
+$ROOT = Split-Path -Parent (Get-Location).Path
+$logsDir = Join-Path $ROOT "logs"
+$pidsDir = Join-Path $ROOT ".pids"
+New-Item -ItemType Directory -Path $logsDir -Force | Out-Null
+New-Item -ItemType Directory -Path $pidsDir -Force | Out-Null
+
+$logFile = Join-Path $logsDir "frontend.log"
+$errFile = Join-Path $logsDir "frontend-error.log"
+$proc = Start-Process cmd.exe `
+    -ArgumentList "/c npm run dev -- --port $FRONTEND_PORT > `"$logFile`" 2> `"$errFile`"" `
+    -WorkingDirectory (Get-Location).Path `
+    -WindowStyle Hidden -PassThru
+
+$proc.Id | Out-File (Join-Path $pidsDir "frontend.pid") -Encoding ascii
+Write-Host "Frontend started (PID $($proc.Id))." -ForegroundColor Green
+Write-Host "  URL:  http://localhost:$FRONTEND_PORT" -ForegroundColor Cyan
+Write-Host "  Logs: $logsDir\frontend.log" -ForegroundColor Gray
+Write-Host "To stop: .\scripts\stop-local.ps1" -ForegroundColor Gray
