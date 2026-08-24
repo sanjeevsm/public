@@ -1,4 +1,4 @@
-Set-Location "C:\Users\SanjeevMenon\PGit\public\workspace\python\itrack\scripts\..\frontend"
+Set-Location (Join-Path $PSScriptRoot "..\frontend")
 
 $FRONTEND_PORT = if ($env:FRONTEND_PORT) { [int]$env:FRONTEND_PORT } else { 3000 }
 Write-Host "Starting iTrack+ frontend on http://localhost:$FRONTEND_PORT" -ForegroundColor Green

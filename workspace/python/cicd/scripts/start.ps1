@@ -82,16 +82,6 @@ foreach ($dir in @(".pids", "exports", "data", "data\prometheus", "data\grafana-
     $null = New-Item -ItemType Directory -Force -Path $dir
 }
 
-function Ensure-PortFree {
-    param([int]$Port)
-    $pids = Get-ListenersByPort -Port $Port
-    if ($pids) {
-        foreach ($thePid in $pids) {
-            if (-not (Stop-If-ProjectOrForce -TargetPid $thePid -Port $Port)) { Write-Err "Aborting start due to occupied port $Port" }
-        }
-    }
-}
-
 # -- Start Prometheus ----------------------------------------------------------
 Write-Info "Starting Prometheus on port $PROM_PORT ..."
 Ensure-PortFree -Port $PROM_PORT

@@ -38,7 +38,7 @@ async def transportapi_nearby(lat: float, lon: float, radius: int, country: str)
             return []
         data = r.json()
     places = []
-    for p in data.get('member', []) or data.get('member', []):
+    for p in data.get('member', []) or data.get('places', []):
         places.append({
             'stop_id': p.get('atcocode') or p.get('id') or p.get('name'),
             'name': p.get('name'),

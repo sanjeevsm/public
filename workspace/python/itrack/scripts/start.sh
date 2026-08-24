@@ -15,8 +15,8 @@ if ! command -v docker &> /dev/null; then
     exit 1
 fi
 
-if ! command -v docker-compose &> /dev/null; then
-    echo "❌ Docker Compose is not installed. Please install Docker Compose first."
+if ! docker compose version &> /dev/null; then
+    echo "❌ Docker Compose is not available. Please install Docker Desktop first."
     exit 1
 fi
 
@@ -31,17 +31,17 @@ fi
 
 # Build and start containers
 echo "🏗️  Building Docker containers..."
-docker-compose build
+docker compose build
 
 echo "🚀 Starting iTrack+ application..."
-docker-compose up -d
+docker compose up -d
 
 # Wait for services to be ready
 echo "⏳ Waiting for services to start..."
 sleep 10
 
 # Check if services are running
-if docker-compose ps | grep -q "Up"; then
+if docker compose ps | grep -q "Up"; then
     echo ""
     echo "✅ iTrack+ is now running!"
     echo ""
@@ -50,9 +50,9 @@ if docker-compose ps | grep -q "Up"; then
     echo "📚 API Docs: http://localhost:8002/docs"
     echo ""
     echo "To stop the application, run: ./scripts/stop.sh"
-    echo "To view logs, run: docker-compose logs -f"
+    echo "To view logs, run: docker compose logs -f"
 else
     echo ""
-    echo "❌ Failed to start services. Check logs with: docker-compose logs"
+    echo "❌ Failed to start services. Check logs with: docker compose logs"
     exit 1
 fi

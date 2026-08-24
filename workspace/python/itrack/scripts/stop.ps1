@@ -13,13 +13,14 @@ if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
     exit 1
 }
 
-if (-not (Get-Command docker-compose -ErrorAction SilentlyContinue)) {
-    Write-Host "❌ Docker Compose is not installed." -ForegroundColor Red
+docker compose version | Out-Null
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "❌ Docker Compose is not available." -ForegroundColor Red
     exit 1
 }
 
 # Check if containers are running
-$runningContainers = docker-compose ps --filter "status=running" -q
+$runningContainers = docker compose ps --filter "status=running" -q
 
 if (-not $runningContainers) {
     Write-Host "ℹ️  iTrack+ is not currently running." -ForegroundColor Cyan
@@ -27,14 +28,14 @@ if (-not $runningContainers) {
 }
 
 Write-Host "📦 Stopping containers..." -ForegroundColor Yellow
-docker-compose stop
+docker compose stop
 
 Write-Host "🗑️  Removing containers..." -ForegroundColor Yellow
-docker-compose down
+docker compose down
 
 Write-Host ""
 Write-Host "✅ iTrack+ has been stopped successfully!" -ForegroundColor Green
 Write-Host ""
-Write-Host "💡 To start again, run: .\scripts\start.ps1 or docker-compose up -d" -ForegroundColor Cyan
-Write-Host "🗑️  To remove all data (including database), run: docker-compose down -v" -ForegroundColor Cyan
+Write-Host "💡 To start again, run: .\scripts\start.ps1 or docker compose up -d" -ForegroundColor Cyan
+Write-Host "🗑️  To remove all data (including database), run: docker compose down -v" -ForegroundColor Cyan
 Write-Host ""
