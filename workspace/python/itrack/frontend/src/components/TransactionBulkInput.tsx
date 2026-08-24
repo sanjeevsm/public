@@ -25,21 +25,6 @@ export const TransactionBulkInput: React.FC<{ onDone?: () => void; defaultType?:
   const addRow = () => setRows([...rows, { description: '', amount: '', type: defaultType, category: '', date: new Date().toISOString().split('T')[0] }]);
   const removeRow = (index: number) => setRows(rows.filter((_, i) => i !== index));
 
-  const toCsv = () => {
-    const header = ['description', 'amount', 'type', 'category', 'date'];
-    const lines = [header.join(',')];
-    for (const r of rows) {
-      if (!r.description && (r.amount === '' || r.amount === 0)) continue;
-      lines.push([
-        '"' + (r.description || '') + '"',
-        r.amount === '' ? '0' : String(r.amount),
-        r.type,
-        '"' + (r.category || '') + '"',
-        r.date,
-      ].join(','));
-    }
-    return lines.join('\n');
-  };
   const [csvPreview, setCsvPreview] = useState<Row[] | null>(null);
   const [parsedRows, setParsedRows] = useState<Row[] | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -99,7 +84,7 @@ export const TransactionBulkInput: React.FC<{ onDone?: () => void; defaultType?:
         type: r.type,
         category: r.category,
         date: new Date(r.date).toISOString(),
-        mode: 'private',
+        mode: 'private' as const,
       }));
 
       const result = await transactionService.bulkCreate(toSend);

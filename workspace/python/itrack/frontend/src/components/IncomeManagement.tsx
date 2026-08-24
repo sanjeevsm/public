@@ -7,7 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useSettings } from '../contexts/SettingsContext';
 
 export const IncomeManagement: React.FC = () => {
-  const { formatCurrency, selectedCurrencies, currency: primaryCurrency } = useSettings();
+  const { formatCurrency, formatDate, selectedCurrencies, currency: primaryCurrency } = useSettings();
   const { user } = useAuth();
   const hasEntity = !!user?.entity_id;
   const [incomes, setIncomes] = useState<Transaction[]>([]);
@@ -86,7 +86,7 @@ export const IncomeManagement: React.FC = () => {
         date: new Date(formData.date).toISOString(),
         currency: activeCurrency,
         is_recurring: formData.is_recurring,
-        recurrence: formData.is_recurring ? 'monthly' : undefined,
+        recurrence: formData.is_recurring ? ('monthly' as const) : undefined,
         recurrence_start: formData.is_recurring && formData.recurrence_start ? new Date(formData.recurrence_start).toISOString() : undefined,
       };
 
@@ -417,7 +417,7 @@ export const IncomeManagement: React.FC = () => {
                     <div>
                       <h3 className="font-semibold text-gray-800">{income.description}</h3>
                       <p className="text-sm text-gray-600" style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexWrap: 'wrap' }}>
-                        {income.category} • {new Date(income.date).toLocaleDateString()}
+                        {income.category} • {formatDate(income.date)}
                         {hasEntity && income.mode && (
                           <span style={{
                             display: 'inline-flex', alignItems: 'center', gap: '0.2rem',

@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useSettings } from '../contexts/SettingsContext';
 
 export const AssetManagement: React.FC = () => {
-  const { formatCurrency, selectedCurrencies, currency: primaryCurrency } = useSettings();
+  const { formatCurrency, formatDate, selectedCurrencies, currency: primaryCurrency } = useSettings();
   const { user } = useAuth();
   const hasEntity = !!user?.entity_id;
   const [assets, setAssets] = useState<Transaction[]>([]);
@@ -359,7 +359,7 @@ export const AssetManagement: React.FC = () => {
                     <div>
                       <h3 className="font-semibold text-gray-800">{asset.description}</h3>
                       <p className="text-sm text-gray-600" style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexWrap: 'wrap' }}>
-                        {asset.category} • {new Date(asset.date).toLocaleDateString()}
+                        {asset.category} • {formatDate(asset.date)}
                         {hasEntity && asset.mode && (
                           <span style={{
                             display: 'inline-flex', alignItems: 'center', gap: '0.2rem',

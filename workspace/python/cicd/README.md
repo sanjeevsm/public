@@ -179,6 +179,40 @@ sudo mv prometheus-*/prometheus /usr/local/bin/
 sudo apt-get install -y grafana
 ```
 
+### Reinstallation (Clean Reset)
+
+The steps above are for a **first-time install**. Use the following when you need a clean slate — a corrupted virtualenv, dependency conflicts after a `requirements.txt` change, or stale Prometheus/Grafana data.
+
+1. Stop any running services so no files are locked:
+
+   ```bash
+   ./scripts/stop.sh          # Windows: .\scripts\stop.ps1
+   ```
+
+2. Remove the generated artifacts:
+
+   ```bash
+   # macOS / Linux
+   rm -rf dashboard_api/.venv data .pids exports
+   find . -type d -name __pycache__ -prune -exec rm -rf {} +
+   ```
+
+   ```powershell
+   # Windows (PowerShell)
+   Remove-Item -Recurse -Force dashboard_api\.venv, data, .pids, exports -ErrorAction SilentlyContinue
+   Get-ChildItem -Recurse -Directory -Filter __pycache__ | Remove-Item -Recurse -Force
+   ```
+
+   Keep your existing `.env` to preserve configuration. Delete it too for a pristine reset — `setup` recreates it from `.env.example`. Note that removing `data/` also clears the Prometheus time-series database and `data/grafana.db`.
+
+3. Re-run setup, then start:
+
+   ```bash
+   ./scripts/setup.sh && ./scripts/start.sh
+   ```
+
+> **Dependency-only refresh:** to rebuild just the Python environment without wiping monitoring data, delete only `dashboard_api/.venv` and re-run `setup`.
+
 ---
 
 ## Configuration

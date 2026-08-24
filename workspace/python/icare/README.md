@@ -120,6 +120,50 @@ To stop: .\scripts\stop.ps1
 - Login with **admin / admin**
 - Navigate to Users to create additional accounts with roles
 
+### Reinstallation (Clean Reset)
+
+Steps 1–5 above are for a **first-time install**. Reinstalling has two parts — the Python environments and the PostgreSQL database — clean either or both.
+
+1. Stop the services:
+
+   ```bash
+   ./scripts/stop.sh          # Windows: .\scripts\stop.ps1
+   ```
+
+2. **Reset the Python environments.** Delete both virtualenvs and runtime artifacts, then re-run setup:
+
+   ```bash
+   # macOS / Linux
+   rm -rf api/venv web-app/venv .pids data
+   find . -type d -name __pycache__ -prune -exec rm -rf {} +
+   ./scripts/setup.sh
+   ```
+
+   ```powershell
+   # Windows (PowerShell)
+   Remove-Item -Recurse -Force api\venv, web-app\venv, .pids, data -ErrorAction SilentlyContinue
+   Get-ChildItem -Recurse -Directory -Filter __pycache__ | Remove-Item -Recurse -Force
+   .\scripts\setup.ps1
+   ```
+
+   Keep `.env` to preserve your database credentials; delete it for a pristine reset (setup recreates it from `.env.example`).
+
+3. **Reset the database** (optional — only when you want to wipe all clinic data). This drops and recreates the `clinic` database on the local PostgreSQL server (port 5432), then reloads the combined schema + seed:
+
+   ```bash
+   psql -U postgres -c "DROP DATABASE IF EXISTS clinic;"
+   psql -U postgres -c "CREATE DATABASE clinic;"
+   psql -U postgres -d clinic -f clinic_setup.sql
+   ```
+
+4. Start again:
+
+   ```bash
+   ./scripts/start.sh          # Windows: .\scripts\start.ps1
+   ```
+
+> To refresh dependencies only, delete `api/venv` and/or `web-app/venv` and re-run `setup`. The API auto-creates any missing tables on startup, but `clinic_setup.sql` remains the canonical schema + seed baseline.
+
 ## API Reference
 
 ### Base URL
