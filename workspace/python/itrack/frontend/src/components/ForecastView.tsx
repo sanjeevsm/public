@@ -240,7 +240,7 @@ interface ForecastViewProps {
 export const ForecastView: React.FC<ForecastViewProps> = ({ entityId, includePrivate = false, currency: initialCurrency = 'USD' }) => {
   const { formatCurrency, selectedCurrencies } = useSettings();
   const [selectedForecastCurrency, setSelectedForecastCurrency] = useState(initialCurrency);
-  const fmt = (n: number) => formatCurrency(n, false);
+  const fmt = (n: number) => formatCurrency(n, selectedForecastCurrency);
   const fmtDelta = (n: number) => `${n >= 0 ? '+' : ''}${fmt(n)}`;
 
   // Update selected currency when prop changes
@@ -261,7 +261,11 @@ export const ForecastView: React.FC<ForecastViewProps> = ({ entityId, includePri
 
   const [history, setHistory] = useState<MonthlyDataPoint[]>([]);
   const [recurringTxs, setRecurringTxs] = useState<RecurringTransaction[]>([]);
-  const [currentBalance, setCurrentBalance] = useState(0);
+  const [cashBalance, setCashBalance] = useState(0);
+  const [netWorth, setNetWorth] = useState(0);
+  const [assetsTotal, setAssetsTotal] = useState(0);
+  const [liabilitiesTotal, setLiabilitiesTotal] = useState(0);
+  const [balanceBasis, setBalanceBasis] = useState<'networth' | 'cashflow'>('networth');
   const [historyMonths, setHistoryMonths] = useState(6);
   const [targetDate, setTargetDate] = useState(defaultTargetStr);
   const [incomeChangePct, setIncomeChangePct] = useState(5);
@@ -269,6 +273,10 @@ export const ForecastView: React.FC<ForecastViewProps> = ({ entityId, includePri
   const [deviationPeriod, setDeviationPeriod] = useState<'monthly' | 'yearly'>('monthly');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  // Cash-flow balance is income − expense; net worth adds assets − liabilities.
+  // Gap A holds assets/liabilities constant across the projection (no growth modelling).
+  const currentBalance = balanceBasis === 'networth' ? netWorth : cashBalance;
 
   useEffect(() => {
     let cancelled = false;
@@ -278,12 +286,15 @@ export const ForecastView: React.FC<ForecastViewProps> = ({ entityId, includePri
       try {
         if (entityId) {
           const [summary, hist, recurring] = await Promise.all([
-            entityService.getEntitySummary(entityId, includePrivate),
+            entityService.getEntitySummary(entityId, includePrivate, undefined, undefined, selectedForecastCurrency),
             entityService.getEntityHistory(entityId, historyMonths, includePrivate, selectedForecastCurrency),
             entityService.getEntityRecurringTransactions(entityId, includePrivate, selectedForecastCurrency),
           ]);
           if (!cancelled) {
-            setCurrentBalance(summary.total_balance);
+            setCashBalance(summary.total_balance);
+            setNetWorth(summary.net_worth ?? summary.total_balance);
+            setAssetsTotal(summary.total_assets ?? 0);
+            setLiabilitiesTotal(summary.total_liabilities ?? 0);
             setHistory(hist);
             setRecurringTxs(recurring);
           }
@@ -294,7 +305,10 @@ export const ForecastView: React.FC<ForecastViewProps> = ({ entityId, includePri
             transactionService.getRecurringTransactions(selectedForecastCurrency),
           ]);
           if (!cancelled) {
-            setCurrentBalance(summary.total_balance);
+            setCashBalance(summary.total_balance);
+            setNetWorth(summary.net_worth ?? summary.total_balance);
+            setAssetsTotal(summary.total_assets ?? 0);
+            setLiabilitiesTotal(summary.total_liabilities ?? 0);
             setHistory(hist);
             setRecurringTxs(recurring);
           }
@@ -314,12 +328,6 @@ export const ForecastView: React.FC<ForecastViewProps> = ({ entityId, includePri
   }, [targetDate]);
 
   const { points, assumptions } = useMemo(() => {
-    // Debug logging
-    console.log('Forecast Input:', {
-      currency: selectedForecastCurrency,
-      recurringCount: recurringTxs.length,
-      recurring: recurringTxs.map(tx => ({ type: tx.type, amount: tx.amount, desc: tx.description })),
-    });
     return buildForecast(
       currentBalance, history, targetYear, targetMonth,
       toMonthlyRate(incomeChangePct, deviationPeriod),
@@ -507,6 +515,36 @@ export const ForecastView: React.FC<ForecastViewProps> = ({ entityId, includePri
               ))}
             </div>
           </div>
+
+          {/* Balance basis toggle */}
+          <div>
+            <label className="label">Starting balance</label>
+            <div style={{
+              display: 'flex', background: 'var(--surface-2)',
+              border: '1px solid var(--border)', borderRadius: 8, padding: 2,
+            }}>
+              {([
+                { key: 'networth' as const, label: 'Net worth' },
+                { key: 'cashflow' as const, label: 'Cash only' },
+              ]).map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => setBalanceBasis(key)}
+                  title={key === 'networth'
+                    ? 'Start from net worth: cash balance plus assets minus liabilities'
+                    : 'Start from cash balance only: income minus expenses'}
+                  style={{
+                    padding: '0.3rem 0.75rem', borderRadius: 6, border: 'none', cursor: 'pointer',
+                    fontSize: '0.8125rem', fontWeight: 500, transition: 'all 0.15s',
+                    background: balanceBasis === key ? 'var(--primary)' : 'transparent',
+                    color: balanceBasis === key ? '#fff' : 'var(--text-secondary)',
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Sliders row */}
@@ -684,7 +722,13 @@ export const ForecastView: React.FC<ForecastViewProps> = ({ entityId, includePri
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(155px, 1fr))', gap: '0.625rem' }}>
               {[
-                { label: 'Starting balance',      value: fmt(currentBalance) },
+                {
+                  label: balanceBasis === 'networth' ? 'Starting net worth' : 'Starting balance',
+                  value: fmt(currentBalance),
+                  sub: balanceBasis === 'networth'
+                    ? `incl. assets ${fmt(assetsTotal)} − liabilities ${fmt(liabilitiesTotal)}`
+                    : 'cash only (income − expense)',
+                },
                 { label: 'Monthly income (base)', value: fmt(assumptions.baselineIncome),  sub: `trend: ${fmtDelta(assumptions.incomeSlope)}/mo` },
                 { label: 'Monthly expense (base)',value: fmt(assumptions.baselineExpense), sub: `trend: ${fmtDelta(assumptions.expenseSlope)}/mo` },
                 { label: 'History used',          value: `${historyMonths} months` },

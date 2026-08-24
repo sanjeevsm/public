@@ -27,6 +27,7 @@ class BudgetService:
             period=budget["period"],
             budget_type=budget["budget_type"],
             category=budget.get("category"),
+            currency=budget.get("currency", "USD"),
             start_date=budget["start_date"],
             end_date=budget.get("end_date"),
             alert_threshold=budget.get("alert_threshold", 80.0),
@@ -151,6 +152,7 @@ class BudgetService:
             is_alert=pct >= budget.get("alert_threshold", 80.0),
             period=budget["period"],
             category=budget.get("category"),
+            currency=budget.get("currency", "USD"),
             days_remaining=(period_end - now).days if period_end > now else 0,
         )
 
@@ -159,6 +161,7 @@ class BudgetService:
         query = {
             "user_id": ObjectId(user_id),
             "type": "expense",
+            "currency": budget.get("currency", "USD"),
             "date": {"$gte": period_start, "$lt": period_end},
         }
         if budget["budget_type"] == "category" and budget.get("category"):
@@ -185,8 +188,9 @@ class BudgetService:
         for b in budgets_raw:
             period_groups[b["period"]].append(b)
 
-        # For each period, one aggregation returning totals per category
-        spending_cache: dict[str, dict[str, float]] = {}
+        # For each period, one aggregation returning totals per (currency, category).
+        # spending_cache[period][currency][category] and [currency]["__total__"].
+        spending_cache: dict[str, dict[str, dict[str, float]]] = {}
         for period, group in period_groups.items():
             period_start, period_end = self._get_period_dates(period)
             pipeline = [
@@ -197,18 +201,28 @@ class BudgetService:
                         "date": {"$gte": period_start, "$lt": period_end},
                     }
                 },
-                {"$group": {"_id": "$category", "total": {"$sum": "$amount"}}},
+                {
+                    "$group": {
+                        "_id": {"currency": "$currency", "category": "$category"},
+                        "total": {"$sum": "$amount"},
+                    }
+                },
             ]
-            results = await self.transactions_collection.aggregate(pipeline).to_list(length=500)
-            # Also store a "__total__" key for total-type budgets
-            grand_total = sum(r["total"] for r in results)
-            spending_cache[period] = {r["_id"]: r["total"] for r in results}
-            spending_cache[period]["__total__"] = grand_total
+            results = await self.transactions_collection.aggregate(pipeline).to_list(length=1000)
+            by_currency: dict[str, dict[str, float]] = {}
+            for r in results:
+                cur = r["_id"].get("currency") or "USD"
+                cat = r["_id"].get("category")
+                bucket = by_currency.setdefault(cur, {"__total__": 0.0})
+                bucket[cat] = r["total"]
+                bucket["__total__"] += r["total"]
+            spending_cache[period] = by_currency
 
         progress_list = []
         for budget in budgets_raw:
             period = budget["period"]
-            cache = spending_cache.get(period, {})
+            cur = budget.get("currency", "USD")
+            cache = spending_cache.get(period, {}).get(cur, {})
             if budget["budget_type"] == "category" and budget.get("category"):
                 spent = cache.get(budget["category"], 0.0)
             else:

@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useSettings } from '../contexts/SettingsContext';
 import { authService } from '../services/authService';
 import { userService } from '../services/userService';
 import { User, AdminUserUpdate } from '../types/user';
 
 export const ProfilePage: React.FC = () => {
   const { user, refreshUser } = useAuth();
+  const { formatDate } = useSettings();
   const isAdmin = user?.entity_role === 'admin';
 
   // ── My Profile state ────────────────────────────────────────────
@@ -242,7 +244,7 @@ export const ProfilePage: React.FC = () => {
                         </p>
                         <p className="text-xs text-gray-500">{member.email}</p>
                         <p className="text-xs text-gray-400">
-                          {member.entity_role === 'admin' ? '👑 Admin' : '👤 Member'} · Joined {new Date(member.created_at).toLocaleDateString()}
+                          {member.entity_role === 'admin' ? '👑 Admin' : '👤 Member'} · Joined {formatDate(member.created_at)}
                         </p>
                       </div>
                     </div>

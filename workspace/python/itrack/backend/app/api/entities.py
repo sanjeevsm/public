@@ -160,6 +160,21 @@ async def get_entity_summary(
     )
 
 
+@router.get("/{entity_id}/transactions")
+async def get_entity_transactions(
+    entity_id: str,
+    include_private: bool = False,
+    currency: Optional[str] = Query(default=None),
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=50, ge=1, le=200),
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_database),
+):
+    return await EntityService(db).get_entity_transactions(
+        entity_id, current_user.id, include_private, currency=currency, skip=skip, limit=limit
+    )
+
+
 @router.get("/{entity_id}/recurring-transactions")
 async def get_entity_recurring_transactions(
     entity_id: str,

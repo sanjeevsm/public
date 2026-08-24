@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Entity, EntityMember, MemberRole } from '../types/entity';
 import { entityService } from '../services/entityService';
+import { useSettings } from '../contexts/SettingsContext';
 
 interface EntityManagementProps {
   entity: Entity;
@@ -15,6 +16,7 @@ export const EntityManagement: React.FC<EntityManagementProps> = ({
   isAdmin,
   onUpdate
 }) => {
+  const { formatDate } = useSettings();
   const [members, setMembers] = useState<EntityMember[]>([]);
   const [showInviteForm, setShowInviteForm] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
@@ -217,7 +219,7 @@ export const EntityManagement: React.FC<EntityManagementProps> = ({
         <div className="space-y-1 text-sm text-gray-600">
           <p><strong>Type:</strong> {entity.entity_type} {entity.custom_type_name && `(${entity.custom_type_name})`}</p>
           {entity.description && <p><strong>Description:</strong> {entity.description}</p>}
-          <p><strong>Created:</strong> {new Date(entity.created_at).toLocaleDateString()}</p>
+          <p><strong>Created:</strong> {formatDate(entity.created_at)}</p>
           <p><strong>Total Members:</strong> {members.length}</p>
         </div>
       </div>
@@ -246,7 +248,7 @@ export const EntityManagement: React.FC<EntityManagementProps> = ({
                       {isCreator && <span className="ml-2 text-xs text-purple-600">(Creator)</span>}
                     </p>
                     <p className="text-sm text-gray-500">
-                      Joined {new Date(member.joined_at).toLocaleDateString()}
+                      Joined {formatDate(member.joined_at)}
                     </p>
                   </div>
                 </div>

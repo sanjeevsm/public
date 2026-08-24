@@ -60,7 +60,9 @@ class TransactionService:
             limit = MAX_LIMIT
         cursor = self.collection.find(query).sort("date", -1).skip(skip).limit(limit)
         transactions = await cursor.to_list(length=limit)
-        return [self._transaction_to_response(t) for t in transactions]
+        user = await self.db.users.find_one({"_id": ObjectId(user_id)}, {"username": 1})
+        username = user["username"] if user else None
+        return [self._transaction_to_response(t, username=username) for t in transactions]
 
     async def get_transaction_by_id(
         self, user_id: str, transaction_id: str
@@ -309,7 +311,7 @@ class TransactionService:
             "note": "Each currency shown separately. No conversion applied."
         }
 
-    def _transaction_to_response(self, transaction: dict) -> TransactionResponse:
+    def _transaction_to_response(self, transaction: dict, username: Optional[str] = None) -> TransactionResponse:
         return TransactionResponse(
             id=str(transaction["_id"]),
             description=transaction["description"],
@@ -321,6 +323,7 @@ class TransactionService:
             currency=transaction.get("currency", "USD"),
             created_at=transaction["created_at"],
             user_id=str(transaction["user_id"]),
+            username=username,
             entity_id=str(transaction["entity_id"]) if transaction.get("entity_id") else None,
         )
 

@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Users, UserPlus, UserX, Shield, User, Mail, Calendar } from 'lucide-react';
-import { Entity, Member } from '../types/entity';
+import { Entity, EntityMember } from '../types/entity';
 import { entityService } from '../services/entityService';
 import { useAuth } from '../contexts/AuthContext';
+import { useSettings } from '../contexts/SettingsContext';
 
 export const MemberManagement: React.FC = () => {
   const { user } = useAuth();
+  const { formatDate } = useSettings();
   const [entity, setEntity] = useState<Entity | null>(null);
+  const [members, setMembers] = useState<EntityMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -22,6 +25,8 @@ export const MemberManagement: React.FC = () => {
       setLoading(true);
       const entityData = await entityService.getMyEntity();
       setEntity(entityData);
+      const memberData = await entityService.getMembers(entityData.id);
+      setMembers(memberData);
     } catch (err: any) {
       if (err.response?.status === 404) {
         setError('You are not part of any entity. Create or join one first.');
@@ -39,8 +44,9 @@ export const MemberManagement: React.FC = () => {
     setSuccess('');
     setIsInviting(true);
 
+    if (!entity) return;
     try {
-      await entityService.inviteMember(inviteEmail);
+      await entityService.inviteMember(entity.id, { user_email: inviteEmail, role: 'member' });
       setSuccess(`Invitation sent to ${inviteEmail}`);
       setInviteEmail('');
       loadEntity();
@@ -55,9 +61,10 @@ export const MemberManagement: React.FC = () => {
     if (!window.confirm(`Are you sure you want to remove ${memberName} from the entity?`)) {
       return;
     }
+    if (!entity) return;
 
     try {
-      await entityService.removeMember(memberId);
+      await entityService.removeMember(entity.id, memberId);
       setSuccess(`${memberName} removed successfully`);
       loadEntity();
     } catch (err: any) {
@@ -69,9 +76,10 @@ export const MemberManagement: React.FC = () => {
     if (!window.confirm(`Promote ${memberName} to admin? They will have full control over the entity.`)) {
       return;
     }
+    if (!entity) return;
 
     try {
-      await entityService.updateMemberRole(memberId, 'admin');
+      await entityService.changeMemberRole(entity.id, memberId, 'admin');
       setSuccess(`${memberName} promoted to admin`);
       loadEntity();
     } catch (err: any) {
@@ -83,9 +91,10 @@ export const MemberManagement: React.FC = () => {
     if (!window.confirm(`Demote ${memberName} to member? They will have limited permissions.`)) {
       return;
     }
+    if (!entity) return;
 
     try {
-      await entityService.updateMemberRole(memberId, 'member');
+      await entityService.changeMemberRole(entity.id, memberId, 'member');
       setSuccess(`${memberName} demoted to member`);
       loadEntity();
     } catch (err: any) {
@@ -93,8 +102,8 @@ export const MemberManagement: React.FC = () => {
     }
   };
 
-  const isAdmin = entity?.members.find(m => m.user_id === user?.id)?.role === 'admin';
-  const isOwner = entity?.owner_id === user?.id;
+  const isAdmin = members.find(m => m.user_id === user?.id)?.role === 'admin';
+  const isOwner = entity?.created_by === user?.id;
 
   return (
     <div className="space-y-6">
@@ -136,12 +145,12 @@ export const MemberManagement: React.FC = () => {
             <div className="flex justify-between items-start">
               <div>
                 <h2 className="text-2xl font-bold">{entity.name}</h2>
-                <p className="text-blue-100 mt-1">{entity.type}</p>
+                <p className="text-blue-100 mt-1">{entity.entity_type}</p>
                 <p className="text-blue-100 text-sm mt-2">{entity.description}</p>
               </div>
               <div className="text-right">
                 <p className="text-blue-100 text-sm">Total Members</p>
-                <p className="text-4xl font-bold">{entity.members.length}</p>
+                <p className="text-4xl font-bold">{members.length}</p>
               </div>
             </div>
           </div>
@@ -181,10 +190,10 @@ export const MemberManagement: React.FC = () => {
           {/* Members List */}
           <div className="card">
             <h2 className="text-xl font-semibold mb-4">
-              Entity Members ({entity.members.length})
+              Entity Members ({members.length})
             </h2>
             <div className="space-y-3">
-              {entity.members.map((member) => {
+              {members.map((member) => {
                 const isCurrentUser = member.user_id === user?.id;
                 const canModify = isAdmin && !isCurrentUser && (isOwner || member.role !== 'admin');
 
@@ -213,7 +222,7 @@ export const MemberManagement: React.FC = () => {
                               You
                             </span>
                           )}
-                          {entity.owner_id === member.user_id && (
+                          {entity.created_by === member.user_id && (
                             <span className="px-2 py-0.5 bg-yellow-100 text-yellow-700 text-xs rounded">
                               Owner
                             </span>
@@ -234,7 +243,7 @@ export const MemberManagement: React.FC = () => {
                         </div>
                         <p className="text-xs text-gray-500 mt-1 flex items-center space-x-1">
                           <Calendar size={12} />
-                          <span>Joined {new Date(member.joined_at).toLocaleDateString()}</span>
+                          <span>Joined {formatDate(member.joined_at)}</span>
                         </p>
                       </div>
                     </div>
