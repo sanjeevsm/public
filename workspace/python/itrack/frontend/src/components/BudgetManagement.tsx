@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { PieChart, Plus, Edit2, Trash2, AlertTriangle, CheckCircle } from 'lucide-react';
-import { Budget, BudgetCreate, BudgetUpdate, BudgetProgress, BudgetPeriod, BudgetType } from '../types/budget';
+import { Budget, BudgetCreate, BudgetProgress, BudgetPeriod, BudgetType } from '../types/budget';
 import { budgetService } from '../services/budgetService';
 import { useSettings } from '../contexts/SettingsContext';
 
 export const BudgetManagement: React.FC = () => {
-  const { formatCurrency } = useSettings();
+  const { formatCurrency, selectedCurrencies, currency: primaryCurrency } = useSettings();
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [progress, setProgress] = useState<BudgetProgress[]>([]);
   const [loading, setLoading] = useState(true);
@@ -20,6 +20,7 @@ export const BudgetManagement: React.FC = () => {
     period: 'monthly',
     budget_type: 'total',
     category: '',
+    currency: primaryCurrency,
     start_date: new Date().toISOString().split('T')[0],
     alert_threshold: 80,
   });
@@ -90,6 +91,7 @@ export const BudgetManagement: React.FC = () => {
       period: budget.period,
       budget_type: budget.budget_type,
       category: budget.category || '',
+      currency: budget.currency,
       start_date: new Date(budget.start_date).toISOString().split('T')[0],
       alert_threshold: budget.alert_threshold,
     });
@@ -117,17 +119,12 @@ export const BudgetManagement: React.FC = () => {
       period: 'monthly',
       budget_type: 'total',
       category: '',
+      currency: primaryCurrency,
       start_date: new Date().toISOString().split('T')[0],
       alert_threshold: 80,
     });
     setEditingBudget(null);
     setShowForm(false);
-  };
-
-  const getProgressColor = (progress: BudgetProgress) => {
-    if (progress.is_exceeded) return 'red';
-    if (progress.is_alert) return 'yellow';
-    return 'green';
   };
 
   const getProgressBarColor = (progress: BudgetProgress) => {
@@ -204,6 +201,25 @@ export const BudgetManagement: React.FC = () => {
                   className="input"
                   placeholder="0.00"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Currency *
+                </label>
+                <select
+                  required
+                  value={formData.currency}
+                  onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
+                  className="input"
+                >
+                  {selectedCurrencies.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Only expenses in this currency count toward the budget
+                </p>
               </div>
 
               <div>
@@ -312,7 +328,6 @@ export const BudgetManagement: React.FC = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {progress.map((p) => {
-              const progressColor = getProgressColor(p);
               const progressBarColor = getProgressBarColor(p);
               const progressWidth = Math.min(p.percentage_spent, 100);
 
@@ -333,6 +348,7 @@ export const BudgetManagement: React.FC = () => {
                       <p className="text-sm text-gray-600">
                         {p.category ? `${p.category} • ` : ''}
                         {p.period.charAt(0).toUpperCase() + p.period.slice(1)}
+                        {` • ${p.currency}`}
                       </p>
                     </div>
                     {p.is_exceeded ? (
@@ -347,16 +363,16 @@ export const BudgetManagement: React.FC = () => {
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Spent</span>
-                      <span className="font-semibold">{formatCurrency(p.spent_amount, false)}</span>
+                      <span className="font-semibold">{formatCurrency(p.spent_amount, p.currency)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Budget</span>
-                      <span className="font-semibold">{formatCurrency(p.budget_amount, false)}</span>
+                      <span className="font-semibold">{formatCurrency(p.budget_amount, p.currency)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Remaining</span>
                       <span className={`font-semibold ${p.remaining_amount < 0 ? 'text-red-600' : 'text-green-600'}`}>
-                        {formatCurrency(p.remaining_amount, false)}
+                        {formatCurrency(p.remaining_amount, p.currency)}
                       </span>
                     </div>
 

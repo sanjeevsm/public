@@ -1,5 +1,5 @@
 import api from './api';
-import { Category, CategoryCreate, CategoryUpdate, CategoryStats } from '../types/category';
+import { Category, CategoryCreate, CategoryUpdate, CategoryStats, CategoryType } from '../types/category';
 
 export const categoryService = {
   /**
@@ -21,7 +21,7 @@ export const categoryService = {
   /**
    * Get all categories (default + custom)
    */
-  getCategories: async (type?: 'income' | 'expense'): Promise<Category[]> => {
+  getCategories: async (type?: CategoryType): Promise<Category[]> => {
     const params = type ? { type } : {};
     const response = await api.get('/api/categories', { params });
     return response.data;

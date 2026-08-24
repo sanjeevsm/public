@@ -574,6 +574,7 @@ body { background-color: var(--bg); color: var(--text); }
   .badge-red    { background: var(--error-soft);    color: var(--error); }
   .badge-blue   { background: var(--primary-soft);  color: var(--primary); }
   .badge-yellow { background: var(--warning-soft);  color: var(--warning); }
+  .badge-orange { background: #FFF3E0;              color: #F97316; }
   .badge-muted  { background: var(--surface-2);     color: var(--text-secondary); }
 
   /* ── Divider ── */

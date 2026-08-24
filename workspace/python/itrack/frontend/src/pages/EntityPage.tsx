@@ -7,6 +7,7 @@ import { EntityDashboardSummary } from '../components/EntityDashboardSummary';
 import { EntityManagement } from '../components/EntityManagement';
 import { CategoryChart } from '../components/CategoryChart';
 import { ForecastView } from '../components/ForecastView';
+import { TransactionList } from '../components/TransactionList';
 import { Entity, EntitySummary } from '../types/entity';
 import { entityService } from '../services/entityService';
 
@@ -18,7 +19,8 @@ export const EntityPage: React.FC = () => {
   const { user, refreshUser } = useAuth();
   const { selectedCurrencies, currency: primaryCurrency } = useSettings();
   const [entity, setEntity] = useState<Entity | null>(null);
-  const [summary, setSummary] = useState<EntitySummary | null>(null);
+  const [summaries, setSummaries] = useState<EntitySummary[]>([]);
+  const [showMultiCurrency, setShowMultiCurrency] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -42,7 +44,7 @@ export const EntityPage: React.FC = () => {
 
   useEffect(() => {
     if (entity && dashView !== 'forecast') loadSummary();
-  }, [entity, includePrivate, dashView, selectedYear, selectedMonth, refreshTick, selectedCurrency]);
+  }, [entity, includePrivate, dashView, selectedYear, selectedMonth, refreshTick, selectedCurrency, showMultiCurrency]);
 
   const loadEntityData = async () => {
     setLoading(true);
@@ -62,14 +64,19 @@ export const EntityPage: React.FC = () => {
     if (!entity) return;
     setSummaryLoading(true);
     try {
-      const data = await entityService.getEntitySummary(
-        entity.id,
-        isAdmin ? includePrivate : false,
-        dashView === 'monthly' ? selectedMonth : undefined,
-        dashView === 'monthly' ? selectedYear : undefined,
-        selectedCurrency,
+      const currencies = showMultiCurrency && selectedCurrencies.length > 1
+        ? selectedCurrencies
+        : [selectedCurrency];
+      const data = await Promise.all(
+        currencies.map(curr => entityService.getEntitySummary(
+          entity.id,
+          isAdmin ? includePrivate : false,
+          dashView === 'monthly' ? selectedMonth : undefined,
+          dashView === 'monthly' ? selectedYear : undefined,
+          curr,
+        ))
       );
-      setSummary(data);
+      setSummaries(data);
     } catch (err: any) {
       console.error('Failed to load summary:', err);
     } finally {
@@ -203,20 +210,32 @@ export const EntityPage: React.FC = () => {
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                {/* Currency Selector (if multiple currencies) */}
+                {/* Currency toggle */}
                 {selectedCurrencies.length > 1 && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>Currency:</span>
-                    <select
-                      value={selectedCurrency}
-                      onChange={e => setSelectedCurrency(e.target.value)}
-                      className="input"
-                      style={{ width: 'auto', padding: '0.375rem 0.75rem' }}
-                    >
-                      {selectedCurrencies.map(curr => (
-                        <option key={curr} value={curr}>{curr}</option>
-                      ))}
-                    </select>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                    {(['multi', 'single'] as const).map(mode => (
+                      <button
+                        key={mode}
+                        onClick={() => setShowMultiCurrency(mode === 'multi')}
+                        style={{
+                          padding: '0.375rem 0.75rem', borderRadius: 7, fontSize: '0.8125rem', fontWeight: 500, border: 'none', cursor: 'pointer', transition: 'all 0.15s',
+                          background: (mode === 'multi') === showMultiCurrency ? 'var(--primary)' : 'var(--surface-2)',
+                          color: (mode === 'multi') === showMultiCurrency ? '#fff' : 'var(--text-secondary)',
+                        }}
+                      >
+                        {mode === 'multi' ? 'All Currencies' : 'Single'}
+                      </button>
+                    ))}
+                    {!showMultiCurrency && (
+                      <select
+                        value={selectedCurrency}
+                        onChange={e => setSelectedCurrency(e.target.value)}
+                        className="input"
+                        style={{ width: 'auto', padding: '0.375rem 0.625rem' }}
+                      >
+                        {selectedCurrencies.map(curr => <option key={curr} value={curr}>{curr}</option>)}
+                      </select>
+                    )}
                   </div>
                 )}
 
@@ -284,24 +303,50 @@ export const EntityPage: React.FC = () => {
             {/* All-time / Monthly views */}
             {dashView !== 'forecast' && (
               <>
-                {summaryLoading && !summary && (
+                {summaryLoading && summaries.length === 0 && (
                   <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem' }}>
                     <div className="spinner spinner-lg" />
                   </div>
                 )}
 
-                {summary && (
+                {summaries.length > 0 && (
                   <>
-                    <div className="animate-slide-up">
-                      <EntityDashboardSummary summary={summary} isAdmin={isAdmin} includePrivate={includePrivate} isMonthly={dashView === 'monthly'} />
-                    </div>
-
-                    {/* Category chart */}
-                    {Object.keys(summary.categories_breakdown).length > 0 && (
-                      <div className="card animate-slide-up stagger-1" style={{ marginTop: '1.25rem' }}>
-                        <CategoryChart categoriesBreakdown={summary.categories_breakdown} />
+                    {showMultiCurrency && selectedCurrencies.length > 1 ? (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.25rem', marginBottom: '1.25rem' }} className="animate-slide-up">
+                        {summaries.map((s, idx) => (
+                          <div key={selectedCurrencies[idx]} className="card" style={{ padding: '1.25rem', borderLeft: '4px solid var(--primary)' }}>
+                            <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
+                              {selectedCurrencies[idx]}
+                            </div>
+                            <EntityDashboardSummary summary={s} isAdmin={isAdmin} includePrivate={includePrivate} isMonthly={dashView === 'monthly'} compact currency={selectedCurrencies[idx]} />
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="animate-slide-up">
+                        <EntityDashboardSummary summary={summaries[0]} isAdmin={isAdmin} includePrivate={includePrivate} isMonthly={dashView === 'monthly'} currency={selectedCurrency} />
                       </div>
                     )}
+
+                    {/* Category chart — always uses first/primary summary */}
+                    {Object.keys(summaries[0].categories_breakdown).length > 0 && (
+                      <div className="card animate-slide-up stagger-1" style={{ marginTop: '1.25rem' }}>
+                        <CategoryChart categoriesBreakdown={summaries[0].categories_breakdown} />
+                      </div>
+                    )}
+
+                    {/* Transaction history */}
+                    <div className="animate-slide-up stagger-2" style={{ marginTop: '1.25rem' }}>
+                      <TransactionList
+                        refreshTrigger={refreshTick}
+                        onUpdate={() => setRefreshTick(p => p + 1)}
+                        onDelete={() => setRefreshTick(p => p + 1)}
+                        entityId={entity.id}
+                        includePrivate={isAdmin ? includePrivate : false}
+                        currency={showMultiCurrency ? undefined : selectedCurrency}
+                        showEntityInfo
+                      />
+                    </div>
                   </>
                 )}
               </>

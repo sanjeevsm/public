@@ -29,9 +29,10 @@ export const SettingsPage: React.FC = () => {
     currency, setCurrency, 
     selectedCurrencies, setSelectedCurrencies,
     dateFormat, setDateFormat, 
-    transactionsPerPage, setTransactionsPerPage, 
-    formatCurrency, 
-    currencies 
+    transactionsPerPage, setTransactionsPerPage,
+    formatCurrency,
+    formatDate,
+    currencies
   } = useSettings();
 
   const toggleCurrency = (code: string) => {
@@ -179,7 +180,7 @@ export const SettingsPage: React.FC = () => {
             description="Choose how dates are displayed throughout the application"
           >
             <div style={{ display: 'flex', gap: '0.625rem', flexWrap: 'wrap' }}>
-              {(['MM/DD/YYYY', 'DD/MM/YYYY', 'YYYY-MM-DD'] as DateFormat[]).map(fmt => (
+              {(['MM/DD/YYYY', 'DD/MM/YYYY', 'YYYY-MM-DD', 'DD-MM-YYYY', 'DD-MMM-YYYY', 'MMM DD, YYYY'] as DateFormat[]).map(fmt => (
                 <button
                   key={fmt}
                   onClick={() => setDateFormat(fmt)}
@@ -198,6 +199,9 @@ export const SettingsPage: React.FC = () => {
                   {fmt}
                 </button>
               ))}
+            </div>
+            <div style={{ marginTop: '1rem', padding: '0.75rem 1rem', background: 'var(--surface-2)', borderRadius: 8, fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
+              Preview: {formatDate(new Date())}
             </div>
           </Section>
 

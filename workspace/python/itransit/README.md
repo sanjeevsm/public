@@ -36,6 +36,43 @@ cd public/workspace/python/itransit/scripts
 .\stop-all.ps1
 ```
 
+### Reinstallation (Clean Reset)
+
+The Quick Start above is a **first-time install**: the start scripts create the `.venv/` automatically. Note that the backend does **not** run `pip install` for you (install `backend/requirements.txt` manually the first time), and only the Bash `start-frontend.sh` runs `npm install` automatically — under PowerShell run `npm install` yourself.
+
+For a clean reinstall (corrupted venv, dependency changes, or a pristine slate):
+
+1. Stop both services:
+
+   ```bash
+   ./scripts/stop-all.sh          # Windows: .\scripts\stop-all.ps1
+   ```
+
+2. Delete the environments and runtime artifacts:
+
+   ```bash
+   # macOS / Linux
+   rm -rf .venv frontend/node_modules logs .pids
+   find backend -type d -name __pycache__ -prune -exec rm -rf {} +
+   ```
+
+   ```powershell
+   # Windows (PowerShell)
+   Remove-Item -Recurse -Force .venv, frontend\node_modules, logs, .pids -ErrorAction SilentlyContinue
+   Get-ChildItem backend -Recurse -Directory -Filter __pycache__ | Remove-Item -Recurse -Force
+   ```
+
+   Keep `.env` to preserve your provider API keys, or delete it and re-copy from `.env.example` for a full reset. This project has no database, so there is nothing else to clear.
+
+3. Recreate the backend environment, reinstall, and start:
+
+   ```bash
+   python -m venv .venv
+   . .venv/bin/activate          # Windows: .venv\Scripts\Activate.ps1
+   pip install -r backend/requirements.txt
+   ./scripts/start-all.sh         # Windows: .\scripts\start-all.ps1 (run "npm install" in frontend/ first)
+   ```
+
 ## Runtime layout
 
 - Backend: `backend/` — FastAPI app listening on port `8003` by default.

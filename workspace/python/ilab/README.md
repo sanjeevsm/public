@@ -315,6 +315,52 @@ A custom **Base URL** field is available for every provider to point to a self-h
 
 > **Web mode only (no desktop required)**: If you are deploying on a headless server, skip `python3-tk` and always start with `--web`. The `requirements-web.txt` file does not include the GUI libraries.
 
+### Reinstallation (Clean Reset)
+
+The steps above are for a **first-time install**, where `start` creates the `.venv/` and installs dependencies automatically. Because the start script tracks installed dependencies with a marker file, there are two levels of reinstall:
+
+**A. Refresh dependencies only** (e.g. after editing `requirements.txt` / `requirements-web.txt`). The start script reinstalls automatically when the requirements file is newer than the marker, but you can force it by deleting the marker:
+
+```bash
+# macOS / Linux
+rm -f .venv/.desktop_deps_installed .venv/.web_deps_installed
+
+# Windows (PowerShell)
+Remove-Item .venv\.desktop_deps_installed, .venv\.web_deps_installed -ErrorAction SilentlyContinue
+```
+
+Then re-run `./scripts/start.sh` (or `.\scripts\start.ps1`) and dependencies reinstall on next launch.
+
+**B. Full clean reset** (corrupted virtualenv, Python version change, or a pristine slate):
+
+1. Stop the app:
+
+   ```bash
+   ./scripts/stop.sh          # Windows: .\scripts\stop.ps1
+   ```
+
+2. Delete the environment and runtime artifacts:
+
+   ```bash
+   # macOS / Linux
+   rm -rf .venv .pids data/logs
+   find . -type d -name __pycache__ -prune -exec rm -rf {} +
+   ```
+
+   ```powershell
+   # Windows (PowerShell)
+   Remove-Item -Recurse -Force .venv, .pids, data\logs -ErrorAction SilentlyContinue
+   Get-ChildItem -Recurse -Directory -Filter __pycache__ | Remove-Item -Recurse -Force
+   ```
+
+   Delete `config.json` too for a pristine reset — it is recreated from `config.example.json`.
+
+3. Re-run the start script; it rebuilds `.venv/` and reinstalls everything:
+
+   ```bash
+   ./scripts/start.sh              # or: .\scripts\start.ps1 -Mode web
+   ```
+
 ---
 
 ## Configuration

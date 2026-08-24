@@ -14,6 +14,7 @@ class BudgetBase(BaseModel):
     period: BudgetPeriod
     budget_type: BudgetType
     category: Optional[str] = Field(None, max_length=50)
+    currency: str = Field(default="USD", min_length=3, max_length=3)
     start_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     end_date: Optional[datetime] = None
     alert_threshold: float = Field(default=80.0, ge=0, le=100)
@@ -34,6 +35,7 @@ class BudgetUpdate(BaseModel):
     period: Optional[BudgetPeriod] = None
     budget_type: Optional[BudgetType] = None
     category: Optional[str] = Field(None, max_length=50)
+    currency: Optional[str] = Field(None, min_length=3, max_length=3)
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
     alert_threshold: Optional[float] = Field(None, ge=0, le=100)
@@ -65,6 +67,7 @@ class BudgetResponse(BaseModel):
     period: BudgetPeriod
     budget_type: BudgetType
     category: Optional[str] = None
+    currency: str
     start_date: datetime
     end_date: Optional[datetime] = None
     alert_threshold: float
@@ -85,4 +88,5 @@ class BudgetProgress(BaseModel):
     is_alert: bool
     period: BudgetPeriod
     category: Optional[str] = None
+    currency: str = "USD"
     days_remaining: Optional[int] = None

@@ -65,9 +65,14 @@ class EntitySummary(BaseModel):
     total_balance: float
     total_income: float
     total_expense: float
+    total_assets: float = 0.0
+    total_liabilities: float = 0.0
+    net_worth: float = 0.0
     shared_balance: float
     shared_income: float
     shared_expense: float
+    shared_assets: float = 0.0
+    shared_liabilities: float = 0.0
     transaction_count: int
     shared_transaction_count: int
     categories_breakdown: dict[str, float]

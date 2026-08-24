@@ -232,6 +232,7 @@ class EntityService:
     async def get_entity_summary(
         self, entity_id: str, user_id: str, include_private: bool = False,
         month: Optional[int] = None, year: Optional[int] = None,
+        currency: Optional[str] = None,
     ) -> EntitySummary:
         is_admin = await self._is_admin(entity_id, user_id)
         if include_private and not is_admin:
@@ -273,6 +274,8 @@ class EntityService:
         base_query: dict = {"entity_id": ObjectId(entity_id)}
         if not (is_admin and include_private):
             base_query["mode"] = "shared"
+        if currency:
+            base_query["currency"] = currency
 
         query: dict = {**base_query}
         if date_filter:
@@ -284,16 +287,22 @@ class EntityService:
             {"$group": {"_id": "$type", "total": {"$sum": "$amount"}, "count": {"$sum": 1}}},
         ]
         results = await self.transactions_collection.aggregate(pipeline).to_list(length=10)
-        total_income = total_expense = transaction_count = 0.0
+        total_income = total_expense = total_assets = total_liabilities = transaction_count = 0.0
         for r in results:
             if r["_id"] == "income":
                 total_income = r["total"]
             elif r["_id"] == "expense":
                 total_expense = r["total"]
+            elif r["_id"] == "asset":
+                total_assets = r["total"]
+            elif r["_id"] == "liability":
+                total_liabilities = r["total"]
             transaction_count += r["count"]
 
         # Shared-only totals (also date-scoped when filtering)
         shared_match: dict = {"entity_id": ObjectId(entity_id), "mode": "shared"}
+        if currency:
+            shared_match["currency"] = currency
         if date_filter:
             shared_match["$and"] = [date_filter]
         shared_pipeline = [
@@ -301,12 +310,16 @@ class EntityService:
             {"$group": {"_id": "$type", "total": {"$sum": "$amount"}, "count": {"$sum": 1}}},
         ]
         shared_results = await self.transactions_collection.aggregate(shared_pipeline).to_list(length=10)
-        shared_income = shared_expense = shared_count = 0.0
+        shared_income = shared_expense = shared_assets_val = shared_liabilities_val = shared_count = 0.0
         for r in shared_results:
             if r["_id"] == "income":
                 shared_income = r["total"]
             elif r["_id"] == "expense":
                 shared_expense = r["total"]
+            elif r["_id"] == "asset":
+                shared_assets_val = r["total"]
+            elif r["_id"] == "liability":
+                shared_liabilities_val = r["total"]
             shared_count += r["count"]
 
         # Category breakdown
@@ -322,8 +335,11 @@ class EntityService:
             member_ids = [ObjectId(m["user_id"]) for m in member_entries]
 
             # One aggregation grouped by (user_id, type)
+            mb_match: dict = {"entity_id": ObjectId(entity_id), "user_id": {"$in": member_ids}}
+            if currency:
+                mb_match["currency"] = currency
             mb_pipeline = [
-                {"$match": {"entity_id": ObjectId(entity_id), "user_id": {"$in": member_ids}}},
+                {"$match": mb_match},
                 {
                     "$group": {
                         "_id": {"user_id": "$user_id", "type": "$type"},
@@ -336,7 +352,7 @@ class EntityService:
             )
 
             # Build per-member totals from aggregation result
-            mb_map: dict[str, dict] = {m["user_id"]: {"income": 0.0, "expense": 0.0} for m in member_entries}
+            mb_map: dict[str, dict] = {m["user_id"]: {"income": 0.0, "expense": 0.0, "asset": 0.0, "liability": 0.0} for m in member_entries}
             for r in mb_results:
                 uid = str(r["_id"]["user_id"])
                 t = r["_id"]["type"]
@@ -351,22 +367,35 @@ class EntityService:
 
             for uid, totals in mb_map.items():
                 u = user_map.get(uid)
+                mb_net_assets = round(totals["asset"] - totals["liability"], 2)
                 member_breakdown[uid] = {
                     "username": u["username"] if u else "Unknown",
                     "income": round(totals["income"], 2),
                     "expense": round(totals["expense"], 2),
                     "balance": round(totals["income"] - totals["expense"], 2),
+                    "assets": round(totals["asset"], 2),
+                    "liabilities": round(totals["liability"], 2),
+                    "net_assets": mb_net_assets,
+                    "net_worth": round(totals["income"] - totals["expense"] + mb_net_assets, 2),
                 }
+
+        balance = total_income - total_expense
+        net_worth = balance + total_assets - total_liabilities
 
         return EntitySummary(
             entity_id=str(entity["_id"]),
             entity_name=entity["name"],
-            total_balance=round(total_income - total_expense, 2),
+            total_balance=round(balance, 2),
             total_income=round(total_income, 2),
             total_expense=round(total_expense, 2),
+            total_assets=round(total_assets, 2),
+            total_liabilities=round(total_liabilities, 2),
+            net_worth=round(net_worth, 2),
             shared_balance=round(shared_income - shared_expense, 2),
             shared_income=round(shared_income, 2),
             shared_expense=round(shared_expense, 2),
+            shared_assets=round(shared_assets_val, 2),
+            shared_liabilities=round(shared_liabilities_val, 2),
             transaction_count=int(transaction_count),
             shared_transaction_count=int(shared_count),
             categories_breakdown=categories_breakdown,
@@ -374,7 +403,8 @@ class EntityService:
         )
 
     async def get_entity_monthly_history(
-        self, entity_id: str, user_id: str, months: int = 6, include_private: bool = False
+        self, entity_id: str, user_id: str, months: int = 6, include_private: bool = False,
+        currency: Optional[str] = None,
     ) -> list[dict]:
         # Delegate to get_entity_summary per month — same proven code path used by
         # the monthly dashboard tab (confirmed returning correct values).
@@ -384,7 +414,7 @@ class EntityService:
             total_m = now.year * 12 + (now.month - 1) - i
             y, m = total_m // 12, (total_m % 12) + 1
             summary = await self.get_entity_summary(
-                entity_id, user_id, include_private, month=m, year=y
+                entity_id, user_id, include_private, month=m, year=y, currency=currency
             )
             result.append({
                 "year": y,
@@ -396,7 +426,8 @@ class EntityService:
         return result
 
     async def get_entity_recurring_transactions(
-        self, entity_id: str, user_id: str, include_private: bool = False
+        self, entity_id: str, user_id: str, include_private: bool = False,
+        currency: Optional[str] = None,
     ) -> list[dict]:
         """Return all active monthly recurring transactions for the entity."""
         query: dict = {
@@ -406,6 +437,8 @@ class EntityService:
         }
         if not include_private:
             query["mode"] = "shared"
+        if currency:
+            query["currency"] = currency
         cursor = self.transactions_collection.find(query)
         result = []
         async for doc in cursor:
@@ -415,7 +448,41 @@ class EntityService:
                 "type": doc.get("type"),
                 "amount": doc.get("amount", 0),
                 "description": doc.get("description", ""),
+                "currency": doc.get("currency", "USD"),
                 "recurrence_start": rs.isoformat() if rs else None,
+            })
+        return result
+
+    async def get_entity_transactions(
+        self, entity_id: str, user_id: str, include_private: bool = False,
+        currency: Optional[str] = None, skip: int = 0, limit: int = 50,
+    ) -> list[dict]:
+        is_admin = await self._is_admin(entity_id, user_id)
+        if include_private and not is_admin:
+            raise HTTPException(status_code=403, detail="Only admin can view all transactions")
+        query: dict = {"entity_id": ObjectId(entity_id)}
+        if not (is_admin and include_private):
+            query["mode"] = "shared"
+        if currency:
+            query["currency"] = currency
+        cursor = self.transactions_collection.find(query).sort("date", -1).skip(skip).limit(limit)
+        transactions = await cursor.to_list(length=limit)
+        uid_set = list({t["user_id"] for t in transactions})
+        users = await self.users_collection.find({"_id": {"$in": uid_set}}).to_list(length=len(uid_set))
+        user_map = {str(u["_id"]): u["username"] for u in users}
+        result = []
+        for t in transactions:
+            result.append({
+                "id": str(t["_id"]),
+                "description": t["description"],
+                "amount": t["amount"],
+                "type": t["type"],
+                "category": t["category"],
+                "date": t["date"].isoformat() if hasattr(t["date"], "isoformat") else str(t["date"]),
+                "mode": t.get("mode", "private"),
+                "currency": t.get("currency", "USD"),
+                "username": user_map.get(str(t["user_id"]), "Unknown"),
+                "user_id": str(t["user_id"]),
             })
         return result
 

@@ -36,7 +36,15 @@ export const CURRENCIES: Currency[] = [
   { code: 'TRY', symbol: '₺',  label: 'Turkish Lira',        locale: 'tr-TR' },
 ];
 
-export type DateFormat = 'MM/DD/YYYY' | 'DD/MM/YYYY' | 'YYYY-MM-DD';
+export type DateFormat =
+  | 'MM/DD/YYYY'
+  | 'DD/MM/YYYY'
+  | 'YYYY-MM-DD'
+  | 'DD-MM-YYYY'
+  | 'DD-MMM-YYYY'
+  | 'MMM DD, YYYY';
+
+const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 interface SettingsContextValue {
   currency: string;
@@ -48,6 +56,7 @@ interface SettingsContextValue {
   transactionsPerPage: number;
   setTransactionsPerPage: (n: number) => void;
   formatCurrency: (amount: number, currencyCode?: string, compact?: boolean) => string;
+  formatDate: (date: string | number | Date, fmt?: DateFormat) => string;
   currencies: Currency[];
   getCurrency: (code: string) => Currency | undefined;
 }
@@ -108,6 +117,24 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return CURRENCIES.find(c => c.code === code);
   };
 
+  const formatDate = (date: string | number | Date, fmt?: DateFormat) => {
+    const d = date instanceof Date ? date : new Date(date);
+    if (isNaN(d.getTime())) return '';
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mmm = MONTHS_SHORT[d.getMonth()];
+    switch (fmt ?? dateFormat) {
+      case 'DD/MM/YYYY':   return `${dd}/${mm}/${yyyy}`;
+      case 'YYYY-MM-DD':   return `${yyyy}-${mm}-${dd}`;
+      case 'DD-MM-YYYY':   return `${dd}-${mm}-${yyyy}`;
+      case 'DD-MMM-YYYY':  return `${dd}-${mmm}-${yyyy}`;
+      case 'MMM DD, YYYY': return `${mmm} ${dd}, ${yyyy}`;
+      case 'MM/DD/YYYY':
+      default:             return `${mm}/${dd}/${yyyy}`;
+    }
+  };
+
   return (
     <SettingsContext.Provider value={{
       currency, setCurrency,
@@ -115,6 +142,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       dateFormat, setDateFormat,
       transactionsPerPage, setTransactionsPerPage,
       formatCurrency,
+      formatDate,
       getCurrency,
       currencies: CURRENCIES,
     }}>

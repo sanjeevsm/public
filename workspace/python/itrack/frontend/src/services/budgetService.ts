@@ -6,7 +6,7 @@ export const budgetService = {
    * Create a new budget
    */
   createBudget: async (data: BudgetCreate): Promise<Budget> => {
-    const response = await api.post('/budgets', data);
+    const response = await api.post('/api/budgets', data);
     return response.data;
   },
 
@@ -15,7 +15,7 @@ export const budgetService = {
    */
   getBudgets: async (activeOnly: boolean = false): Promise<Budget[]> => {
     const params = activeOnly ? { active_only: true } : {};
-    const response = await api.get('/budgets', { params });
+    const response = await api.get('/api/budgets', { params });
     return response.data;
   },
 
@@ -23,7 +23,7 @@ export const budgetService = {
    * Get progress for all active budgets
    */
   getBudgetsProgress: async (): Promise<BudgetProgress[]> => {
-    const response = await api.get('/budgets/progress');
+    const response = await api.get('/api/budgets/progress');
     return response.data;
   },
 
@@ -31,7 +31,7 @@ export const budgetService = {
    * Get budget alerts (exceeded threshold)
    */
   getBudgetAlerts: async (): Promise<BudgetProgress[]> => {
-    const response = await api.get('/budgets/alerts');
+    const response = await api.get('/api/budgets/alerts');
     return response.data;
   },
 
@@ -39,7 +39,7 @@ export const budgetService = {
    * Get a specific budget
    */
   getBudget: async (budgetId: string): Promise<Budget> => {
-    const response = await api.get(`/budgets/${budgetId}`);
+    const response = await api.get(`/api/budgets/${budgetId}`);
     return response.data;
   },
 
@@ -47,7 +47,7 @@ export const budgetService = {
    * Get progress for a specific budget
    */
   getBudgetProgress: async (budgetId: string): Promise<BudgetProgress> => {
-    const response = await api.get(`/budgets/${budgetId}/progress`);
+    const response = await api.get(`/api/budgets/${budgetId}/progress`);
     return response.data;
   },
 
@@ -58,7 +58,7 @@ export const budgetService = {
     budgetId: string,
     data: BudgetUpdate
   ): Promise<Budget> => {
-    const response = await api.put(`/budgets/${budgetId}`, data);
+    const response = await api.put(`/api/budgets/${budgetId}`, data);
     return response.data;
   },
 
@@ -66,6 +66,6 @@ export const budgetService = {
    * Delete a budget
    */
   deleteBudget: async (budgetId: string): Promise<void> => {
-    await api.delete(`/budgets/${budgetId}`);
+    await api.delete(`/api/budgets/${budgetId}`);
   },
 };

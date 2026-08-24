@@ -97,6 +97,19 @@ export const entityService = {
     return response.data;
   },
 
+  async getEntityTransactions(
+    entityId: string,
+    includePrivate = false,
+    currency?: string,
+    skip = 0,
+    limit = 50,
+  ): Promise<any[]> {
+    const response = await api.get(`/api/entities/${entityId}/transactions`, {
+      params: { include_private: includePrivate, currency, skip, limit },
+    });
+    return response.data;
+  },
+
   async getEntityRecurringTransactions(entityId: string, includePrivate = false, currency?: string): Promise<RecurringTransaction[]> {
     const response = await api.get<RecurringTransaction[]>(`/api/entities/${entityId}/recurring-transactions`, {
       params: { include_private: includePrivate, currency },

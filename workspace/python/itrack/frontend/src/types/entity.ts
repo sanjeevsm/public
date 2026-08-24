@@ -5,6 +5,7 @@ export type TransactionMode = 'shared' | 'private';
 export interface EntityMember {
   user_id: string;
   username: string;
+  email?: string;
   role: MemberRole;
   joined_at: string;
 }
@@ -44,6 +45,10 @@ export interface MemberBreakdown {
   income: number;
   expense: number;
   balance: number;
+  assets: number;
+  liabilities: number;
+  net_assets: number;
+  net_worth: number;
 }
 
 export interface EntitySummary {
@@ -52,9 +57,14 @@ export interface EntitySummary {
   total_balance: number;
   total_income: number;
   total_expense: number;
+  total_assets: number;
+  total_liabilities: number;
+  net_worth: number;
   shared_balance: number;
   shared_income: number;
   shared_expense: number;
+  shared_assets: number;
+  shared_liabilities: number;
   transaction_count: number;
   shared_transaction_count: number;
   categories_breakdown: Record<string, number>;

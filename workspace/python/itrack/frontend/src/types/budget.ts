@@ -8,6 +8,7 @@ export interface Budget {
   period: BudgetPeriod;
   budget_type: BudgetType;
   category?: string;
+  currency: string;
   start_date: string;
   end_date?: string;
   alert_threshold: number;
@@ -22,6 +23,7 @@ export interface BudgetCreate {
   period: BudgetPeriod;
   budget_type: BudgetType;
   category?: string;
+  currency: string;
   start_date: string;
   end_date?: string;
   alert_threshold?: number;
@@ -33,6 +35,7 @@ export interface BudgetUpdate {
   period?: BudgetPeriod;
   budget_type?: BudgetType;
   category?: string;
+  currency?: string;
   start_date?: string;
   end_date?: string;
   alert_threshold?: number;
@@ -49,5 +52,6 @@ export interface BudgetProgress {
   is_alert: boolean;
   period: BudgetPeriod;
   category?: string;
+  currency: string;
   days_remaining?: number;
 }
