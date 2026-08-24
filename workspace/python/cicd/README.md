@@ -9,6 +9,39 @@ A real-time CI/CD metrics dashboard built with **Python FastAPI** and a single-p
 
 ---
 
+## Docker (Recommended)
+
+The quickest way to run cicd — no Python or virtualenv setup required.
+
+**Prerequisites:** [Docker Desktop](https://docs.docker.com/get-docker/) (includes Docker Compose)
+
+```bash
+cd cicd
+
+# Optional: customise port or log level
+cp .env.example .env   # then edit .env
+
+docker compose up -d
+```
+
+| URL | Description |
+|---|---|
+| `http://localhost:8000` | Dashboard SPA |
+| `http://localhost:8000/api/docs` | Swagger UI |
+| `http://localhost:8000/health` | Health check |
+| `http://localhost:8000/metrics` | Prometheus metrics |
+
+**LAN access:** replace `localhost` with this machine's IP address — the server binds to `0.0.0.0` so no additional config is needed.
+
+```bash
+docker compose down          # stop and remove containers
+docker compose logs -f cicd  # follow logs
+```
+
+> Prometheus and Grafana are not included in the Docker setup. Use the process-based installation (see **Installation** below) if you need the monitoring stack.
+
+---
+
 ## Features
 
 ### Multi-provider support

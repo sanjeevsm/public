@@ -4,6 +4,38 @@ A short summary of the primary technologies used: Frontend: Jinja2 + Vanilla JS 
 
 iLab+ is an AI-powered technical interview simulator that generates multiple-choice questions from a job description or a list of skills, runs them as a timed quiz, and delivers a scored result with per-question explanations. It supports six AI providers and runs in two modes: a native desktop GUI or a shared web server that any browser on the same network can access.
 
+## Docker (Recommended)
+
+The quickest way to run iLab+ in web mode — no Python or virtualenv setup required.
+
+**Prerequisites:** [Docker Desktop](https://docs.docker.com/get-docker/) (includes Docker Compose)
+
+```bash
+cd ilab
+
+# Optional: set a custom secret key
+cp .env.example .env   # then edit .env
+
+docker compose up -d
+```
+
+| URL | Description |
+|---|---|
+| `http://localhost:8001` | iLab+ web UI |
+
+**LAN access:** replace `localhost` with this machine's IP address — the server binds to `0.0.0.0` so no additional config is needed.
+
+```bash
+docker compose down        # stop and remove container
+docker compose logs -f     # follow logs
+```
+
+> **API key:** configure your AI provider key in the web UI (⚙ Settings) after opening the app — it is stored in the browser, not on the server.
+>
+> **Single worker:** the container runs with one Gunicorn worker (`-w 1`). The in-memory session store is not safe for multiple worker processes. Do not override this.
+
+---
+
 ## Quick Start
 
 See the Installation section below for detailed platform-specific steps (Windows / macOS / Linux).

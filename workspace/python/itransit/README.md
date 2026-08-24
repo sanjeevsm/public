@@ -5,7 +5,54 @@ A short summary of the primary technologies used: Frontend: React (Vite) · Back
 
 Lightweight stateless frontend + FastAPI backend that queries public-transport provider APIs for nearby stops and live departures. The backend prefers live provider adapters (TfL, TransportAPI, Translink, Traveline, Transport Scotland, Transport for Wales) and falls back to generated mock data when provider keys are not configured.
 
-## Quick Start
+## Docker (Recommended)
+
+The quickest way to run iTransit+ — no Python, Node.js, or virtualenv setup required.
+
+**Prerequisites:** [Docker Desktop](https://docs.docker.com/get-docker/) (includes Docker Compose)
+
+### Localhost only
+
+```bash
+cd itransit
+
+# Optional: add provider API keys
+cp .env.example .env   # then edit .env
+
+docker compose up -d
+```
+
+### LAN access (other machines on the same network)
+
+`VITE_API_URL` is baked into the frontend bundle at build time — it must be the URL the **browser** uses to reach the backend.
+
+```bash
+cd itransit
+cp .env.example .env
+# Edit .env and set:
+#   VITE_API_URL=http://<your-lan-ip>:8003
+
+docker compose build   # rebuilds frontend with the correct API URL
+docker compose up -d
+```
+
+| URL | Description |
+|---|---|
+| `http://localhost:3001` | Map UI |
+| `http://localhost:8003` | Backend API |
+
+```bash
+docker compose down        # stop and remove containers
+docker compose logs -f     # follow logs
+```
+
+> **Provider API keys** are optional — mock data is returned when keys are absent. Set keys in `.env` for live departures.
+>
+> **IP changed?** Re-run `docker compose build frontend && docker compose up -d frontend` after updating `VITE_API_URL` in `.env`.
+
+---
+
+## Quick Start (Process-Based)
 
 1. Create a local `.env` from the example and add any provider keys you have (do NOT commit secrets):
 

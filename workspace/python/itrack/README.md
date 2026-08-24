@@ -135,7 +135,7 @@ cd itrack
 cp .env.example .env
 
 # 3. Start application with Docker
-docker-compose up --build
+docker compose up -d --build
 
 # 4. Wait 30-60 seconds for services to initialize
 
@@ -144,6 +144,21 @@ Frontend:  http://localhost:3000
 Backend:   http://localhost:8002
 API Docs:  http://localhost:8002/docs
 ```
+
+### LAN Access (other machines on the same network)
+
+`VITE_API_URL` is baked into the frontend bundle at build time — it must be the URL the **browser** uses to reach the backend.
+
+```bash
+# Edit .env and set:
+#   VITE_API_URL=http://<your-lan-ip>:8002
+#   FRONTEND_URL=http://<your-lan-ip>:3000
+
+docker compose build frontend   # rebuild frontend with the correct API URL
+docker compose up -d
+```
+
+Replace `localhost` with this machine's LAN IP when accessing from another device.
 
 ### First Time Setup
 
