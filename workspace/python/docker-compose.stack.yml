@@ -1,0 +1,229 @@
+version: '3.8'
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FULL STACK — runs all five applications together with a portal landing page.
+#
+# Each application also has its own docker-compose.yml for standalone deployment.
+# Use this file only when you want to run everything on one host.
+#
+# Quick start:
+#   cp .env.example .env
+#   # Edit .env — set HOST_IP to this machine's LAN IP
+#   #   Windows: ipconfig → IPv4 Address
+#   #   Linux:   hostname -I | awk '{print $1}'
+#   docker compose -f docker-compose.stack.yml build
+#   docker compose -f docker-compose.stack.yml up -d
+#
+# Portal:  http://<HOST_IP>       (links to all apps)
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── Portal (landing page on :80) ──────────────────────────────────────────
+  portal:
+    image: nginx:alpine
+    container_name: portal
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/index.html:/usr/share/nginx/html/index.html:ro
+    networks:
+      - app_net
+
+  # ── cicd — CI/CD metrics dashboard (:8000) ────────────────────────────────
+  cicd:
+    build:
+      context: ./cicd
+      dockerfile: Dockerfile
+    container_name: cicd
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      APP_PORT: "8000"
+      LOG_LEVEL: info
+      CACHE_TTL: "60"
+    networks:
+      - app_net
+
+  # ── ilab — AI interview simulator (:8001) ─────────────────────────────────
+  ilab:
+    build:
+      context: ./ilab
+      dockerfile: Dockerfile
+    container_name: ilab
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    environment:
+      HOST: "0.0.0.0"
+      PORT: "8001"
+      FLASK_DEBUG: "0"
+      ILAB_SECRET: ${ILAB_SECRET:-change-me-random-hex-string}
+    networks:
+      - app_net
+
+  # ── itrack database (MongoDB) ─────────────────────────────────────────────
+  itrack_db:
+    image: mongo:7.0
+    container_name: itrack_db
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: ${ITRACK_MONGO_PASSWORD:-change_me}
+    volumes:
+      - itrack_db_data:/data/db
+      - itrack_db_config:/data/configdb
+    networks:
+      - app_net
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # ── itrack backend — personal finance API (:8002) ─────────────────────────
+  itrack_backend:
+    build:
+      context: ./itrack/backend
+      dockerfile: Dockerfile
+    container_name: itrack_backend
+    restart: unless-stopped
+    ports:
+      - "8002:8002"
+    environment:
+      MONGODB_URL: mongodb://itrack_db:27017
+      MONGODB_DB_NAME: itrack_db
+      SECRET_KEY: ${ITRACK_SECRET_KEY:-change-me-min-32-chars-random-string}
+      ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: "30"
+      FRONTEND_URL: http://${HOST_IP:-localhost}:3000
+      ENVIRONMENT: production
+    depends_on:
+      itrack_db:
+        condition: service_healthy
+    networks:
+      - app_net
+
+  # ── itrack frontend — React SPA (:3000) ───────────────────────────────────
+  itrack_frontend:
+    build:
+      context: ./itrack/frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: http://${HOST_IP:-localhost}:8002
+    container_name: itrack_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - itrack_backend
+    networks:
+      - app_net
+
+  # ── itransit backend — transport viewer API (:8003) ───────────────────────
+  itransit_backend:
+    build:
+      context: ./itransit/backend
+      dockerfile: Dockerfile
+    container_name: itransit_backend
+    restart: unless-stopped
+    ports:
+      - "8003:8003"
+    env_file:
+      - path: ./itransit/.env
+        required: false
+    networks:
+      - app_net
+
+  # ── itransit frontend — React SPA (:3001) ─────────────────────────────────
+  itransit_frontend:
+    build:
+      context: ./itransit/frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: http://${HOST_IP:-localhost}:8003
+    container_name: itransit_frontend
+    restart: unless-stopped
+    ports:
+      - "3001:80"
+    depends_on:
+      - itransit_backend
+    networks:
+      - app_net
+
+  # ── icare database (PostgreSQL) ───────────────────────────────────────────
+  icare_db:
+    image: postgres:16-alpine
+    container_name: icare_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: clinic
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${ICARE_DB_PASSWORD:-icare_secret}
+    volumes:
+      - icare_db_data:/var/lib/postgresql/data
+      - ./icare/clinic_setup.sql:/docker-entrypoint-initdb.d/01-clinic.sql:ro
+    networks:
+      - app_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d clinic"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # ── icare API — clinic REST API (:8004) ───────────────────────────────────
+  icare_api:
+    build:
+      context: ./icare/api
+      dockerfile: Dockerfile
+    container_name: icare_api
+    restart: unless-stopped
+    ports:
+      - "8004:8004"
+    environment:
+      DB_HOST: icare_db
+      DB_PORT: "5432"
+      DB_NAME: clinic
+      DB_USER: postgres
+      DB_PASSWORD: ${ICARE_DB_PASSWORD:-icare_secret}
+      API_HOST: "0.0.0.0"
+      API_PORT: "8004"
+      API_SECRET: ${ICARE_API_SECRET:-change-me-api-secret}
+    depends_on:
+      icare_db:
+        condition: service_healthy
+    networks:
+      - app_net
+
+  # ── icare web — clinic management UI (:3003) ──────────────────────────────
+  icare_web:
+    build:
+      context: ./icare/web-app
+      dockerfile: Dockerfile
+    container_name: icare_web
+    restart: unless-stopped
+    ports:
+      - "3003:3003"
+    environment:
+      API_URL: http://icare_api:8004
+      WEB_HOST: "0.0.0.0"
+      WEB_PORT: "3003"
+      WEB_SECRET: ${ICARE_WEB_SECRET:-change-me-web-secret}
+    depends_on:
+      - icare_api
+    networks:
+      - app_net
+
+networks:
+  app_net:
+    driver: bridge
+
+volumes:
+  itrack_db_data:
+  itrack_db_config:
+  icare_db_data:
