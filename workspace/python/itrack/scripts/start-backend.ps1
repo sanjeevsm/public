@@ -1,4 +1,4 @@
-Set-Location "C:\Users\SanjeevMenon\PGit\public\workspace\python\itrack\scripts\..\backend"
+Set-Location (Join-Path $PSScriptRoot "..\backend")
 .\venv\Scripts\Activate.ps1
 
 $BACKEND_PORT = if ($env:BACKEND_PORT) { [int]$env:BACKEND_PORT } else { 8002 }

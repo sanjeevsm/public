@@ -22,7 +22,7 @@ function App(){
   useEffect(()=>{
     // websocket connection
     try{
-      wsRef.current = new WebSocket((API_BASE + '/ws').replace('http://','ws://'))
+      wsRef.current = new WebSocket((API_BASE + '/ws').replace('https://','wss://').replace('http://','ws://'))
       wsRef.current.onmessage = (ev)=>{
         const msg = JSON.parse(ev.data)
         if((msg.type === 'snapshot' || msg.type === 'update') && msg.data.stop_id === selectedStop) {
