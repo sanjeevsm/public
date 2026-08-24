@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>App Portal</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+
+    header h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: #f8fafc;
+    }
+
+    header p {
+      margin-top: 0.5rem;
+      color: #94a3b8;
+      font-size: 0.9375rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.25rem;
+      width: 100%;
+      max-width: 960px;
+    }
+
+    .card {
+      background: #1e2130;
+      border: 1px solid #2d3148;
+      border-radius: 14px;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      transition: border-color 0.15s, transform 0.15s;
+    }
+
+    .card:hover { border-color: #4f6ef7; transform: translateY(-2px); }
+
+    .card-top {
+      display: flex;
+      align-items: center;
+      gap: 0.875rem;
+    }
+
+    .icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.375rem;
+      flex-shrink: 0;
+    }
+
+    .card-meta { flex: 1; }
+    .card-name { font-weight: 700; font-size: 1.0625rem; color: #f1f5f9; }
+    .card-port { font-size: 0.75rem; color: #64748b; margin-top: 0.15rem; font-family: monospace; }
+    .card-desc { font-size: 0.875rem; color: #94a3b8; line-height: 1.5; }
+
+    .badge {
+      display: inline-block;
+      font-size: 0.6875rem;
+      font-weight: 600;
+      padding: 0.2rem 0.55rem;
+      border-radius: 20px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .open-btn {
+      margin-top: auto;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      padding: 0.6rem 1.25rem;
+      border-radius: 8px;
+      border: none;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: opacity 0.15s;
+      color: #fff;
+    }
+
+    .open-btn:hover { opacity: 0.85; }
+
+    footer {
+      margin-top: 3rem;
+      color: #475569;
+      font-size: 0.8125rem;
+      text-align: center;
+    }
+
+    @media (max-width: 480px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>App Portal</h1>
+  <p>All applications running on this host</p>
+</header>
+
+<div class="grid" id="grid"></div>
+
+<footer id="footer"></footer>
+
+<script>
+  const host = window.location.hostname;
+
+  const apps = [
+    {
+      name: 'iTrack+',
+      desc: 'Personal finance tracker — income, expenses, assets, liabilities, multi-currency, entity collaboration.',
+      icon: '💰',
+      iconBg: '#1a2e1a',
+      port: 3000,
+      stack: 'React + FastAPI',
+      badgeColor: '#22c55e',
+      badgeBg: '#14291a',
+      btnColor: '#16a34a',
+    },
+    {
+      name: 'iCare+',
+      desc: 'Clinic management — doctors, patients, appointments, billing, and financial reporting.',
+      icon: '🏥',
+      iconBg: '#1a1a2e',
+      port: 3003,
+      stack: 'Flask SSR',
+      badgeColor: '#818cf8',
+      badgeBg: '#1e1a2e',
+      btnColor: '#4f46e5',
+    },
+    {
+      name: 'iLab+',
+      desc: 'AI interview simulator — generates MCQ quizzes from job descriptions using Claude, OpenAI, Gemini, and more.',
+      icon: '🤖',
+      iconBg: '#2e1a1a',
+      port: 8001,
+      stack: 'Flask + Gunicorn',
+      badgeColor: '#f97316',
+      badgeBg: '#2e1a0a',
+      btnColor: '#ea580c',
+    },
+    {
+      name: 'cicd',
+      desc: 'Real-time CI/CD metrics dashboard — aggregates pipelines, jobs, PRs, and deployments from GitLab, GitHub, Bitbucket, and Gitea.',
+      icon: '🚀',
+      iconBg: '#1a2530',
+      port: 8000,
+      stack: 'FastAPI + Vanilla JS',
+      badgeColor: '#38bdf8',
+      badgeBg: '#0c1f2e',
+      btnColor: '#0284c7',
+    },
+    {
+      name: 'iTransit+',
+      desc: 'Public transport viewer — live bus, tram, and train departures for UK and Ireland.',
+      icon: '🚌',
+      iconBg: '#2e2a1a',
+      port: 3001,
+      stack: 'React + FastAPI',
+      badgeColor: '#fbbf24',
+      badgeBg: '#2e2510',
+      btnColor: '#d97706',
+    },
+  ];
+
+  const grid = document.getElementById('grid');
+
+  apps.forEach(app => {
+    const url = `http://${host}:${app.port}`;
+    grid.innerHTML += `
+      <div class="card">
+        <div class="card-top">
+          <div class="icon" style="background:${app.iconBg}">${app.icon}</div>
+          <div class="card-meta">
+            <div class="card-name">${app.name}</div>
+            <div class="card-port">:${app.port} &nbsp;·&nbsp; ${url}</div>
+          </div>
+          <span class="badge" style="color:${app.badgeColor};background:${app.badgeBg}">${app.stack}</span>
+        </div>
+        <p class="card-desc">${app.desc}</p>
+        <a class="open-btn" href="${url}" target="_blank" rel="noopener"
+           style="background:${app.btnColor}">
+          Open &rarr;
+        </a>
+      </div>`;
+  });
+
+  document.getElementById('footer').textContent =
+    `Serving from ${host} · ${new Date().getFullYear()}`;
+</script>
+
+</body>
+</html>

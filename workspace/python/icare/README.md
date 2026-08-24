@@ -54,7 +54,38 @@ A full-stack medical clinic management system for managing doctors, patients, ap
 - **Dashboard** — Welcome screen with doctor/speciality browser
 - **Navigation** — Context-aware menu (shows only authenticated user's available options)
 
-## Quick Start
+## Docker (Recommended)
+
+The quickest way to run iCare+ — no Python or PostgreSQL setup required. The database is created and seeded automatically on first start.
+
+**Prerequisites:** [Docker Desktop](https://docs.docker.com/get-docker/) (includes Docker Compose)
+
+```bash
+cd icare
+
+# Set passwords and secrets (recommended)
+cp .env.example .env   # then edit .env
+
+docker compose up -d
+```
+
+| URL | Description |
+|---|---|
+| `http://localhost:3003` | Web UI (default login: `admin` / `admin`) |
+| `http://localhost:8004` | REST API |
+
+**LAN access:** replace `localhost` with this machine's IP address — both services bind to `0.0.0.0` so no additional config is needed.
+
+```bash
+docker compose down        # stop and remove containers
+docker compose logs -f     # follow logs
+```
+
+> **Database persistence:** data lives in a named Docker volume (`icare_db_data`). `docker compose down` preserves data; add `-v` to also wipe the database.
+
+---
+
+## Quick Start (Process-Based)
 
 ### Prerequisites
 - Python 3.8+

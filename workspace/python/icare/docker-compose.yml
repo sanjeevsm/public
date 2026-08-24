@@ -1,0 +1,92 @@
+version: '3.8'
+
+# ─────────────────────────────────────────────────────────────────────────────
+# iCare+ — Clinic Management System — standalone Docker Compose
+#
+# Quick start:
+#   cp .env.example .env        # set passwords and secrets
+#   docker compose up -d
+#
+# Access:  http://localhost:3003   (web UI — default login: admin / admin)
+#          http://localhost:8004   (REST API)
+#
+# LAN access: the web UI and API both bind to 0.0.0.0 — other machines on the
+# same network can reach them at  http://<host-ip>:3003  without any config change.
+#
+# First run: the database is initialised automatically from clinic_setup.sql.
+# Subsequent runs reuse the named volume (icare_db_data) — no re-import.
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  db:
+    image: postgres:16-alpine
+    container_name: icare_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: clinic
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-icare_secret}
+    volumes:
+      - icare_db_data:/var/lib/postgresql/data
+      - ./clinic_setup.sql:/docker-entrypoint-initdb.d/01-clinic.sql:ro
+    networks:
+      - icare_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d clinic"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: icare_api
+    restart: unless-stopped
+    ports:
+      - "${API_PORT:-8004}:8004"
+    environment:
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: clinic
+      DB_USER: postgres
+      DB_PASSWORD: ${DB_PASSWORD:-icare_secret}
+      API_HOST: "0.0.0.0"
+      API_PORT: "8004"
+      API_SECRET: ${API_SECRET:-change-me-api-secret}
+      API_TOKEN_EXP: ${API_TOKEN_EXP:-86400}
+      BRAND_NAME: ${BRAND_NAME:-iCare+}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - icare_net
+
+  web:
+    build:
+      context: ./web-app
+      dockerfile: Dockerfile
+    container_name: icare_web
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-3003}:3003"
+    environment:
+      # Internal container-to-container URL — do NOT set to localhost or host IP
+      API_URL: http://api:8004
+      WEB_HOST: "0.0.0.0"
+      WEB_PORT: "3003"
+      WEB_SECRET: ${WEB_SECRET:-change-me-web-secret}
+      BRAND_NAME: ${BRAND_NAME:-iCare+}
+    depends_on:
+      - api
+    networks:
+      - icare_net
+
+networks:
+  icare_net:
+    driver: bridge
+
+volumes:
+  icare_db_data:

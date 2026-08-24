@@ -1,0 +1,61 @@
+version: '3.8'
+
+# ─────────────────────────────────────────────────────────────────────────────
+# iTransit+ — Public Transport Viewer — standalone Docker Compose
+#
+# Quick start (localhost only):
+#   docker compose up -d
+#
+# Quick start (LAN access — other machines on the same network):
+#   cp .env.example .env
+#   # Edit .env — set VITE_API_URL to http://<your-lan-ip>:8003
+#   docker compose build        # rebuilds frontend with the correct API URL
+#   docker compose up -d
+#
+# Access:  http://localhost:3001   (map UI)
+#          http://localhost:8003   (backend API)
+#
+# Transport provider API keys: set them in .env (all optional — mock data is
+# returned when keys are absent). See .env.example for available variables.
+#
+# IMPORTANT: VITE_API_URL is baked into the frontend bundle at build time.
+# If the host IP changes, re-run: docker compose build frontend && docker compose up -d frontend
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: itransit_backend
+    restart: unless-stopped
+    ports:
+      - "8003:8003"
+    env_file:
+      - path: .env
+        required: false
+    networks:
+      - itransit_net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # Baked at build time — must be the URL the *browser* uses to reach the backend.
+        # For localhost:  http://localhost:8003  (default)
+        # For LAN access: http://<host-lan-ip>:8003
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8003}
+    container_name: itransit_frontend
+    restart: unless-stopped
+    ports:
+      - "3001:80"
+    depends_on:
+      - backend
+    networks:
+      - itransit_net
+
+networks:
+  itransit_net:
+    driver: bridge
