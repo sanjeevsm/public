@@ -206,14 +206,14 @@ Replace `localhost` with this machine's LAN IP when accessing from another devic
 
 The steps above are for a **first-time install**. Reinstallation differs by mode.
 
-**Docker mode.** `docker-compose up` alone reuses the existing MongoDB volumes, so your data survives a restart. For a true clean reinstall that also wipes the database, tear down with `-v` to drop the named volumes (`mongodb_data`, `mongodb_config`), then rebuild:
+**Docker mode.** `docker compose up` alone reuses the existing MongoDB volumes, so your data survives a restart. For a true clean reinstall that also wipes the database, tear down with `-v` to drop the named volumes (`mongodb_data`, `mongodb_config`), then rebuild:
 
 ```bash
-docker-compose down -v          # stops containers AND deletes MongoDB volumes
-docker-compose up --build        # rebuilds images from scratch
+docker compose down -v          # stops containers AND deletes MongoDB volumes
+docker compose up -d --build    # rebuilds images from scratch
 ```
 
-To rebuild images without losing data, omit `-v`: `docker-compose down && docker-compose up --build`.
+To rebuild images without losing data, omit `-v`: `docker compose down && docker compose up -d --build`.
 
 **Local mode** (after `./scripts/setup-local.sh`). Remove the backend virtualenv, frontend packages, generated env files, and runtime artifacts, then re-run setup:
 

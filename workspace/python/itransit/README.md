@@ -57,30 +57,41 @@ docker compose logs -f     # follow logs
 1. Create a local `.env` from the example and add any provider keys you have (do NOT commit secrets):
 
 ```powershell
-cd public/workspace/python/itransit
+# Windows (PowerShell)
+cd itransit
 copy .env.example .env
 # edit .env and add keys (TFL_APP_KEY etc.)
 ```
 
-2. Start both services (PowerShell):
-
-```powershell
-cd public/workspace/python/itransit/scripts
-.\start-all.ps1
+```bash
+# macOS / Linux
+cd itransit
+cp .env.example .env
+# edit .env and add keys
 ```
 
-Or POSIX:
+2. Start both services:
+
+```powershell
+# Windows (PowerShell)
+.\scripts\start-all.ps1
+```
 
 ```bash
-cd public/workspace/python/itransit/scripts
-./start-all.sh
+# macOS / Linux
+./scripts/start-all.sh
 ```
 
 3. Stop services:
 
 ```powershell
-cd public/workspace/python/itransit/scripts
-.\stop-all.ps1
+# Windows (PowerShell)
+.\scripts\stop-all.ps1
+```
+
+```bash
+# macOS / Linux
+./scripts/stop-all.sh
 ```
 
 ### Reinstallation (Clean Reset)
@@ -197,49 +208,3 @@ fetch('http://127.0.0.1:8003/api/stops/nearby?lat=51.5074&lon=-0.1278&country=En
 - If provider calls return empty arrays and you expect live data, confirm keys are set in `.env` and restart the backend so environment variables are reloaded.
 - To inspect whether the backend attached a TfL key to outgoing requests, check the backend console logs — the TfL adapter logs request params (keys are masked).
 
-## Contributing
-
- Backend: `backend/` — FastAPI app listening on port `8003` by default.
- Frontend: `frontend/` — Vite + React app (dev port `3001`).
-
----
-# iTransit+
-
-  curl 'http://127.0.0.1:8003/api/stops/nearby?lat=51.5074&lon=-0.1278&country=England'
-
-Quick start (backend):
-- create a Python virtualenv and install:
-  - `python -m venv .venv`
-    curl 'http://127.0.0.1:8003/api/stops/490014585N/departures?country=England'
-- run backend: `python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8003 --app-dir backend`
-
-Frontend (dev):
-
-- `VITE_API_URL` — frontend uses this to locate the backend (default `http://localhost:8003`).
-- `npm install`
- If the frontend fails to start on port `3001`, check the dev server output for the bound port (open `http://localhost:3001/`).
-
-Notes:
-- This scaffold uses mock data; later phases can swap in real transport APIs.
- run backend: `python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8003 --app-dir backend`
-
-Folders:
-- `backend/` — FastAPI mock proxy and WebSocket server (no DB)
- `npm run dev` (serves on http://localhost:3001)
-
-Windows PowerShell:
-```powershell
-cd public\workspace\python\itransit\backend
-.\venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8003
-```
-
-Frontend (dev):
-```powershell
-cd public\workspace\python\itransit\frontend
-npm install
-npm run dev
-```
-
-Notes: This scaffold returns mock data so you can run the full app locally without API keys. The backend exposes a WebSocket at `/ws` for real-time arrival updates.
