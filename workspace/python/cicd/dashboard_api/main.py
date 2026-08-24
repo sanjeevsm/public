@@ -58,7 +58,7 @@ app.include_router(ws.router)
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    logger.error("Unhandled error on %s: %s", request.url, exc)
+    logger.error("Unhandled error on %s: %s", request.url.path, exc)
     return JSONResponse(status_code=500, content={"error": str(exc)})
 
 

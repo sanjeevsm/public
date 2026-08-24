@@ -7,7 +7,7 @@ _HERE = Path(__file__).parent
 
 class Settings(BaseSettings):
     app_host: str = "0.0.0.0"
-    app_port: int = 8090
+    app_port: int = 8000
     log_level: str = "info"
     export_dir: str = str(_HERE / "exports")
     cache_ttl: int = 60

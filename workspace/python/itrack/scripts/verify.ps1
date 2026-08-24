@@ -19,13 +19,14 @@ if (Get-Command docker -ErrorAction SilentlyContinue) {
 }
 Write-Host ""
 
-# Check Docker Compose
+# Check Docker Compose (v2 plugin)
 Write-Host "Checking Docker Compose... " -NoNewline
-if (Get-Command docker-compose -ErrorAction SilentlyContinue) {
-    Write-Host "✓ Installed" -ForegroundColor Green
-    docker-compose --version
+docker compose version | Out-Null
+if ($LASTEXITCODE -eq 0) {
+    Write-Host "✓ Available" -ForegroundColor Green
+    docker compose version
 } else {
-    Write-Host "✗ Not installed" -ForegroundColor Red
+    Write-Host "✗ Not available" -ForegroundColor Red
     Write-Host "Docker Compose should be included with Docker Desktop" -ForegroundColor Yellow
     $allChecksPass = $false
 }
@@ -113,7 +114,7 @@ if ($allChecksPass -and $portsOk) {
     Write-Host "You're ready to start iTrack+!" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "Run: .\scripts\start.ps1" -ForegroundColor Yellow
-    Write-Host "Or: docker-compose up --build -d" -ForegroundColor Yellow
+    Write-Host "Or: docker compose up --build -d" -ForegroundColor Yellow
     Write-Host ""
     Write-Host "Then visit: http://localhost:3000" -ForegroundColor Cyan
 } else {

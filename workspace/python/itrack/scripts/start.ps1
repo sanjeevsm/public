@@ -13,8 +13,9 @@ if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
     exit 1
 }
 
-if (-not (Get-Command docker-compose -ErrorAction SilentlyContinue)) {
-    Write-Host "❌ Docker Compose is not installed. Please install Docker Desktop first." -ForegroundColor Red
+docker compose version | Out-Null
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "❌ Docker Compose is not available. Please install Docker Desktop first." -ForegroundColor Red
     exit 1
 }
 
@@ -29,17 +30,17 @@ if (-not (Test-Path .env)) {
 
 # Build and start containers
 Write-Host "🏗️  Building Docker containers..." -ForegroundColor Yellow
-docker-compose build
+docker compose build
 
 Write-Host "🚀 Starting iTrack+ application..." -ForegroundColor Yellow
-docker-compose up -d
+docker compose up -d
 
 # Wait for services to be ready
 Write-Host "⏳ Waiting for services to start..." -ForegroundColor Yellow
 Start-Sleep -Seconds 10
 
 # Check if services are running
-$running = docker-compose ps | Select-String "Up"
+$running = docker compose ps | Select-String "Up"
 
 if ($running) {
     Write-Host "";
@@ -50,9 +51,9 @@ if ($running) {
     Write-Host "📚 API Docs: http://localhost:8002/docs" -ForegroundColor Cyan
     Write-Host "";
     Write-Host "To stop the application, run: .\scripts\stop.ps1" -ForegroundColor Yellow
-    Write-Host "To view logs, run: docker-compose logs -f" -ForegroundColor Yellow
+    Write-Host "To view logs, run: docker compose logs -f" -ForegroundColor Yellow
 } else {
     Write-Host "";
-    Write-Host "❌ Failed to start services. Check logs with: docker-compose logs" -ForegroundColor Red
+    Write-Host "❌ Failed to start services. Check logs with: docker compose logs" -ForegroundColor Red
     exit 1
 }

@@ -30,14 +30,14 @@ else
 fi
 echo ""
 
-# Check Docker Compose
+# Check Docker Compose (v2 plugin)
 echo -n "Checking Docker Compose... "
-if command -v docker-compose &> /dev/null; then
-    echo -e "${GREEN}✓ Installed${NC}"
-    docker-compose --version
+if docker compose version &> /dev/null; then
+    echo -e "${GREEN}✓ Available${NC}"
+    docker compose version
 else
-    echo -e "${RED}✗ Not installed${NC}"
-    echo "Please install Docker Compose: https://docs.docker.com/compose/install/"
+    echo -e "${RED}✗ Not available${NC}"
+    echo "Docker Compose should be included with Docker Desktop"
     exit 1
 fi
 echo ""
@@ -116,7 +116,7 @@ if [ "$PORTS_OK" = true ]; then
     echo "You're ready to start iTrack+!"
     echo ""
     echo "Run: ./scripts/start.sh"
-    echo "Or: docker-compose up --build -d"
+    echo "Or: docker compose up --build -d"
     echo ""
     echo "Then visit: http://localhost:3000"
 else

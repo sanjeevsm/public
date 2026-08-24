@@ -42,7 +42,7 @@ check_and_free_port "$BACKEND_PORT"
 
 mkdir -p "$ROOT_DIR/logs" "$ROOT_DIR/.pids"
 
-nohup python -m uvicorn app.main:app --reload --host 0.0.0.0 --port "$BACKEND_PORT" --app-dir app \
+nohup python -m uvicorn app.main:app --host 0.0.0.0 --port "$BACKEND_PORT" \
     >"$ROOT_DIR/logs/backend.log" 2>"$ROOT_DIR/logs/backend-error.log" &
 echo $! > "$ROOT_DIR/.pids/backend.pid"
 

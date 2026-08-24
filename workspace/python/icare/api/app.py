@@ -994,11 +994,13 @@ def list_appointments():
             LEFT JOIN patients p ON p.id = a.patient_id
         '''
         # Doctor sees only their own appointments (based on doctor_id in users table)
+        params = None
         if user and user.get('role') == 'Doctor' and not user.get('is_admin'):
             if user.get('doctor_id'):
-                sql += f" WHERE a.doctor_id={user.get('doctor_id')}"
+                sql += ' WHERE a.doctor_id=%s'
+                params = (user.get('doctor_id'),)
         sql += ' ORDER BY a.appointment_date DESC, a.start_time DESC LIMIT 500'
-        rows = query(sql)
+        rows = query(sql, params)
         # Flatten doctor/patient names for the frontend
         for r in rows:
             r['doctor_name'] = f"{r.get('doctor_first') or ''} {r.get('doctor_last') or ''}".strip()
@@ -1352,7 +1354,7 @@ def delete_appointment(aid):
         
         # Doctor can only delete their own appointments
         if user.get('role') == 'Doctor' and not user.get('is_admin'):
-            if appt[0].get('doctor_id') != getattr(user, 'doctor_id', None):
+            if appt[0].get('doctor_id') != user.get('doctor_id'):
                 # Try to get doctor_id from user lookup
                 user_row = query('SELECT role FROM users WHERE id=%s', (user.get('id'),))
                 if user_row and user_row[0].get('role') == 'Doctor':
