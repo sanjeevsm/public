@@ -2,12 +2,11 @@ package com.istream.sources;
 
 import com.istream.core.model.MarketEvent;
 import com.istream.core.source.DataSource;
-import com.istream.sources.config.SourceProperties;
+import com.istream.core.source.SourceSettingProvider;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
@@ -16,7 +15,6 @@ import java.util.List;
 import java.util.Map;
 
 @Component
-@ConditionalOnProperty(prefix = "sources.crypto", name = "enabled", havingValue = "true")
 public class CryptoSource implements DataSource {
 
     private static final Logger log = LoggerFactory.getLogger(CryptoSource.class);
@@ -31,12 +29,12 @@ public class CryptoSource implements DataSource {
     );
 
     private final RestTemplate restTemplate;
-    private final SourceProperties.CryptoConfig config;
+    private final SourceSettingProvider settings;
     private List<MarketEvent> lastKnown = List.of();
 
-    public CryptoSource(RestTemplate restTemplate, SourceProperties sourceProperties) {
+    public CryptoSource(RestTemplate restTemplate, SourceSettingProvider settings) {
         this.restTemplate = restTemplate;
-        this.config = sourceProperties.crypto();
+        this.settings = settings;
     }
 
     @Override
@@ -48,12 +46,13 @@ public class CryptoSource implements DataSource {
     @CircuitBreaker(name = "crypto-source", fallbackMethod = "fetchFallback")
     @Retry(name = "crypto-source")
     public List<MarketEvent> fetch() {
-        String ids = config.assets().stream()
+        List<String> assets = settings.getList(sourceId(), "assets");
+        String currency = settings.get(sourceId(), "currency", "usd");
+
+        String ids = assets.stream()
                 .map(a -> ASSET_TO_ID.getOrDefault(a, a.toLowerCase().replace("-usd", "")))
                 .reduce((a, b) -> a + "," + b)
                 .orElse("bitcoin");
-
-        String currency = config.currency() != null ? config.currency() : "usd";
 
         @SuppressWarnings("unchecked")
         Map<String, Map<String, Double>> response = restTemplate.getForObject(
@@ -63,7 +62,7 @@ public class CryptoSource implements DataSource {
         if (response == null) return List.of();
 
         List<MarketEvent> events = new ArrayList<>();
-        config.assets().forEach(asset -> {
+        assets.forEach(asset -> {
             String coinId = ASSET_TO_ID.getOrDefault(asset, asset.toLowerCase().replace("-usd", ""));
             Map<String, Double> prices = response.get(coinId);
             if (prices != null) {
