@@ -13,19 +13,29 @@ import org.springframework.web.client.RestTemplate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Component
 public class CryptoSource implements DataSource {
 
     private static final Logger log = LoggerFactory.getLogger(CryptoSource.class);
-    private static final String COINGECKO_URL =
-            "https://api.coingecko.com/api/v3/simple/price?ids={ids}&vs_currencies={currency}";
+    private static final String BINANCE_URL = "https://api.binance.com/api/v3/ticker/price?symbols=";
 
-    private static final Map<String, String> ASSET_TO_ID = Map.of(
-            "BTC-USD", "bitcoin",
-            "ETH-USD", "ethereum",
-            "SOL-USD", "solana",
-            "BNB-USD", "binancecoin"
+    private static final Map<String, String> ASSET_TO_SYMBOL = Map.of(
+            "BTC-USD", "BTCUSDT",
+            "ETH-USD", "ETHUSDT",
+            "SOL-USD", "SOLUSDT",
+            "BNB-USD", "BNBUSDT",
+            "XRP-USD", "XRPUSDT",
+            "ADA-USD", "ADAUSDT"
+    );
+    private static final Map<String, String> SYMBOL_TO_ASSET = Map.of(
+            "BTCUSDT", "BTC-USD",
+            "ETHUSDT", "ETH-USD",
+            "SOLUSDT", "SOL-USD",
+            "BNBUSDT", "BNB-USD",
+            "XRPUSDT", "XRP-USD",
+            "ADAUSDT", "ADA-USD"
     );
 
     private final RestTemplate restTemplate;
@@ -47,41 +57,39 @@ public class CryptoSource implements DataSource {
     @Retry(name = "crypto-source")
     public List<MarketEvent> fetch() {
         List<String> assets = settings.getList(sourceId(), "assets");
-        String currency = settings.get(sourceId(), "currency", "usd");
 
-        String ids = assets.stream()
-                .map(a -> ASSET_TO_ID.getOrDefault(a, a.toLowerCase().replace("-usd", "")))
-                .reduce((a, b) -> a + "," + b)
-                .orElse("bitcoin");
+        String symbolsJson = assets.stream()
+                .map(a -> ASSET_TO_SYMBOL.getOrDefault(a, a.replace("-USD", "USDT")))
+                .map(s -> "\"" + s + "\"")
+                .collect(Collectors.joining(",", "[", "]"));
 
         @SuppressWarnings("unchecked")
-        Map<String, Map<String, Double>> response = restTemplate.getForObject(
-                COINGECKO_URL, Map.class, ids, currency
+        List<Map<String, Object>> tickers = restTemplate.getForObject(
+                BINANCE_URL + symbolsJson, List.class
         );
 
-        if (response == null) return List.of();
+        if (tickers == null) return List.of();
 
         List<MarketEvent> events = new ArrayList<>();
-        assets.forEach(asset -> {
-            String coinId = ASSET_TO_ID.getOrDefault(asset, asset.toLowerCase().replace("-usd", ""));
-            Map<String, Double> prices = response.get(coinId);
-            if (prices != null) {
-                events.add(MarketEvent.builder()
-                        .source(sourceId())
-                        .asset(asset)
-                        .metric("price")
-                        .value(prices.getOrDefault(currency, 0.0))
-                        .unit(currency.toUpperCase())
-                        .build());
-            }
-        });
+        for (Map<String, Object> ticker : tickers) {
+            String symbol = (String) ticker.get("symbol");
+            String asset = SYMBOL_TO_ASSET.getOrDefault(symbol, symbol);
+            double price = Double.parseDouble((String) ticker.get("price"));
+            events.add(MarketEvent.builder()
+                    .source(sourceId())
+                    .asset(asset)
+                    .metric("price")
+                    .value(price)
+                    .unit("USDT")
+                    .build());
+        }
 
         lastKnown = events;
         return events;
     }
 
     public List<MarketEvent> fetchFallback(Exception e) {
-        log.warn("CoinGecko circuit open, using cached data: {}", e.getMessage());
+        log.warn("Binance circuit open, using cached data: {}", e.getMessage());
         return lastKnown;
     }
 }
