@@ -1,7 +1,8 @@
 #Requires -Version 5.1
 [CmdletBinding()]
 param(
-    [switch]$Docker
+    [switch]$Docker,
+    [switch]$Local
 )
 
 $ErrorActionPreference = 'Stop'
@@ -14,7 +15,18 @@ function Write-Warn  { param($m) Write-Host "[start] $m" -ForegroundColor Yellow
 function Write-Fail  { param($m) Write-Host "[start] $m" -ForegroundColor Red; exit 1 }
 function Write-Link  { param($m) Write-Host "  $m" -ForegroundColor Cyan }
 
-# ── Full Docker mode ──────────────────────────────────────────────────────────
+# Resolve java executable via JAVA_HOME (process env, then machine env)
+$JavaHome = $env:JAVA_HOME
+if (-not $JavaHome) {
+    $JavaHome = [System.Environment]::GetEnvironmentVariable("JAVA_HOME", "Machine")
+}
+$JavaExe = "java"
+if ($JavaHome -and (Test-Path "$JavaHome\bin\java.exe")) {
+    $JavaExe = "$JavaHome\bin\java.exe"
+    Write-Info "Using Java from JAVA_HOME: $JavaHome"
+}
+
+# Full Docker mode
 if ($Docker) {
     Write-Info "Starting full Docker stack (build + run)..."
     docker compose up --build -d
@@ -27,7 +39,7 @@ if ($Docker) {
     exit 0
 }
 
-# ── Hybrid mode: Docker infra + local JAR ─────────────────────────────────────
+# Guard: already running
 if (Test-Path $PidFile) {
     $existingPid = Get-Content $PidFile
     if (Get-Process -Id $existingPid -ErrorAction SilentlyContinue) {
@@ -38,20 +50,7 @@ if (Test-Path $PidFile) {
 
 # Find JAR
 $jar = Get-ChildItem "$Root\istream-app\target\istream-app-*.jar" -ErrorAction SilentlyContinue | Select-Object -First 1
-if (-not $jar) {
-    Write-Fail "JAR not found. Run .\scripts\setup.ps1 first."
-}
-
-# Start Docker infra
-if (Get-Command docker -ErrorAction SilentlyContinue) {
-    Write-Info "Starting infrastructure (Kafka, PostgreSQL, Redis) via Docker..."
-    docker compose up -d zookeeper kafka postgres redis
-    Write-Info "Waiting for services to be ready..."
-    Start-Sleep -Seconds 20
-} else {
-    Write-Warn "Docker not found — infrastructure must be running manually."
-    Write-Warn "See README.md 'Fully Local' section for manual Kafka/PostgreSQL/Redis setup."
-}
+if (-not $jar) { Write-Fail "JAR not found. Run .\scripts\setup.ps1 first." }
 
 # Load .env
 if (Test-Path .env) {
@@ -62,24 +61,61 @@ if (Test-Path .env) {
     Write-Info "Loaded environment from .env"
 }
 
-$env:KAFKA_BROKERS    = if ($env:KAFKA_BROKERS)    { $env:KAFKA_BROKERS }    else { "localhost:9092" }
-$env:DB_URL           = if ($env:DB_URL)           { $env:DB_URL }           else { "jdbc:postgresql://localhost:5433/istream" }
-$env:DB_USER          = if ($env:DB_USER)          { $env:DB_USER }          else { "istream" }
-$env:DB_PASSWORD      = if ($env:DB_PASSWORD)      { $env:DB_PASSWORD }      else { "istream" }
-$env:REDIS_HOST       = if ($env:REDIS_HOST)       { $env:REDIS_HOST }       else { "localhost" }
-$env:REDIS_PORT       = if ($env:REDIS_PORT)       { $env:REDIS_PORT }       else { "6379" }
-$env:JWT_SECRET       = if ($env:JWT_SECRET)       { $env:JWT_SECRET }       else { "dev-secret-change-in-production-minimum-32-chars" }
-$env:SERVER_PORT      = if ($env:SERVER_PORT)      { $env:SERVER_PORT }      else { "8080" }
-
 $logsDir = Join-Path $Root "logs"
 if (-not (Test-Path $logsDir)) { New-Item -ItemType Directory -Path $logsDir | Out-Null }
 
-Write-Info "Starting iStream+..."
-$proc = Start-Process java `
-    -ArgumentList "-XX:MaxRAMPercentage=75.0", "-Djava.security.egd=file:/dev/./urandom", "-jar", $jar.FullName `
-    -RedirectStandardOutput (Join-Path $logsDir "istream.log") `
-    -RedirectStandardError  (Join-Path $logsDir "istream-err.log") `
-    -PassThru -NoNewWindow
+# Local mode: embedded Kafka + local PostgreSQL, no Docker
+if ($Local) {
+    Write-Info "Local mode - embedded Kafka, local PostgreSQL on port 5432."
+    $env:DB_URL      = "jdbc:postgresql://localhost:5432/istream"
+    $env:DB_USER     = if ($env:DB_USER)     { $env:DB_USER }     else { "istream" }
+    $env:DB_PASSWORD = if ($env:DB_PASSWORD) { $env:DB_PASSWORD } else { "istream" }
+    $env:SERVER_PORT = if ($env:SERVER_PORT) { $env:SERVER_PORT } else { "8080" }
+    $env:JWT_SECRET  = if ($env:JWT_SECRET)  { $env:JWT_SECRET }  else { "dev-secret-change-in-production-minimum-32-chars" }
+
+    Write-Info "Starting iStream+ in local mode..."
+    $jvmArgs = @(
+        "-XX:MaxRAMPercentage=75.0",
+        "-Djava.security.egd=file:/dev/./urandom",
+        "-jar", $jar.FullName,
+        "--spring.profiles.active=local"
+    )
+    $proc = Start-Process -FilePath $JavaExe -ArgumentList $jvmArgs `
+        -RedirectStandardOutput (Join-Path $logsDir "istream.log") `
+        -RedirectStandardError  (Join-Path $logsDir "istream-err.log") `
+        -PassThru -NoNewWindow
+}
+# Hybrid mode: Docker infra + local JAR
+else {
+    if (Get-Command docker -ErrorAction SilentlyContinue) {
+        Write-Info "Starting infrastructure via Docker..."
+        docker compose up -d kafka postgres redis
+        Write-Info "Waiting for services to be ready..."
+        Start-Sleep -Seconds 20
+    } else {
+        Write-Warn "Docker not found. Tip: use -Local for fully local mode (no Docker needed)."
+    }
+
+    $env:KAFKA_BROKERS = if ($env:KAFKA_BROKERS) { $env:KAFKA_BROKERS } else { "localhost:9092" }
+    $env:DB_URL        = if ($env:DB_URL)        { $env:DB_URL }        else { "jdbc:postgresql://localhost:5433/istream" }
+    $env:DB_USER       = if ($env:DB_USER)       { $env:DB_USER }       else { "istream" }
+    $env:DB_PASSWORD   = if ($env:DB_PASSWORD)   { $env:DB_PASSWORD }   else { "istream" }
+    $env:REDIS_HOST    = if ($env:REDIS_HOST)    { $env:REDIS_HOST }    else { "localhost" }
+    $env:REDIS_PORT    = if ($env:REDIS_PORT)    { $env:REDIS_PORT }    else { "6379" }
+    $env:JWT_SECRET    = if ($env:JWT_SECRET)    { $env:JWT_SECRET }    else { "dev-secret-change-in-production-minimum-32-chars" }
+    $env:SERVER_PORT   = if ($env:SERVER_PORT)   { $env:SERVER_PORT }   else { "8080" }
+
+    Write-Info "Starting iStream+..."
+    $jvmArgs = @(
+        "-XX:MaxRAMPercentage=75.0",
+        "-Djava.security.egd=file:/dev/./urandom",
+        "-jar", $jar.FullName
+    )
+    $proc = Start-Process -FilePath $JavaExe -ArgumentList $jvmArgs `
+        -RedirectStandardOutput (Join-Path $logsDir "istream.log") `
+        -RedirectStandardError  (Join-Path $logsDir "istream-err.log") `
+        -PassThru -NoNewWindow
+}
 
 $proc.Id | Set-Content $PidFile
 Write-Info "Application started (PID $($proc.Id)). Logs: logs\istream.log"
@@ -89,7 +125,8 @@ Write-Info "Waiting for application to be ready..."
 $ready = $false
 for ($i = 0; $i -lt 30; $i++) {
     try {
-        $r = Invoke-WebRequest "http://localhost:$($env:SERVER_PORT)/actuator/health" -UseBasicParsing -TimeoutSec 2 -ErrorAction SilentlyContinue
+        $r = Invoke-WebRequest "http://localhost:$($env:SERVER_PORT)/actuator/health" `
+            -UseBasicParsing -TimeoutSec 2 -ErrorAction SilentlyContinue
         if ($r.StatusCode -eq 200) { $ready = $true; break }
     } catch {}
     Start-Sleep -Seconds 2

@@ -9,134 +9,169 @@
 
     body {
       min-height: 100vh;
-      background: #0f1117;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      color: #e2e8f0;
+      background: #080b14;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      color: #eef0f8;
     }
 
+    body::before {
+      content: '';
+      position: fixed; bottom: -280px; left: -200px;
+      width: 720px; height: 720px;
+      background: radial-gradient(circle, rgba(139,92,246,0.07) 0%, transparent 65%);
+      pointer-events: none; z-index: 0;
+    }
+
+    /* ── Header ────────────────────────────────────────────────── */
     header {
-      background: #1a1d27;
-      border-bottom: 1px solid #2d3148;
-      padding: 0 32px;
-      height: 56px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+      position: sticky; top: 0; z-index: 10;
+      background: rgba(8,11,20,0.88);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border-bottom: 1px solid #191d2e;
+      padding: 0 32px; height: 56px;
+      display: flex; align-items: center; justify-content: space-between;
     }
 
-    .logo { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 700; text-decoration: none; color: inherit; }
+    .logo {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 17px; font-weight: 700;
+      text-decoration: none; color: inherit;
+    }
     .logo-icon {
       width: 32px; height: 32px;
       background: linear-gradient(135deg, #6366f1, #8b5cf6);
       border-radius: 8px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 16px;
+      font-size: 15px;
+      box-shadow: 0 0 16px rgba(99,102,241,0.32);
     }
-    .logo span { color: #6366f1; }
+    .logo span { color: #818cf8; }
 
-    .header-right { display: flex; align-items: center; gap: 16px; font-size: 14px; color: #64748b; }
+    nav { display: flex; gap: 2px; }
     .nav-link {
-      color: #94a3b8; font-size: 14px; text-decoration: none; padding: 5px 10px;
-      border-radius: 6px; transition: color 0.2s, background 0.2s;
+      color: #505878; font-size: 13px; font-weight: 500;
+      text-decoration: none; padding: 5px 11px; border-radius: 7px;
+      transition: color 0.15s, background 0.15s;
     }
-    .nav-link:hover { color: #e2e8f0; background: #2d3148; }
-    .nav-link.active { color: #6366f1; }
+    .nav-link:hover { color: #eef0f8; background: rgba(255,255,255,0.05); }
+    .nav-link.active { color: #818cf8; background: rgba(99,102,241,0.1); }
 
+    .header-right { display: flex; align-items: center; gap: 8px; }
+    #usernameLabel { font-size: 13px; color: #383e58; }
     .btn-logout {
-      background: none; border: 1px solid #2d3148; border-radius: 6px;
-      color: #94a3b8; padding: 5px 12px; cursor: pointer; font-size: 13px;
-      transition: border-color 0.2s, color 0.2s;
+      background: none; border: 1px solid #191d2e; border-radius: 7px;
+      color: #505878; padding: 5px 12px; cursor: pointer;
+      font-size: 12px; font-family: inherit;
+      transition: border-color 0.15s, color 0.15s;
     }
-    .btn-logout:hover { border-color: #6366f1; color: #e2e8f0; }
+    .btn-logout:hover { border-color: rgba(99,102,241,0.38); color: #eef0f8; }
 
-    main { padding: 32px; max-width: 900px; margin: 0 auto; }
+    /* ── Main ──────────────────────────────────────────────────── */
+    main { position: relative; z-index: 1; padding: 36px 32px; max-width: 860px; margin: 0 auto; }
 
-    h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
-    .tagline { font-size: 14px; color: #64748b; margin-bottom: 32px; }
+    h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; margin-bottom: 3px; }
+    .tagline { font-size: 13px; color: #383e58; margin-bottom: 32px; }
 
+    /* ── Source cards ──────────────────────────────────────────── */
     .source-card {
-      background: #1a1d27;
-      border: 1px solid #2d3148;
-      border-radius: 12px;
-      padding: 24px;
-      margin-bottom: 20px;
+      position: relative; overflow: hidden;
+      background: #0d1018;
+      border: 1px solid #191d2e;
+      border-left: 3px solid #191d2e;
+      border-radius: 14px;
+      padding: 26px;
+      margin-bottom: 18px;
+      transition: border-color 0.2s, box-shadow 0.2s, opacity 0.2s, transform 0.15s;
     }
-    .source-card.disabled { opacity: 0.7; }
+    .source-card:hover {
+      border-color: #23273c;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+      transform: translateY(-1px);
+    }
+    .source-card.disabled { opacity: 0.5; }
 
     .card-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 20px;
+      display: flex; align-items: flex-start; justify-content: space-between;
+      margin-bottom: 22px;
     }
-    .card-title { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+    .card-title { display: flex; align-items: center; gap: 12px; }
+    .card-title-text { font-size: 15px; font-weight: 700; letter-spacing: -0.2px; }
+    .card-title-sub { font-size: 11px; color: #404660; margin-top: 2px; }
+
     .source-icon {
-      width: 32px; height: 32px; border-radius: 8px;
+      width: 40px; height: 40px; border-radius: 11px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 15px; font-weight: 700;
+      font-size: 18px; flex-shrink: 0;
     }
-    .icon-crypto  { background: #1e3a5f; color: #60a5fa; }
-    .icon-stocks  { background: #14532d; color: #4ade80; }
-    .icon-weather { background: #1c1917; color: #fb923c; }
+    .icon-crypto  { background: rgba(99,102,241,0.13);  color: #818cf8; }
+    .icon-stocks  { background: rgba(16,185,129,0.12); color: #34d399; }
+    .icon-weather { background: rgba(249,115,22,0.12); color: #fb923c; }
 
-    .toggle-wrap { display: flex; align-items: center; gap: 10px; }
-    .toggle-label { font-size: 13px; color: #64748b; }
-
-    .toggle {
-      position: relative; width: 44px; height: 24px; cursor: pointer;
-    }
+    /* Toggle */
+    .toggle-wrap { display: flex; align-items: center; gap: 10px; padding-top: 2px; }
+    .toggle-label { font-size: 11px; font-weight: 600; color: #505878; letter-spacing: 0.4px; }
+    .toggle { position: relative; width: 46px; height: 26px; cursor: pointer; flex-shrink: 0; }
     .toggle input { opacity: 0; width: 0; height: 0; }
     .slider {
       position: absolute; inset: 0;
-      background: #2d3148; border-radius: 24px;
-      transition: background 0.2s;
+      background: #14182a; border: 1px solid #1e2338; border-radius: 26px;
+      transition: background 0.2s, border-color 0.2s;
     }
     .slider::before {
       content: ''; position: absolute;
-      width: 18px; height: 18px;
-      left: 3px; top: 3px;
-      background: #94a3b8; border-radius: 50%;
-      transition: transform 0.2s, background 0.2s;
+      width: 20px; height: 20px; left: 2px; top: 2px;
+      background: #383e58; border-radius: 50%;
+      transition: transform 0.22s, background 0.2s;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.4);
     }
-    input:checked + .slider { background: #6366f1; }
-    input:checked + .slider::before { transform: translateX(20px); background: #fff; }
+    input:checked + .slider { background: rgba(99,102,241,0.18); border-color: rgba(99,102,241,0.45); }
+    input:checked + .slider::before { transform: translateX(20px); background: #818cf8; }
 
-    .fields { display: grid; gap: 14px; }
-    .field { display: flex; flex-direction: column; gap: 6px; }
-    .field label { font-size: 12px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
-
-    .field input, .field textarea {
-      background: #0f1117;
-      border: 1px solid #2d3148;
-      border-radius: 8px;
-      color: #e2e8f0;
-      padding: 9px 12px;
-      font-size: 14px;
-      font-family: inherit;
-      transition: border-color 0.2s;
-      width: 100%;
+    /* Fields */
+    .fields { display: grid; gap: 16px; }
+    .field { display: flex; flex-direction: column; gap: 7px; }
+    .field label {
+      font-size: 11px; font-weight: 600; color: #505878;
+      letter-spacing: 0.7px; text-transform: uppercase;
     }
-    .field input:focus, .field textarea:focus {
-      outline: none; border-color: #6366f1;
+    .field input {
+      background: rgba(6,8,16,0.8);
+      border: 1px solid #191d2e; border-radius: 9px;
+      color: #eef0f8; padding: 10px 13px;
+      font-size: 13px; font-family: inherit; width: 100%;
+      transition: border-color 0.2s, box-shadow 0.2s;
     }
-    .field textarea { resize: vertical; min-height: 60px; }
-    .field .hint { font-size: 11px; color: #475569; }
+    .field input:focus {
+      outline: none;
+      border-color: rgba(99,102,241,0.5);
+      box-shadow: 0 0 0 3px rgba(99,102,241,0.07);
+    }
+    .field .hint { font-size: 11px; color: #2c3050; line-height: 1.4; }
 
+    /* Footer */
     .card-footer {
       display: flex; align-items: center; justify-content: space-between;
-      margin-top: 20px; padding-top: 16px; border-top: 1px solid #2d3148;
+      margin-top: 22px; padding-top: 18px; border-top: 1px solid #191d2e;
     }
-    .status-msg { font-size: 13px; min-height: 20px; }
-    .status-ok  { color: #22c55e; }
-    .status-err { color: #ef4444; }
+    .status-msg { font-size: 12px; min-height: 18px; font-weight: 500; }
+    .status-ok  { color: #34d399; }
+    .status-err { color: #f87171; }
 
     .btn-save {
-      background: #6366f1; color: #fff; border: none; border-radius: 8px;
-      padding: 8px 22px; font-size: 14px; font-weight: 600;
-      cursor: pointer; transition: background 0.2s, opacity 0.2s;
+      background: #6366f1; color: #fff; border: none; border-radius: 9px;
+      padding: 9px 24px; font-size: 13px; font-weight: 600; font-family: inherit;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(99,102,241,0.22);
+      transition: background 0.15s, box-shadow 0.15s, transform 0.1s, opacity 0.2s;
     }
-    .btn-save:hover   { background: #4f46e5; }
-    .btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-save:hover:not(:disabled) {
+      background: #5254cc;
+      box-shadow: 0 6px 22px rgba(99,102,241,0.38);
+      transform: translateY(-1px);
+    }
+    .btn-save:active:not(:disabled) { transform: translateY(0); }
+    .btn-save:disabled { opacity: 0.45; cursor: not-allowed; }
 
     .spinner { display: inline-block; animation: spin 0.7s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
@@ -148,9 +183,13 @@
       <div class="logo-icon">⚡</div>
       i<span>Stream+</span>
     </a>
-    <div class="header-right">
+
+    <nav>
       <a href="/dashboard.html" class="nav-link">Dashboard</a>
       <a href="/settings.html" class="nav-link active">Settings</a>
+    </nav>
+
+    <div class="header-right">
       <span id="usernameLabel"></span>
       <button class="btn-logout" onclick="logout()">Sign out</button>
     </div>
@@ -159,9 +198,8 @@
   <main>
     <h1>Source Settings</h1>
     <p class="tagline">Configure data sources at runtime — changes take effect on the next poll cycle.</p>
-
     <div id="settingsContainer">
-      <p style="color:#64748b; padding: 40px 0; text-align:center;">Loading settings…</p>
+      <p style="color:#252a3c;padding:52px 0;text-align:center;font-size:13px">Loading settings…</p>
     </div>
   </main>
 
@@ -172,7 +210,6 @@
     function authHeaders() {
       return { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' };
     }
-
     function logout() {
       localStorage.removeItem('is_token');
       window.location.href = '/index.html';
@@ -184,43 +221,57 @@
     } catch(e) {}
 
     const LABELS = {
-      crypto:  { label: 'Crypto',        icon: '₿',  cls: 'icon-crypto',  fields: ['assets','currency','intervalMs'] },
-      stocks:  { label: 'Stocks',         icon: '📈', cls: 'icon-stocks',  fields: ['assets','intervalMs'] },
-      weather: { label: 'Weather',        icon: '🌤', cls: 'icon-weather', fields: ['cities','apiKey','intervalMs'] },
+      crypto:  { label: 'Crypto',  sub: 'CoinGecko price feed',    icon: '₿', cls: 'icon-crypto',  accent: '#6366f1', fields: ['assets','currency','intervalMs'] },
+      stocks:  { label: 'Stocks',  sub: 'Yahoo Finance price feed', icon: '$', cls: 'icon-stocks',  accent: '#10b981', fields: ['assets','intervalMs'] },
+      weather: { label: 'Weather', sub: 'OpenWeather API',          icon: '°', cls: 'icon-weather', accent: '#f97316', fields: ['cities','apiKey','intervalMs'] },
     };
 
     const FIELD_META = {
-      assets:     { label: 'Assets',            hint: 'Comma-separated symbols, e.g. BTC-USD,ETH-USD,SOL-USD',  type: 'text' },
-      currency:   { label: 'Quote Currency',     hint: 'e.g. usd',                                               type: 'text' },
+      assets:     { label: 'Assets',             hint: 'Comma-separated symbols, e.g. BTC-USD,ETH-USD,SOL-USD', type: 'text' },
+      currency:   { label: 'Quote Currency',     hint: 'e.g. usd',                                              type: 'text' },
       intervalMs: { label: 'Poll Interval (ms)', hint: 'Milliseconds between fetches, e.g. 5000',               type: 'text' },
-      cities:     { label: 'Cities',             hint: 'Comma-separated city names, e.g. London,New York',       type: 'text' },
-      apiKey:     { label: 'OpenWeather API Key',hint: 'Required when weather source is enabled',                type: 'password' },
+      cities:     { label: 'Cities',             hint: 'Comma-separated city names, e.g. London,New York',      type: 'text' },
+      apiKey:     { label: 'API Key',            hint: 'OpenWeather API key — required when source is enabled', type: 'password' },
     };
 
+    function escHtml(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
     function buildCard(src) {
-      const meta = LABELS[src.sourceId] || { label: src.sourceId, icon: '⚙', cls: '', fields: Object.keys(src.settings) };
+      const meta = LABELS[src.sourceId] || {
+        label: src.sourceId, sub: '', icon: '⚙', cls: '',
+        accent: '#8b5cf6', fields: Object.keys(src.settings)
+      };
+      const accent = meta.accent;
+
       const fields = meta.fields.map(key => {
         const fm = FIELD_META[key] || { label: key, hint: '', type: 'text' };
         const val = src.settings[key] || '';
-        return `
-          <div class="field">
-            <label>${fm.label}</label>
-            <input type="${fm.type}" id="${src.sourceId}_${key}" value="${escHtml(val)}" placeholder="${escHtml(fm.hint)}">
-            <span class="hint">${escHtml(fm.hint)}</span>
-          </div>`;
+        return `<div class="field">
+          <label>${escHtml(fm.label)}</label>
+          <input type="${fm.type}" id="${src.sourceId}_${key}"
+                 value="${escHtml(val)}" placeholder="${escHtml(fm.hint)}">
+          <span class="hint">${escHtml(fm.hint)}</span>
+        </div>`;
       }).join('');
 
       return `
-        <div class="source-card ${src.enabled ? '' : 'disabled'}" id="card_${src.sourceId}">
+        <div class="source-card ${src.enabled ? '' : 'disabled'}" id="card_${src.sourceId}"
+             style="border-left-color:${accent}">
           <div class="card-header">
             <div class="card-title">
               <div class="source-icon ${meta.cls}">${meta.icon}</div>
-              ${escHtml(meta.label)}
+              <div>
+                <div class="card-title-text">${escHtml(meta.label)}</div>
+                <div class="card-title-sub">${escHtml(meta.sub)}</div>
+              </div>
             </div>
             <div class="toggle-wrap">
               <span class="toggle-label">Enabled</span>
               <label class="toggle">
-                <input type="checkbox" id="${src.sourceId}_enabled" ${src.enabled ? 'checked' : ''}
+                <input type="checkbox" id="${src.sourceId}_enabled"
+                       ${src.enabled ? 'checked' : ''}
                        onchange="onToggle('${src.sourceId}')">
                 <span class="slider"></span>
               </label>
@@ -232,14 +283,6 @@
             <button class="btn-save" onclick="save('${src.sourceId}')">Save</button>
           </div>
         </div>`;
-    }
-
-    function escHtml(s) {
-      return String(s)
-        .replace(/&/g,'&amp;')
-        .replace(/</g,'&lt;')
-        .replace(/>/g,'&gt;')
-        .replace(/"/g,'&quot;');
     }
 
     function onToggle(sourceId) {
@@ -271,10 +314,10 @@
         });
         if (res.status === 401) { logout(); return; }
         if (!res.ok) throw new Error(await res.text());
-        msg.textContent = 'Saved successfully';
+        msg.textContent = 'Saved';
         msg.className = 'status-msg status-ok';
       } catch(e) {
-        msg.textContent = 'Save failed: ' + e.message;
+        msg.textContent = 'Failed — ' + e.message;
         msg.className = 'status-msg status-err';
       } finally {
         btn.disabled = false;
@@ -296,7 +339,7 @@
         document.getElementById('settingsContainer').innerHTML = sources.map(buildCard).join('');
       } catch(e) {
         document.getElementById('settingsContainer').innerHTML =
-          `<p style="color:#ef4444; padding:40px 0; text-align:center">Failed to load settings: ${escHtml(e.message)}</p>`;
+          `<p style="color:#f8717166;padding:52px 0;text-align:center;font-size:13px">Failed to load — ${escHtml(e.message)}</p>`;
       }
     }
 

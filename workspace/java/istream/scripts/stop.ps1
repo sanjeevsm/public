@@ -16,26 +16,26 @@ $stopInfra = $Infra -or $All
 
 # Stop the application JAR
 if (Test-Path $PidFile) {
-    $pid = Get-Content $PidFile
-    $proc = Get-Process -Id $pid -ErrorAction SilentlyContinue
+    $appPid = Get-Content $PidFile
+    $proc = Get-Process -Id $appPid -ErrorAction SilentlyContinue
     if ($proc) {
-        Write-Info "Stopping application (PID $pid)..."
-        Stop-Process -Id $pid -Force
+        Write-Info "Stopping application (PID $appPid)..."
+        Stop-Process -Id $appPid -Force
         Start-Sleep -Seconds 2
         Write-Info "Application stopped."
     } else {
-        Write-Warn "No process found for PID $pid."
+        Write-Warn "No process found for PID $appPid."
     }
     Remove-Item $PidFile -Force
 } else {
-    Write-Warn "No PID file found — application may not be running."
+    Write-Warn "No PID file found -- application may not be running."
 }
 
 # Optionally stop infrastructure
 if ($stopInfra) {
     if (Get-Command docker -ErrorAction SilentlyContinue) {
         Write-Info "Stopping infrastructure containers..."
-        docker compose stop zookeeper kafka postgres redis
+        docker compose stop kafka postgres redis
         Write-Info "Infrastructure stopped."
     }
 }

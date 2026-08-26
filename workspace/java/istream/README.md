@@ -13,11 +13,14 @@ Pulls live market and sensor data from pluggable sources (crypto prices, stock q
 3. [Technology Stack](#3-technology-stack)
 4. [Default Ports](#4-default-ports)
 5. [Prerequisites](#5-prerequisites)
-6. [Docker (Recommended)](#6-docker-recommended)
-7. [Quick Start (Process-Based)](#7-quick-start-process-based)
-8. [Configuration](#8-configuration)
-9. [Start the Application](#9-start-the-application)
-10. [Stop the Application](#10-stop-the-application)
+6. [Build](#6-build)
+7. [Startup Modes](#7-startup-modes)
+   - [Mode A — Local (No Docker)](#mode-a--local-no-docker)
+   - [Mode B — Hybrid (Docker infra + local JAR)](#mode-b--hybrid-docker-infra--local-jar)
+   - [Mode C — Full Docker](#mode-c--full-docker)
+8. [Stop the Application](#8-stop-the-application)
+9. [Configuration](#9-configuration)
+10. [Settings UI](#10-settings-ui)
 11. [Access](#11-access)
 12. [Project Structure](#12-project-structure)
 13. [API Reference](#13-api-reference)
@@ -29,13 +32,15 @@ Pulls live market and sensor data from pluggable sources (crypto prices, stock q
 
 ## 1. Features
 
-- **Plugin data sources** — each source is an independent Spring bean; add one class and one YAML entry to enable a new feed
+- **Plugin data sources** — each source is an independent Spring bean; add one class and register it in the database to enable a new feed
+- **Runtime source configuration** — enable/disable sources and change their settings (assets, cities, API keys, poll intervals) live from the Settings UI without restarting
 - **Kafka fan-out** — three independent consumer groups (persistence, dashboard, alerts) consume the same topic concurrently
 - **Real-time WebSocket push** — browser clients subscribe to `/topic/events/{source}` via STOMP/SockJS for live updates
 - **Persistent history** — every event written to PostgreSQL via JPA; queryable with pagination and source/asset filters
 - **Configurable alert engine** — rule-based threshold alerts dispatched to pluggable notifiers (email, Telegram, etc.)
 - **JWT authentication** — stateless REST API protected by Bearer tokens; roles stored in the database
 - **Circuit breakers + retry** — Resilience4j protects each external API call; stale cached data served on open circuit
+- **Embedded Kafka option** — the `local` Spring profile starts an in-process KRaft Kafka broker; no Docker required for development
 - **Metrics and monitoring** — Micrometer → Prometheus → Grafana; all endpoints scraped automatically
 - **OpenAPI 3 documentation** — Swagger UI auto-generated from controller annotations
 - **Graceful shutdown** — in-flight requests drained before process exit
@@ -50,15 +55,16 @@ Pulls live market and sensor data from pluggable sources (crypto prices, stock q
 │                        Data Sources                          │
 │                                                              │
 │   CryptoSource         StockSource         WeatherSource     │
-│  (CoinGecko API)    (Yahoo Finance API)  (OpenWeatherMap)    │
-│  @ConditionalOn...   @ConditionalOn...   @ConditionalOn...   │
+│  (Binance API)      (Yahoo Finance)     (OpenWeatherMap)     │
+│                                                              │
+│   enabled/disabled at runtime via source_settings table      │
 └────────┬───────────────────┬───────────────────┬────────────┘
          │                   │                   │
          └───────────────────┼───────────────────┘
                              │ List<DataSource> (Spring injection)
                              ▼
                   ┌─────────────────────┐
-                  │   SourceScheduler   │  polls every N seconds
+                  │   SourceScheduler   │  polls every N ms (per-source, configurable)
                   └──────────┬──────────┘
                              │
                              ▼
@@ -109,8 +115,8 @@ Pulls live market and sensor data from pluggable sources (crypto prices, stock q
 | Language | Java 21 | LTS release with records, sealed classes |
 | Framework | Spring Boot 3.2 | Auto-configuration, embedded Tomcat |
 | Messaging | Apache Kafka 7.6 | Durable, ordered, partitioned event stream |
+| Embedded Kafka | Apache Kafka KRaft | In-process broker for `local` profile (no Docker) |
 | Database | PostgreSQL 16 | Persistent event and rule storage |
-| Cache/Session | Redis 7 | Future rate-limiting and session support |
 | Security | Spring Security + jjwt 0.12 | Stateless JWT auth |
 | Resilience | Resilience4j 2.2 | Circuit breaker, retry, rate limiter |
 | Monitoring | Micrometer + Prometheus + Grafana | Metrics collection and dashboards |
@@ -125,166 +131,185 @@ Pulls live market and sensor data from pluggable sources (crypto prices, stock q
 | Service | Host Port | Notes |
 |---|---:|---|
 | iStream+ API | **8080** | REST + WebSocket |
-| Kafka broker | **9092** | PLAINTEXT |
-| PostgreSQL | **5433** | Host port (internal: 5432) |
-| Redis | **6379** | |
-| Prometheus | **9090** | |
-| Grafana | **3002** | admin / admin |
+| Kafka broker | **9092** | PLAINTEXT (Docker or embedded) |
+| PostgreSQL | **5432** | Native local install |
+| PostgreSQL | **5433** | Docker host port (internal: 5432) |
+| Prometheus | **9090** | Docker only |
+| Grafana | **3002** | Docker only — admin / admin |
 
-> Ports 5433 and 3002 are deliberately offset to avoid clashes with other projects in this repository (iCare+ uses 5432; iTrack+ uses 3000).
+> PostgreSQL port 5433 is used when running via Docker Compose to avoid clashing with a local PostgreSQL install on 5432.
 
 ---
 
 ## 5. Prerequisites
 
-### Docker (Recommended)
-
-| Tool | Minimum version | Install |
-|---|---|---|
-| Docker Desktop | 24.x | https://docs.docker.com/get-docker/ |
-| Docker Compose | 2.x (bundled) | Included with Docker Desktop |
-
-### Process-Based (Hybrid)
-
-| Tool | Minimum version | Install |
-|---|---|---|
-| Java (JDK) | 21 | https://adoptium.net |
-| Maven | 3.9 (or use included `mvnw`) | https://maven.apache.org/download.cgi |
-| Docker Desktop | 24.x | For running Kafka, PostgreSQL, Redis |
-
-### Fully Local (No Docker)
-
-Same as above, plus:
+### Mode A — Local (No Docker)
 
 | Tool | Minimum version | Notes |
 |---|---|---|
-| Apache Kafka | 3.7 | https://kafka.apache.org/downloads |
+| Java JDK | **21** | https://adoptium.net — must be a JDK, not a JRE |
+| Maven | 3.9 | Or use the included `mvnw` / `mvnw.cmd` wrapper |
 | PostgreSQL | 16 | https://www.postgresql.org/download/ |
-| Redis | 7 | https://redis.io/docs/install/ |
+
+Kafka is **not required** — the `local` Spring profile starts an embedded KRaft Kafka broker automatically.
+
+### Mode B — Hybrid (Docker infra + local JAR)
+
+| Tool | Minimum version |
+|---|---|
+| Java JDK | **21** |
+| Maven | 3.9 (or `mvnw`) |
+| Docker Desktop | 24.x |
+
+### Mode C — Full Docker
+
+| Tool | Minimum version |
+|---|---|
+| Docker Desktop | 24.x |
+
+No local Java or Maven required.
 
 ---
 
-## 6. Docker (Recommended)
+## 6. Build
 
-The Docker method builds the JAR inside a multi-stage container and starts the full stack with one command. No local Java or Maven installation required.
+> Skip this step for Mode C (Full Docker) — the Dockerfile builds the JAR inside the container.
 
 ### macOS / Linux
 
 ```bash
-git clone <repo-url>
-cd workspace/java/istream
-docker compose up --build
+chmod +x mvnw scripts/*.sh
+./scripts/setup.sh        # checks Java version, builds, copies .env.example → .env
 ```
 
-### Windows
-
-```powershell
-git clone <repo-url>
-cd workspace\java\istream
-docker compose up --build
-```
-
-The first build takes 3–5 minutes (Maven downloads dependencies). Subsequent starts are fast.
-
-### Verify
-
-```bash
-curl http://localhost:8080/actuator/health
-# {"status":"UP"}
-```
-
-### URLs
-
-| Service | URL |
-|---|---|
-| API | http://localhost:8080/api/v1 |
-| Swagger UI | http://localhost:8080/swagger-ui.html |
-| Health check | http://localhost:8080/actuator/health |
-| Metrics | http://localhost:8080/actuator/prometheus |
-| Prometheus | http://localhost:9090 |
-| Grafana | http://localhost:3002 — admin / admin |
-
-### Stop (Docker)
-
-```bash
-docker compose down          # stop containers, keep volumes
-docker compose down -v       # stop containers and delete all data
-```
-
----
-
-## 7. Quick Start (Process-Based)
-
-The process-based method runs Docker only for infrastructure (Kafka, PostgreSQL, Redis) and starts the Spring Boot JAR directly on your machine. This is the recommended approach for development and debugging.
-
-### Prerequisites check
-
-Verify your environment before running setup:
-
-```bash
-java -version    # must show 21+
-./mvnw --version # Maven wrapper — no system Maven required
-docker --version # must show 24+
-```
-
-### macOS / Linux — setup
-
-```bash
-chmod +x mvnw scripts/setup.sh scripts/start.sh scripts/stop.sh
-./scripts/setup.sh
-```
-
-`setup.sh` checks Java version, builds the project using `mvnw` (`mvn clean package -DskipTests`), and copies `.env.example` → `.env`.
-
-### macOS / Linux — start
-
-```bash
-# Hybrid (recommended): Docker infra + local JAR
-./scripts/start.sh
-
-# Full Docker: everything in containers
-./scripts/start.sh --docker
-```
-
-### Windows — setup
-
-```powershell
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-.\scripts\setup.ps1
-```
-
-### Windows — start
-
-```powershell
-# Hybrid (recommended): Docker infra + local JAR
-.\scripts\start.ps1
-
-# Full Docker: everything in containers
-.\scripts\start.ps1 -Docker
-```
-
-### Manual start (any OS)
-
-If you prefer to start without the scripts:
-
-**Step 1 — Start infrastructure**
-
-```bash
-docker compose up -d zookeeper kafka postgres redis
-```
-
-Wait ~20 seconds for services to initialise.
-
-**Step 2 — Build**
+Or build directly:
 
 ```bash
 ./mvnw clean package -DskipTests
 ```
 
-**Step 3 — Set environment variables**
+### Windows
 
-macOS / Linux:
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\scripts\setup.ps1       # checks Java version, builds, copies .env.example → .env
+```
+
+Or build directly:
+
+```powershell
+.\mvnw.cmd clean package -DskipTests
+```
+
+The fat JAR is produced at:
+
+```
+istream-app/target/istream-app-1.0.0-SNAPSHOT.jar
+```
+
+---
+
+## 7. Startup Modes
+
+### Mode A — Local (No Docker)
+
+Starts the application with **embedded KRaft Kafka** and connects to a **local PostgreSQL** on port 5432. No Docker required. This is the fastest way to run in development.
+
+#### Prerequisites — PostgreSQL setup (first time only)
+
 ```bash
+# macOS / Linux
+psql -U postgres -c "CREATE USER istream WITH PASSWORD 'istream';"
+psql -U postgres -c "CREATE DATABASE istream OWNER istream;"
+```
+
+```powershell
+# Windows (PowerShell)
+$env:PGPASSWORD = 'postgres'
+psql -U postgres -h localhost -c "CREATE USER istream WITH PASSWORD 'istream';"
+psql -U postgres -h localhost -c "CREATE DATABASE istream OWNER istream;"
+```
+
+Flyway runs on first startup and creates all tables automatically.
+
+#### Start (dedicated scripts)
+
+```bash
+# macOS / Linux
+./scripts/start-local.sh
+```
+
+```powershell
+# Windows
+.\scripts\start-local.ps1
+```
+
+#### Start (via flag on the main script)
+
+```bash
+./scripts/start.sh --local
+```
+
+```powershell
+.\scripts\start.ps1 -Local
+```
+
+#### Manual start
+
+```bash
+# macOS / Linux
+./mvnw clean package -DskipTests
+java -jar istream-app/target/istream-app-*.jar --spring.profiles.active=local
+```
+
+```powershell
+# Windows — set JAVA_HOME explicitly if needed
+$env:JAVA_HOME = "C:\Program Files\<your-jdk-21-folder>"
+.\mvnw.cmd clean package -DskipTests
+java -jar istream-app\target\istream-app-1.0.0-SNAPSHOT.jar --spring.profiles.active=local
+```
+
+#### What the `local` profile does
+
+- Starts an embedded KRaft Kafka broker on port 9092 (via `LocalKafkaInitializer`)
+- Overrides `DB_URL` to `jdbc:postgresql://localhost:5432/istream`
+- Sets `flyway.validate-on-migrate: false` for relaxed schema management
+- Enables `DEBUG` logging for `com.istream`
+
+---
+
+### Mode B — Hybrid (Docker infra + local JAR)
+
+Runs Kafka, PostgreSQL, and Redis in Docker and the Spring Boot JAR directly on your machine. Best for debugging with a full infrastructure stack.
+
+#### Start
+
+```bash
+# macOS / Linux
+./scripts/start.sh
+```
+
+```powershell
+# Windows
+.\scripts\start.ps1
+```
+
+The scripts start the Docker services, wait for them to be ready, then launch the JAR with environment variables pointing to the Docker-exposed ports.
+
+#### Manual start
+
+**Step 1 — Start infrastructure**
+
+```bash
+docker compose up -d kafka postgres redis
+```
+
+Wait ~20 seconds for services to initialise.
+
+**Step 2 — Set environment variables**
+
+```bash
+# macOS / Linux
 export KAFKA_BROKERS=localhost:9092
 export DB_URL=jdbc:postgresql://localhost:5433/istream
 export DB_USER=istream
@@ -293,8 +318,8 @@ export REDIS_HOST=localhost
 export JWT_SECRET=dev-secret-change-in-production-minimum-32-chars
 ```
 
-Windows (PowerShell):
 ```powershell
+# Windows
 $env:KAFKA_BROKERS = "localhost:9092"
 $env:DB_URL        = "jdbc:postgresql://localhost:5433/istream"
 $env:DB_USER       = "istream"
@@ -303,123 +328,142 @@ $env:REDIS_HOST    = "localhost"
 $env:JWT_SECRET    = "dev-secret-change-in-production-minimum-32-chars"
 ```
 
-**Step 4 — Run**
+**Step 3 — Run**
 
 ```bash
 java -jar istream-app/target/istream-app-*.jar
 ```
 
-### Fully Local (No Docker)
+---
 
-For environments where Docker is unavailable:
+### Mode C — Full Docker
 
-**Kafka** (macOS / Linux):
+Builds the JAR inside a multi-stage container and starts the full stack with one command.
+
 ```bash
-# Download and extract Kafka 3.7+
-bin/zookeeper-server-start.sh config/zookeeper.properties &
-bin/kafka-server-start.sh config/server.properties &
+# macOS / Linux
+docker compose up --build
+
+# Windows
+docker compose up --build
 ```
 
-**PostgreSQL**:
+Or using the script:
+
 ```bash
-# Create database and user
-psql -U postgres -c "CREATE USER istream WITH PASSWORD 'istream';"
-psql -U postgres -c "CREATE DATABASE istream OWNER istream;"
+./scripts/start.sh --docker
 ```
 
-**Redis**:
-```bash
-redis-server &
+```powershell
+.\scripts\start.ps1 -Docker
 ```
 
-Then set `DB_URL=jdbc:postgresql://localhost:5432/istream` (note: 5432, not 5433, when PostgreSQL runs natively) and start the JAR as shown in Step 4.
+The first build takes 3–5 minutes (Maven downloads dependencies). Subsequent starts are fast.
+
+#### Verify
+
+```bash
+curl http://localhost:8080/actuator/health
+# {"status":"UP"}
+```
 
 ---
 
-## 8. Configuration
+## 8. Stop the Application
 
-Copy `.env.example` to `.env` and adjust values before starting.
+### Local mode (Mode A)
+
+```bash
+# macOS / Linux
+./scripts/stop-local.sh
+```
+
+```powershell
+# Windows
+.\scripts\stop-local.ps1
+```
+
+### Hybrid mode (Mode B)
+
+```bash
+# macOS / Linux
+./scripts/stop.sh           # stop JAR only
+./scripts/stop.sh --infra   # stop JAR + Docker infrastructure
+./scripts/stop.sh --all     # alias for --infra
+```
+
+```powershell
+# Windows
+.\scripts\stop.ps1          # stop JAR only
+.\scripts\stop.ps1 -Infra   # stop JAR + Docker infrastructure
+.\scripts\stop.ps1 -All     # alias for -Infra
+```
+
+### Full Docker (Mode C)
+
+```bash
+docker compose down        # stop containers, keep volumes
+docker compose down -v     # stop containers and delete all data
+```
+
+---
+
+## 9. Configuration
+
+Copy `.env.example` to `.env` and adjust values before starting (Modes A and B load this file automatically).
 
 | Variable | Default | Description |
 |---|---|---|
 | `SERVER_PORT` | `8080` | HTTP server port |
-| `KAFKA_BROKERS` | `localhost:9092` | Kafka bootstrap servers (comma-separated) |
-| `DB_URL` | `jdbc:postgresql://localhost:5433/istream` | JDBC connection URL |
+| `KAFKA_BROKERS` | `localhost:9092` | Kafka bootstrap servers (not used in local mode — embedded broker starts automatically) |
+| `DB_URL` | `jdbc:postgresql://localhost:5433/istream` | JDBC URL (local mode overrides this to port 5432) |
 | `DB_USER` | `istream` | Database username |
 | `DB_PASSWORD` | `istream` | Database password |
 | `REDIS_HOST` | `localhost` | Redis hostname |
 | `REDIS_PORT` | `6379` | Redis port |
 | `JWT_SECRET` | *(dev default)* | JWT signing secret — **change in production** (min 32 chars) |
 | `JWT_EXPIRATION_MS` | `86400000` | Token lifetime in milliseconds (24 hours) |
-| `CRYPTO_ENABLED` | `true` | Enable cryptocurrency price source |
-| `CRYPTO_ASSETS` | `BTC-USD,ETH-USD,SOL-USD` | Assets to poll from CoinGecko |
-| `STOCKS_ENABLED` | `true` | Enable stock price source |
-| `STOCK_ASSETS` | `AAPL,TSLA,MSFT` | Ticker symbols to poll from Yahoo Finance |
-| `WEATHER_ENABLED` | `false` | Enable weather source (requires API key) |
-| `WEATHER_CITIES` | `London,New York` | Cities to poll when weather source is enabled |
-| `OPENWEATHER_API_KEY` | *(empty)* | OpenWeatherMap API key — required when `WEATHER_ENABLED=true` |
-| `POLL_INTERVAL_MS` | `5000` | Global poll interval in milliseconds |
-| `SPRING_PROFILES_ACTIVE` | `default` | Set to `prod` for structured JSON logging |
+| `SPRING_PROFILES_ACTIVE` | `default` | Set to `local` for no-Docker mode; `prod` for structured JSON logging |
 
-> All variables have safe defaults for local development. In production, override `JWT_SECRET`, `DB_PASSWORD`, and any external service credentials.
+> Source-specific settings (assets, cities, API keys, poll intervals, enabled/disabled) are managed at runtime from the **Settings UI** and stored in the `source_settings` database table. See [Section 10](#10-settings-ui).
 
 ---
 
-## 9. Start the Application
+## 10. Settings UI
 
-### macOS / Linux
+Source settings are configured at runtime without restarting the application. Navigate to **http://localhost:8080/settings.html** after signing in.
 
-```bash
-./scripts/start.sh           # hybrid: Docker infra + local JAR (default)
-./scripts/start.sh --docker  # full Docker Compose stack
-```
+| Source | Default assets | Default interval | Notes |
+|---|---|---|---|
+| Crypto | BTC-USD, ETH-USD, SOL-USD | 30 s | Binance public API — no key required |
+| Stocks | AAPL, TSLA, MSFT | 30 s | Yahoo Finance — free, no key required |
+| Weather | London, New York | 30 s | OpenWeatherMap — requires free API key |
 
-### Windows
+Changes take effect on the next poll cycle. Settings are persisted to PostgreSQL via the `source_settings` table and survive restarts.
 
-```powershell
-.\scripts\start.ps1          # hybrid: Docker infra + local JAR (default)
-.\scripts\start.ps1 -Docker  # full Docker Compose stack
-```
+### Settings API
 
-### Logs (process-based)
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| GET | `/api/v1/settings/sources` | Bearer | List all source configurations |
+| GET | `/api/v1/settings/sources/{sourceId}` | Bearer | Get one source configuration |
+| PUT | `/api/v1/settings/sources/{sourceId}` | Bearer | Update source configuration |
 
-Application logs are written to `logs/istream.log` in the project root.
-
-```bash
-tail -f logs/istream.log
-```
-
-### Logs (Docker)
+**Example — enable weather source:**
 
 ```bash
-docker compose logs -f app
-```
-
----
-
-## 10. Stop the Application
-
-### macOS / Linux
-
-```bash
-./scripts/stop.sh          # stop JAR only
-./scripts/stop.sh --infra  # stop JAR + Docker infrastructure
-./scripts/stop.sh --all    # alias for --infra
-```
-
-### Windows
-
-```powershell
-.\scripts\stop.ps1          # stop JAR only
-.\scripts\stop.ps1 -Infra  # stop JAR + Docker infrastructure
-.\scripts\stop.ps1 -All    # alias for -Infra
-```
-
-### Docker (full stack)
-
-```bash
-docker compose down        # stop and remove containers
-docker compose down -v     # also remove volumes (deletes all data)
+curl -X PUT http://localhost:8080/api/v1/settings/sources/weather \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sourceId": "weather",
+    "enabled": true,
+    "settings": {
+      "cities": "London,Tokyo,Sydney",
+      "apiKey": "your-openweathermap-key",
+      "intervalMs": "60000"
+    }
+  }'
 ```
 
 ---
@@ -428,18 +472,21 @@ docker compose down -v     # also remove volumes (deletes all data)
 
 | Resource | URL | Credentials |
 |---|---|---|
+| Sign-in | http://localhost:8080/index.html | admin / admin123 |
+| Dashboard | http://localhost:8080/dashboard.html | JWT (auto-redirect) |
+| Settings | http://localhost:8080/settings.html | JWT (auto-redirect) |
 | REST API base | http://localhost:8080/api/v1 | JWT Bearer token |
 | Swagger UI | http://localhost:8080/swagger-ui.html | — |
 | OpenAPI spec | http://localhost:8080/v3/api-docs | — |
 | Health check | http://localhost:8080/actuator/health | — |
 | Prometheus metrics | http://localhost:8080/actuator/prometheus | — |
-| Prometheus UI | http://localhost:9090 | — |
-| Grafana | http://localhost:3002 | admin / admin |
+| Prometheus UI | http://localhost:9090 | Docker only |
+| Grafana | http://localhost:3002 | Docker only — admin / admin |
 
 ### Authenticate via API
 
 ```bash
-# 1. Get a token (default user seeded by Flyway)
+# 1. Get a token
 curl -s -X POST http://localhost:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{"username":"admin","password":"admin123"}' | jq .token
@@ -450,7 +497,7 @@ curl http://localhost:8080/api/v1/events?source=crypto \
   -H "Authorization: Bearer $TOKEN"
 ```
 
-> Default admin password is `admin123`. Change it immediately by updating the BCrypt hash in a new Flyway migration.
+> Default admin password is `admin123`. Change it by inserting a new BCrypt hash via a Flyway migration.
 
 ---
 
@@ -460,14 +507,15 @@ curl http://localhost:8080/api/v1/events?source=crypto \
 istream/
 ├── pom.xml                              # Parent POM — Spring Boot 3.2, Java 21
 ├── docker-compose.yml                   # Full stack: Kafka, Postgres, Redis, Prometheus, Grafana
-├── .env.example                         # Environment variable template
+├── .env / .env.example                  # Environment variable template
 ├── mvnw / mvnw.cmd                      # Maven wrapper — no system Maven required
-├── .gitignore
 │
 ├── scripts/
 │   ├── setup.sh / setup.ps1             # Build + prerequisites check
-│   ├── start.sh / start.ps1             # Start (hybrid or full Docker)
-│   └── stop.sh  / stop.ps1             # Stop (JAR only or with infra)
+│   ├── start-local.sh / start-local.ps1 # Start: embedded Kafka + local PostgreSQL (no Docker)
+│   ├── stop-local.sh  / stop-local.ps1  # Stop local mode instance
+│   ├── start.sh / start.ps1             # Start: hybrid (--local / -Local flag) or Docker (-Docker)
+│   └── stop.sh  / stop.ps1              # Stop: JAR only, or with --infra / -Infra
 │
 ├── monitoring/
 │   └── prometheus.yml                   # Prometheus scrape config
@@ -477,16 +525,17 @@ istream/
 │       ├── model/
 │       │   ├── MarketEvent.java         # Canonical message record (Kafka payload)
 │       │   └── AlertNotification.java   # Alert dispatch payload
-│       ├── source/DataSource.java       # Plugin interface: sourceId() + fetch()
+│       ├── source/
+│       │   ├── DataSource.java          # Plugin interface: sourceId() + fetch()
+│       │   └── SourceSettingProvider.java  # Interface for runtime setting access
 │       ├── alert/AlertRule.java         # Plugin interface: matches() + buildNotification()
 │       └── notifier/Notifier.java       # Plugin interface: notifierId() + send()
 │
 ├── istream-sources/                     # Data source implementations
 │   └── src/main/java/com/istream/sources/
-│       ├── CryptoSource.java            # CoinGecko — enabled when sources.crypto.enabled=true
-│       ├── StockSource.java             # Yahoo Finance — enabled when sources.stocks.enabled=true
-│       ├── WeatherSource.java           # OpenWeatherMap — disabled by default
-│       └── config/SourceProperties.java # @ConfigurationProperties binding
+│       ├── CryptoSource.java            # Binance public API — runtime enable/disable
+│       ├── StockSource.java             # Yahoo Finance — runtime enable/disable
+│       └── WeatherSource.java           # OpenWeatherMap — disabled by default
 │
 ├── istream-consumers/                   # Kafka consumer group implementations
 │   └── src/main/java/com/istream/consumers/
@@ -499,43 +548,52 @@ istream/
 │       │   ├── AuthController.java      # POST /api/v1/auth/login
 │       │   ├── EventController.java     # GET /api/v1/events (paginated)
 │       │   ├── SourceController.java    # GET /api/v1/sources
+│       │   ├── SettingsController.java  # GET/PUT /api/v1/settings/sources
 │       │   └── GlobalExceptionHandler.java
+│       ├── dto/
+│       │   ├── LoginRequest.java / LoginResponse.java
+│       │   └── SourceSettingDto.java    # { sourceId, enabled, settings }
 │       ├── security/
-│       │   ├── SecurityConfig.java      # Filter chain, CSRF off, stateless sessions
-│       │   ├── JwtService.java          # Token generation and validation
-│       │   ├── JwtAuthFilter.java       # Bearer token extraction
+│       │   ├── SecurityConfig.java
+│       │   ├── JwtService.java
+│       │   ├── JwtAuthFilter.java
 │       │   └── UserDetailsServiceImpl.java
-│       ├── websocket/WebSocketConfig.java
-│       └── dto/LoginRequest.java / LoginResponse.java
+│       └── websocket/WebSocketConfig.java
 │
 ├── istream-persistence/                 # JPA, repositories, Flyway migrations
 │   └── src/main/java/com/istream/persistence/
 │       ├── entity/
 │       │   ├── MarketEventEntity.java
 │       │   ├── AlertRuleEntity.java
-│       │   └── UserEntity.java
+│       │   ├── UserEntity.java
+│       │   ├── SourceSettingEntity.java # source_settings table entity
+│       │   └── SourceSettingId.java     # Composite PK (source_id, setting_key)
 │       ├── repository/
 │       │   ├── MarketEventRepository.java
 │       │   ├── AlertRuleRepository.java
-│       │   └── UserRepository.java
-│       └── service/EventPersistenceService.java
+│       │   ├── UserRepository.java
+│       │   └── SourceSettingRepository.java
+│       └── service/
+│           ├── EventPersistenceService.java
+│           └── SourceSettingService.java  # Implements SourceSettingProvider; in-memory cache
 │   └── src/main/resources/db/migration/
-│       └── V1__init.sql                 # Tables: market_events, alert_rules, users
+│       ├── V1__init.sql                 # Tables: market_events, alert_rules, users + admin seed
+│       └── V2__source_settings.sql      # Table: source_settings + default values
 │
 └── istream-app/                         # Runnable entry point
     ├── Dockerfile                       # Multi-stage build (Maven + JRE Alpine)
-    ├── src/main/java/com/istream/app/
-    │   ├── IStreamApplication.java
-    │   ├── LocalKafkaInitializer.java   # Embedded KRaft Kafka for "local" profile
-    │   ├── config/
-    │   │   ├── KafkaConfig.java         # Producer, consumer, topic auto-creation
-    │   │   └── RestTemplateConfig.java  # Timeouts for external HTTP calls
-    │   ├── producer/GenericProducer.java # Sends MarketEvent to Kafka
-    │   └── scheduler/SourceScheduler.java # Polls all DataSource beans in parallel
+    └── src/main/java/com/istream/app/
+        ├── IStreamApplication.java
+        ├── LocalKafkaInitializer.java   # Starts embedded KRaft Kafka on "local" profile
+        ├── config/
+        │   ├── KafkaConfig.java         # Producer, consumer, topic auto-creation
+        │   └── RestTemplateConfig.java  # Timeouts + User-Agent interceptor
+        ├── producer/GenericProducer.java
+        └── scheduler/SourceScheduler.java  # Polls enabled sources in parallel
     └── src/main/resources/
-        ├── application.yml              # All config (env-var overridable)
-        ├── application-local.yml        # Local profile: embedded Kafka + relaxed validation
-        └── logback-spring.xml           # Console (dev) + JSON (prod) logging
+        ├── application.yml
+        ├── application-local.yml        # Embedded Kafka, port 5432, relaxed Flyway
+        └── logback-spring.xml
 ```
 
 ---
@@ -567,30 +625,10 @@ istream/
 | GET | `/api/v1/events` | Bearer | Paginated list; filter by `?source=` and/or `?asset=` |
 | GET | `/api/v1/events/latest/{source}/{asset}` | Bearer | Most recent event for a source+asset pair |
 
-**Example — list crypto events:**
+**Example:**
 ```bash
 curl "http://localhost:8080/api/v1/events?source=crypto&page=0&size=20" \
   -H "Authorization: Bearer $TOKEN"
-```
-
-**Response:**
-```json
-{
-  "content": [
-    {
-      "id": "uuid",
-      "source": "crypto",
-      "asset": "BTC-USD",
-      "metric": "price",
-      "value": 62400.50,
-      "unit": "USD",
-      "occurredAt": "2026-08-26T10:00:00Z"
-    }
-  ],
-  "totalElements": 1200,
-  "page": 0,
-  "size": 20
-}
 ```
 
 ---
@@ -599,21 +637,56 @@ curl "http://localhost:8080/api/v1/events?source=crypto&page=0&size=20" \
 
 | Method | Endpoint | Auth | Description |
 |---|---|---|---|
-| GET | `/api/v1/sources` | Bearer | List active data sources |
+| GET | `/api/v1/sources` | Bearer | List registered sources and their runtime status |
 
 **Response:**
 ```json
 [
-  { "id": "crypto", "status": "active" },
-  { "id": "stocks", "status": "active" }
+  { "id": "crypto", "status": "active"   },
+  { "id": "stocks", "status": "active"   },
+  { "id": "weather","status": "disabled" }
 ]
+```
+
+---
+
+### Source Settings
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| GET | `/api/v1/settings/sources` | Bearer | All source configurations |
+| GET | `/api/v1/settings/sources/{sourceId}` | Bearer | Single source configuration |
+| PUT | `/api/v1/settings/sources/{sourceId}` | Bearer | Update source configuration |
+
+**GET response:**
+```json
+{
+  "sourceId": "crypto",
+  "enabled": true,
+  "settings": {
+    "assets": "BTC-USD,ETH-USD,SOL-USD",
+    "intervalMs": "30000"
+  }
+}
+```
+
+**PUT request body:**
+```json
+{
+  "sourceId": "crypto",
+  "enabled": true,
+  "settings": {
+    "assets": "BTC-USD,ETH-USD,SOL-USD,BNB-USD",
+    "intervalMs": "60000"
+  }
+}
 ```
 
 ---
 
 ### WebSocket — Real-time events
 
-Connect with SockJS + STOMP, then subscribe to a topic:
+Connect with SockJS + STOMP:
 
 ```javascript
 const client = new StompJs.Client({ webSocketFactory: () => new SockJS('/ws') });
@@ -641,15 +714,20 @@ client.subscribe('/topic/events/crypto', msg => console.log(JSON.parse(msg.body)
 
 ## 14. Adding a New Data Source
 
-Integrating a new feed requires only three steps and zero changes to existing code.
+Integrating a new feed requires three steps and zero changes to existing pipeline code.
 
 **Step 1 — Implement the interface** (one file in `istream-sources/`):
 
 ```java
-// src/main/java/com/istream/sources/ForexSource.java
 @Component
-@ConditionalOnProperty(prefix = "sources.forex", name = "enabled", havingValue = "true")
 public class ForexSource implements DataSource {
+
+    private final SourceSettingProvider settings;
+    private List<MarketEvent> lastKnown = List.of();
+
+    public ForexSource(RestTemplate restTemplate, SourceSettingProvider settings) {
+        this.settings = settings;
+    }
 
     @Override
     public String sourceId() { return "forex"; }
@@ -657,58 +735,97 @@ public class ForexSource implements DataSource {
     @Override
     @CircuitBreaker(name = "forex-source", fallbackMethod = "fetchFallback")
     public List<MarketEvent> fetch() {
+        List<String> pairs = settings.getList(sourceId(), "pairs");
         // call your API, return normalised MarketEvent list
-        return List.of(
+        return pairs.stream().map(pair ->
             MarketEvent.builder()
-                .source("forex").asset("EUR-USD").metric("rate").value(1.0852).unit("USD")
+                .source(sourceId()).asset(pair).metric("rate").value(1.085).unit("USD")
                 .build()
-        );
+        ).toList();
     }
 
     public List<MarketEvent> fetchFallback(Exception e) { return lastKnown; }
 }
 ```
 
-**Step 2 — Add config binding** in `SourceProperties.java`:
+**Step 2 — Seed default settings** via a new Flyway migration (e.g. `V3__forex_source.sql`):
 
-```java
-public record SourceProperties(
-    CryptoConfig crypto,
-    StockConfig stocks,
-    WeatherConfig weather,
-    ForexConfig forex      // ← add this record
-) {
-    public record ForexConfig(boolean enabled, List<String> pairs, long intervalMs) {}
-}
+```sql
+INSERT INTO source_settings (source_id, setting_key, setting_value) VALUES
+  ('forex', 'enabled',    'false'),
+  ('forex', 'pairs',      'EUR-USD,GBP-USD'),
+  ('forex', 'intervalMs', '30000');
 ```
 
-**Step 3 — Enable in `application.yml`**:
+**Step 3 — Enable from the Settings UI** (or via the API):
 
-```yaml
-sources:
-  forex:
-    enabled: true
-    pairs: [EUR-USD, GBP-USD]
-    interval-ms: 10000
+```bash
+curl -X PUT http://localhost:8080/api/v1/settings/sources/forex \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"sourceId":"forex","enabled":true,"settings":{"pairs":"EUR-USD,GBP-USD","intervalMs":"30000"}}'
 ```
 
-Spring auto-discovers the new bean. The scheduler, producer, Kafka topic, all consumers, and the REST API pick it up with no changes.
+The scheduler, producer, Kafka topic, all consumers, and the REST API pick it up automatically. The Settings UI also renders it automatically (fields are derived from the database row keys).
 
 ---
 
 ## 15. Troubleshooting
 
-### Application fails to start — Kafka not available
+### JAVA_HOME not set / wrong Java version
+
+```
+Error: A fatal exception has occurred. Unrecognized VM option 'MaxRAMPercentage=75.0'
+```
+
+This means the scripts picked up a Java 8 JRE instead of JDK 21.
+
+**Fix (Windows):**
+```powershell
+# Verify which java the shell resolves
+Get-Command java | Select-Object -ExpandProperty Source
+
+# Set JAVA_HOME for the session
+$env:JAVA_HOME = "C:\Program Files\<your-jdk-21-folder>"
+$env:PATH = "$env:JAVA_HOME\bin;" + $env:PATH
+java -version   # should show 21
+```
+
+**Fix (macOS / Linux):**
+```bash
+export JAVA_HOME=$(/usr/libexec/java_home -v 21)   # macOS
+export PATH=$JAVA_HOME/bin:$PATH
+java -version
+```
+
+The `start-local` scripts read `JAVA_HOME` from both the process and machine environment scopes automatically.
+
+---
+
+### Application fails to start — database auth error
+
+```
+FATAL: password authentication failed for user "istream"
+```
+
+**Fix:** The `istream` PostgreSQL user's password doesn't match `.env`. Reset it:
+
+```bash
+psql -U postgres -c "ALTER USER istream WITH PASSWORD 'istream';"
+```
+
+---
+
+### Application fails to start — Kafka not available (hybrid mode)
 
 ```
 org.apache.kafka.common.errors.TimeoutException: Topic not available
 ```
 
-**Fix:** Kafka takes 15–30 seconds to be ready after container start. Wait and retry, or increase `start_period` in `docker-compose.yml`.
+**Fix:** Kafka takes 15–30 seconds after container start. Wait and retry, or switch to local mode which uses the embedded broker:
 
-```bash
-docker compose logs kafka | tail -20
-# Look for: started (kafka.server.KafkaServer)
+```powershell
+.\scripts\start-local.ps1
 ```
 
 ---
@@ -719,13 +836,18 @@ docker compose logs kafka | tail -20
 FlywayException: Validate failed: Migration checksum mismatch
 ```
 
-**Fix:** The database schema has drifted from the migration scripts. To reset (destroys all data):
+**Fix (local mode):** The `local` profile sets `flyway.validate-on-migrate: false` so this should not occur. If it does, drop and recreate the database:
 
+```bash
+psql -U postgres -c "DROP DATABASE istream;"
+psql -U postgres -c "CREATE DATABASE istream OWNER istream;"
+```
+
+**Fix (Docker):**
 ```bash
 docker compose down -v
 docker compose up -d postgres
-# wait 10s, then restart app
-docker compose up -d app
+# wait 10s, then restart the app
 ```
 
 ---
@@ -736,12 +858,11 @@ docker compose up -d app
 Web server failed to start. Port 8080 was already in use.
 ```
 
-**Fix:** Change `SERVER_PORT` in `.env` or identify and stop the conflicting process:
+**Fix:** Change `SERVER_PORT` in `.env`, or find and kill the conflicting process:
 
 ```bash
 # macOS / Linux
-lsof -i :8080
-kill -9 <PID>
+lsof -i :8080 | awk 'NR>1 {print $2}' | xargs kill -9
 
 # Windows
 netstat -ano | findstr :8080
@@ -750,24 +871,24 @@ taskkill /PID <PID> /F
 
 ---
 
-### CoinGecko / Yahoo Finance returns empty events
-
-CoinGecko has a public rate limit (~10–30 req/min). Signs:
+### Crypto / stock events not flowing — 429 rate limit
 
 ```
-WARN  CryptoSource - CoinGecko circuit open, using cached data: 429 Too Many Requests
+WARN CryptoSource - Binance circuit open, using cached data: 429 Too Many Requests
+WARN StockSource  - Stock API circuit open, using cached data: 429 Too Many Requests
 ```
 
-**Fix:** Increase `POLL_INTERVAL_MS` to at least `30000` (30 seconds) or obtain a CoinGecko API key and set it via a custom HTTP header in `CryptoSource`.
+The circuit breaker opens after repeated 429 responses. This typically means the poll interval is too aggressive.
+
+**Fix:** Increase `intervalMs` to `60000` (60 s) from the Settings UI at http://localhost:8080/settings.html. The circuit breaker will close on the next successful call.
 
 ---
 
 ### JWT token rejected — 401 Unauthorized
 
-Ensure you:
 1. Call `POST /api/v1/auth/login` to get a fresh token
 2. Pass it as `Authorization: Bearer <token>` (not `Basic`)
-3. Check `JWT_SECRET` is the same between restarts (token is invalid if the secret changes)
+3. Ensure `JWT_SECRET` is the same value between restarts
 
 ---
 
@@ -777,36 +898,41 @@ Ensure you:
 # Application
 curl http://localhost:8080/actuator/health
 
-# Kafka topic list
+# Kafka topic list (Docker)
 docker exec -it istream-kafka-1 \
   kafka-topics --bootstrap-server localhost:9092 --list
 
-# PostgreSQL table count
-docker exec -it istream-postgres-1 \
-  psql -U istream -c "SELECT COUNT(*) FROM market_events;"
+# PostgreSQL — count persisted events
+psql -U istream -h localhost -c "SELECT COUNT(*) FROM market_events;"
 
-# Redis ping
+# Redis ping (Docker)
 docker exec -it istream-redis-1 redis-cli PING
 ```
 
 ---
 
-### Reinstall (clean reset — process-based)
+### Clean reset — local mode
+
+```powershell
+# Windows
+.\scripts\stop-local.ps1
+Remove-Item logs\istream*.log, .istream.pid -ErrorAction SilentlyContinue
+```
+
+```bash
+# macOS / Linux
+./scripts/stop-local.sh
+rm -f logs/istream*.log .istream.pid
+```
+
+### Clean reset — hybrid or Docker
 
 ```bash
 ./scripts/stop.sh --all
 docker compose down -v
-rm -f logs/istream.log logs/istream-err.log .istream.pid
-./mvnw clean
+rm -f logs/istream*.log .istream.pid
 ./scripts/setup.sh
 ./scripts/start.sh
-```
-
-### Reinstall (clean reset — Docker)
-
-```bash
-docker compose down -v
-docker compose up --build
 ```
 
 ---
