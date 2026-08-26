@@ -3,104 +3,113 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>iStream+ — Login</title>
+  <title>iStream+ — Sign In</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: #0f1117;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      color: #e2e8f0;
+      display: flex; align-items: center; justify-content: center;
+      background: #080b14;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      color: #eef0f8;
+      overflow: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed; top: -220px; left: -180px;
+      width: 720px; height: 720px;
+      background: radial-gradient(circle, rgba(99,102,241,0.11) 0%, transparent 65%);
+      pointer-events: none;
+    }
+    body::after {
+      content: '';
+      position: fixed; bottom: -260px; right: -200px;
+      width: 800px; height: 800px;
+      background: radial-gradient(circle, rgba(139,92,246,0.08) 0%, transparent 65%);
+      pointer-events: none;
     }
 
     .card {
-      width: 100%;
-      max-width: 400px;
-      background: #1a1d27;
-      border: 1px solid #2d3148;
-      border-radius: 12px;
-      padding: 40px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+      position: relative; z-index: 1;
+      width: 100%; max-width: 420px; margin: 20px;
+      background: rgba(13,16,24,0.94);
+      border: 1px solid rgba(99,102,241,0.13);
+      border-radius: 18px;
+      padding: 44px 40px;
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.02),
+        0 32px 72px rgba(0,0,0,0.7),
+        0 0 60px rgba(99,102,241,0.04);
+    }
+    .card::before {
+      content: '';
+      position: absolute; top: 0; left: 24px; right: 24px; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(99,102,241,0.55), rgba(139,92,246,0.35), transparent);
     }
 
-    .logo {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 32px;
-    }
-
+    .logo { display: flex; align-items: center; gap: 12px; margin-bottom: 36px; }
     .logo-icon {
-      width: 40px; height: 40px;
+      width: 44px; height: 44px;
       background: linear-gradient(135deg, #6366f1, #8b5cf6);
-      border-radius: 10px;
+      border-radius: 12px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 20px;
+      font-size: 22px;
+      box-shadow: 0 0 24px rgba(99,102,241,0.4), 0 6px 16px rgba(0,0,0,0.5);
     }
+    .logo-text { font-size: 22px; font-weight: 700; letter-spacing: -0.4px; }
+    .logo-text .accent { color: #818cf8; }
 
-    .logo-text { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
-    .logo-text span { color: #6366f1; }
+    .heading { font-size: 21px; font-weight: 700; letter-spacing: -0.3px; margin-bottom: 6px; }
+    .subheading { font-size: 14px; color: #505878; margin-bottom: 30px; }
 
-    h2 { font-size: 20px; font-weight: 600; margin-bottom: 6px; }
-    .subtitle { font-size: 14px; color: #64748b; margin-bottom: 28px; }
-
-    label { display: block; font-size: 13px; font-weight: 500; color: #94a3b8; margin-bottom: 6px; }
-
+    .field { margin-bottom: 18px; }
+    .field label {
+      display: block; font-size: 11px; font-weight: 600;
+      color: #606882; letter-spacing: 0.7px; text-transform: uppercase;
+      margin-bottom: 8px;
+    }
     input {
-      width: 100%;
-      padding: 10px 14px;
-      background: #0f1117;
-      border: 1px solid #2d3148;
-      border-radius: 8px;
-      color: #e2e8f0;
-      font-size: 15px;
-      outline: none;
-      transition: border-color 0.2s;
-      margin-bottom: 18px;
+      width: 100%; padding: 11px 14px;
+      background: rgba(6,8,16,0.8);
+      border: 1px solid #191d2e; border-radius: 10px;
+      color: #eef0f8; font-size: 14px; font-family: inherit;
+      outline: none; transition: border-color 0.2s, box-shadow 0.2s;
     }
-    input:focus { border-color: #6366f1; }
-    input::placeholder { color: #3d4259; }
-
-    button {
-      width: 100%;
-      padding: 11px;
-      background: linear-gradient(135deg, #6366f1, #8b5cf6);
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      font-size: 15px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: opacity 0.2s;
-      margin-top: 4px;
+    input:focus {
+      border-color: rgba(99,102,241,0.55);
+      box-shadow: 0 0 0 3px rgba(99,102,241,0.07);
     }
-    button:hover { opacity: 0.9; }
-    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    input::placeholder { color: #272d46; }
 
     .error {
-      background: #2d1b1b;
-      border: 1px solid #7f1d1d;
-      color: #fca5a5;
-      border-radius: 8px;
-      padding: 10px 14px;
-      font-size: 13px;
-      margin-bottom: 16px;
-      display: none;
+      background: rgba(239,68,68,0.07); border: 1px solid rgba(239,68,68,0.18);
+      color: #fca5a5; border-radius: 10px; padding: 11px 14px;
+      font-size: 13px; margin-bottom: 18px; display: none;
     }
 
+    button {
+      width: 100%; padding: 12px;
+      background: linear-gradient(135deg, #6366f1, #7c3aed);
+      color: #fff; border: none; border-radius: 10px;
+      font-size: 14px; font-weight: 600; font-family: inherit;
+      cursor: pointer; margin-top: 6px;
+      box-shadow: 0 4px 20px rgba(99,102,241,0.28);
+      transition: box-shadow 0.2s, transform 0.12s;
+    }
+    button:hover:not(:disabled) {
+      box-shadow: 0 6px 28px rgba(99,102,241,0.45);
+      transform: translateY(-1px);
+    }
+    button:active:not(:disabled) { transform: translateY(0); }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+
     .spinner {
-      display: inline-block;
-      width: 16px; height: 16px;
-      border: 2px solid rgba(255,255,255,0.3);
-      border-top-color: #fff;
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-      vertical-align: middle;
-      margin-right: 6px;
+      display: inline-block; width: 13px; height: 13px;
+      border: 2px solid rgba(255,255,255,0.25); border-top-color: #fff;
+      border-radius: 50%; animation: spin 0.7s linear infinite;
+      vertical-align: middle; margin-right: 8px;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
   </style>
@@ -109,21 +118,23 @@
   <div class="card">
     <div class="logo">
       <div class="logo-icon">⚡</div>
-      <div class="logo-text">i<span>Stream+</span></div>
+      <div class="logo-text">i<span class="accent">Stream+</span></div>
     </div>
 
-    <h2>Welcome back</h2>
-    <p class="subtitle">Sign in to your account to continue</p>
+    <h2 class="heading">Welcome back</h2>
+    <p class="subheading">Sign in to your account to continue</p>
 
     <div class="error" id="error"></div>
 
     <form id="loginForm">
-      <label for="username">Username</label>
-      <input type="text" id="username" placeholder="admin" autocomplete="username" required>
-
-      <label for="password">Password</label>
-      <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" required>
-
+      <div class="field">
+        <label for="username">Username</label>
+        <input type="text" id="username" placeholder="admin" autocomplete="username" required>
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" required>
+      </div>
       <button type="submit" id="btn">Sign in</button>
     </form>
   </div>
@@ -163,7 +174,6 @@
       }
     });
 
-    // Redirect if already logged in
     if (localStorage.getItem('is_token')) {
       window.location.href = '/dashboard.html';
     }

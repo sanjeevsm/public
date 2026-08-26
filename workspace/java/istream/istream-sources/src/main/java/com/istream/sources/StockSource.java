@@ -19,7 +19,7 @@ public class StockSource implements DataSource {
 
     private static final Logger log = LoggerFactory.getLogger(StockSource.class);
     private static final String YAHOO_URL =
-            "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval=1m&range=1d";
+            "https://query2.finance.yahoo.com/v8/finance/chart/{symbol}?interval=1d&range=1d";
 
     private final RestTemplate restTemplate;
     private final SourceSettingProvider settings;
