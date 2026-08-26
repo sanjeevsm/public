@@ -2,12 +2,11 @@ package com.istream.sources;
 
 import com.istream.core.model.MarketEvent;
 import com.istream.core.source.DataSource;
-import com.istream.sources.config.SourceProperties;
+import com.istream.core.source.SourceSettingProvider;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
@@ -16,7 +15,6 @@ import java.util.List;
 import java.util.Map;
 
 @Component
-@ConditionalOnProperty(prefix = "sources.stocks", name = "enabled", havingValue = "true")
 public class StockSource implements DataSource {
 
     private static final Logger log = LoggerFactory.getLogger(StockSource.class);
@@ -24,12 +22,12 @@ public class StockSource implements DataSource {
             "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval=1m&range=1d";
 
     private final RestTemplate restTemplate;
-    private final SourceProperties.StockConfig config;
+    private final SourceSettingProvider settings;
     private List<MarketEvent> lastKnown = List.of();
 
-    public StockSource(RestTemplate restTemplate, SourceProperties sourceProperties) {
+    public StockSource(RestTemplate restTemplate, SourceSettingProvider settings) {
         this.restTemplate = restTemplate;
-        this.config = sourceProperties.stocks();
+        this.settings = settings;
     }
 
     @Override
@@ -43,7 +41,7 @@ public class StockSource implements DataSource {
     public List<MarketEvent> fetch() {
         List<MarketEvent> events = new ArrayList<>();
 
-        for (String asset : config.assets()) {
+        for (String asset : settings.getList(sourceId(), "assets")) {
             try {
                 @SuppressWarnings("unchecked")
                 Map<String, Object> response = restTemplate.getForObject(YAHOO_URL, Map.class, asset);

@@ -2,11 +2,10 @@ package com.istream.sources;
 
 import com.istream.core.model.MarketEvent;
 import com.istream.core.source.DataSource;
-import com.istream.sources.config.SourceProperties;
+import com.istream.core.source.SourceSettingProvider;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
@@ -15,7 +14,6 @@ import java.util.List;
 import java.util.Map;
 
 @Component
-@ConditionalOnProperty(prefix = "sources.weather", name = "enabled", havingValue = "true")
 public class WeatherSource implements DataSource {
 
     private static final Logger log = LoggerFactory.getLogger(WeatherSource.class);
@@ -23,12 +21,12 @@ public class WeatherSource implements DataSource {
             "https://api.openweathermap.org/data/2.5/weather?q={city}&appid={apiKey}&units=metric";
 
     private final RestTemplate restTemplate;
-    private final SourceProperties.WeatherConfig config;
+    private final SourceSettingProvider settings;
     private List<MarketEvent> lastKnown = List.of();
 
-    public WeatherSource(RestTemplate restTemplate, SourceProperties sourceProperties) {
+    public WeatherSource(RestTemplate restTemplate, SourceSettingProvider settings) {
         this.restTemplate = restTemplate;
-        this.config = sourceProperties.weather();
+        this.settings = settings;
     }
 
     @Override
@@ -40,12 +38,13 @@ public class WeatherSource implements DataSource {
     @CircuitBreaker(name = "weather-source", fallbackMethod = "fetchFallback")
     public List<MarketEvent> fetch() {
         List<MarketEvent> events = new ArrayList<>();
+        String apiKey = settings.get(sourceId(), "apiKey", "");
 
-        for (String city : config.cities()) {
+        for (String city : settings.getList(sourceId(), "cities")) {
             try {
                 @SuppressWarnings("unchecked")
                 Map<String, Object> response = restTemplate.getForObject(
-                        OPENWEATHER_URL, Map.class, city, config.apiKey()
+                        OPENWEATHER_URL, Map.class, city, apiKey
                 );
                 if (response != null) {
                     @SuppressWarnings("unchecked")
