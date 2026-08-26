@@ -1,0 +1,105 @@
+server:
+  port: ${SERVER_PORT:8080}
+  shutdown: graceful
+
+spring:
+  application:
+    name: streamsource
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/streamsource}
+    username: ${DB_USER:streamsource}
+    password: ${DB_PASSWORD:streamsource}
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  kafka:
+    bootstrap-servers: ${KAFKA_BROKERS:localhost:9092}
+
+kafka:
+  topics:
+    market-events: streamsource.market.events
+
+jwt:
+  secret: ${JWT_SECRET:streamsource-dev-secret-key-change-in-production-must-be-32-chars-min}
+  expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+
+pipeline:
+  poll-interval-ms: ${POLL_INTERVAL_MS:5000}
+
+sources:
+  crypto:
+    enabled: ${CRYPTO_ENABLED:true}
+    assets: ${CRYPTO_ASSETS:BTC-USD,ETH-USD,SOL-USD}
+    interval-ms: 5000
+    currency: usd
+  stocks:
+    enabled: ${STOCKS_ENABLED:true}
+    assets: ${STOCK_ASSETS:AAPL,TSLA,MSFT}
+    interval-ms: 30000
+  weather:
+    enabled: ${WEATHER_ENABLED:false}
+    cities: ${WEATHER_CITIES:London,New York}
+    interval-ms: 60000
+    api-key: ${OPENWEATHER_API_KEY:}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics,loggers
+  endpoint:
+    health:
+      show-details: when-authorized
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      crypto-source:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 3
+      stock-source:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+      weather-source:
+        sliding-window-size: 5
+        failure-rate-threshold: 60
+        wait-duration-in-open-state: 60s
+  retry:
+    instances:
+      crypto-source:
+        max-attempts: 3
+        wait-duration: 1s
+      stock-source:
+        max-attempts: 3
+        wait-duration: 2s
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+
+logging:
+  level:
+    com.streamsource: INFO
+    org.springframework.kafka: WARN
+    org.hibernate.SQL: WARN
