@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>iStream+ — Settings</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: #0f1117;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      color: #e2e8f0;
+    }
+
+    header {
+      background: #1a1d27;
+      border-bottom: 1px solid #2d3148;
+      padding: 0 32px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 700; text-decoration: none; color: inherit; }
+    .logo-icon {
+      width: 32px; height: 32px;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+    }
+    .logo span { color: #6366f1; }
+
+    .header-right { display: flex; align-items: center; gap: 16px; font-size: 14px; color: #64748b; }
+    .nav-link {
+      color: #94a3b8; font-size: 14px; text-decoration: none; padding: 5px 10px;
+      border-radius: 6px; transition: color 0.2s, background 0.2s;
+    }
+    .nav-link:hover { color: #e2e8f0; background: #2d3148; }
+    .nav-link.active { color: #6366f1; }
+
+    .btn-logout {
+      background: none; border: 1px solid #2d3148; border-radius: 6px;
+      color: #94a3b8; padding: 5px 12px; cursor: pointer; font-size: 13px;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .btn-logout:hover { border-color: #6366f1; color: #e2e8f0; }
+
+    main { padding: 32px; max-width: 900px; margin: 0 auto; }
+
+    h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+    .tagline { font-size: 14px; color: #64748b; margin-bottom: 32px; }
+
+    .source-card {
+      background: #1a1d27;
+      border: 1px solid #2d3148;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .source-card.disabled { opacity: 0.7; }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .card-title { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+    .source-icon {
+      width: 32px; height: 32px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; font-weight: 700;
+    }
+    .icon-crypto  { background: #1e3a5f; color: #60a5fa; }
+    .icon-stocks  { background: #14532d; color: #4ade80; }
+    .icon-weather { background: #1c1917; color: #fb923c; }
+
+    .toggle-wrap { display: flex; align-items: center; gap: 10px; }
+    .toggle-label { font-size: 13px; color: #64748b; }
+
+    .toggle {
+      position: relative; width: 44px; height: 24px; cursor: pointer;
+    }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; inset: 0;
+      background: #2d3148; border-radius: 24px;
+      transition: background 0.2s;
+    }
+    .slider::before {
+      content: ''; position: absolute;
+      width: 18px; height: 18px;
+      left: 3px; top: 3px;
+      background: #94a3b8; border-radius: 50%;
+      transition: transform 0.2s, background 0.2s;
+    }
+    input:checked + .slider { background: #6366f1; }
+    input:checked + .slider::before { transform: translateX(20px); background: #fff; }
+
+    .fields { display: grid; gap: 14px; }
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field label { font-size: 12px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
+
+    .field input, .field textarea {
+      background: #0f1117;
+      border: 1px solid #2d3148;
+      border-radius: 8px;
+      color: #e2e8f0;
+      padding: 9px 12px;
+      font-size: 14px;
+      font-family: inherit;
+      transition: border-color 0.2s;
+      width: 100%;
+    }
+    .field input:focus, .field textarea:focus {
+      outline: none; border-color: #6366f1;
+    }
+    .field textarea { resize: vertical; min-height: 60px; }
+    .field .hint { font-size: 11px; color: #475569; }
+
+    .card-footer {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-top: 20px; padding-top: 16px; border-top: 1px solid #2d3148;
+    }
+    .status-msg { font-size: 13px; min-height: 20px; }
+    .status-ok  { color: #22c55e; }
+    .status-err { color: #ef4444; }
+
+    .btn-save {
+      background: #6366f1; color: #fff; border: none; border-radius: 8px;
+      padding: 8px 22px; font-size: 14px; font-weight: 600;
+      cursor: pointer; transition: background 0.2s, opacity 0.2s;
+    }
+    .btn-save:hover   { background: #4f46e5; }
+    .btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .spinner { display: inline-block; animation: spin 0.7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="/dashboard.html" class="logo">
+      <div class="logo-icon">⚡</div>
+      i<span>Stream+</span>
+    </a>
+    <div class="header-right">
+      <a href="/dashboard.html" class="nav-link">Dashboard</a>
+      <a href="/settings.html" class="nav-link active">Settings</a>
+      <span id="usernameLabel"></span>
+      <button class="btn-logout" onclick="logout()">Sign out</button>
+    </div>
+  </header>
+
+  <main>
+    <h1>Source Settings</h1>
+    <p class="tagline">Configure data sources at runtime — changes take effect on the next poll cycle.</p>
+
+    <div id="settingsContainer">
+      <p style="color:#64748b; padding: 40px 0; text-align:center;">Loading settings…</p>
+    </div>
+  </main>
+
+  <script>
+    const token = localStorage.getItem('is_token');
+    if (!token) { window.location.href = '/index.html'; }
+
+    function authHeaders() {
+      return { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' };
+    }
+
+    function logout() {
+      localStorage.removeItem('is_token');
+      window.location.href = '/index.html';
+    }
+
+    try {
+      const p = JSON.parse(atob(token.split('.')[1]));
+      document.getElementById('usernameLabel').textContent = p.sub || '';
+    } catch(e) {}
+
+    const LABELS = {
+      crypto:  { label: 'Crypto',        icon: '₿',  cls: 'icon-crypto',  fields: ['assets','currency','intervalMs'] },
+      stocks:  { label: 'Stocks',         icon: '📈', cls: 'icon-stocks',  fields: ['assets','intervalMs'] },
+      weather: { label: 'Weather',        icon: '🌤', cls: 'icon-weather', fields: ['cities','apiKey','intervalMs'] },
+    };
+
+    const FIELD_META = {
+      assets:     { label: 'Assets',            hint: 'Comma-separated symbols, e.g. BTC-USD,ETH-USD,SOL-USD',  type: 'text' },
+      currency:   { label: 'Quote Currency',     hint: 'e.g. usd',                                               type: 'text' },
+      intervalMs: { label: 'Poll Interval (ms)', hint: 'Milliseconds between fetches, e.g. 5000',               type: 'text' },
+      cities:     { label: 'Cities',             hint: 'Comma-separated city names, e.g. London,New York',       type: 'text' },
+      apiKey:     { label: 'OpenWeather API Key',hint: 'Required when weather source is enabled',                type: 'password' },
+    };
+
+    function buildCard(src) {
+      const meta = LABELS[src.sourceId] || { label: src.sourceId, icon: '⚙', cls: '', fields: Object.keys(src.settings) };
+      const fields = meta.fields.map(key => {
+        const fm = FIELD_META[key] || { label: key, hint: '', type: 'text' };
+        const val = src.settings[key] || '';
+        return `
+          <div class="field">
+            <label>${fm.label}</label>
+            <input type="${fm.type}" id="${src.sourceId}_${key}" value="${escHtml(val)}" placeholder="${escHtml(fm.hint)}">
+            <span class="hint">${escHtml(fm.hint)}</span>
+          </div>`;
+      }).join('');
+
+      return `
+        <div class="source-card ${src.enabled ? '' : 'disabled'}" id="card_${src.sourceId}">
+          <div class="card-header">
+            <div class="card-title">
+              <div class="source-icon ${meta.cls}">${meta.icon}</div>
+              ${escHtml(meta.label)}
+            </div>
+            <div class="toggle-wrap">
+              <span class="toggle-label">Enabled</span>
+              <label class="toggle">
+                <input type="checkbox" id="${src.sourceId}_enabled" ${src.enabled ? 'checked' : ''}
+                       onchange="onToggle('${src.sourceId}')">
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+          <div class="fields">${fields}</div>
+          <div class="card-footer">
+            <span class="status-msg" id="msg_${src.sourceId}"></span>
+            <button class="btn-save" onclick="save('${src.sourceId}')">Save</button>
+          </div>
+        </div>`;
+    }
+
+    function escHtml(s) {
+      return String(s)
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;');
+    }
+
+    function onToggle(sourceId) {
+      const enabled = document.getElementById(sourceId + '_enabled').checked;
+      document.getElementById('card_' + sourceId).classList.toggle('disabled', !enabled);
+    }
+
+    async function save(sourceId) {
+      const btn = document.querySelector(`#card_${sourceId} .btn-save`);
+      const msg = document.getElementById('msg_' + sourceId);
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner">↻</span> Saving…';
+      msg.textContent = '';
+
+      const enabled = document.getElementById(sourceId + '_enabled').checked;
+      const meta = LABELS[sourceId] || {};
+      const fields = meta.fields || [];
+      const settings = {};
+      fields.forEach(key => {
+        const el = document.getElementById(sourceId + '_' + key);
+        if (el) settings[key] = el.value.trim();
+      });
+
+      try {
+        const res = await fetch(`/api/v1/settings/sources/${sourceId}`, {
+          method: 'PUT',
+          headers: authHeaders(),
+          body: JSON.stringify({ sourceId, enabled, settings })
+        });
+        if (res.status === 401) { logout(); return; }
+        if (!res.ok) throw new Error(await res.text());
+        msg.textContent = 'Saved successfully';
+        msg.className = 'status-msg status-ok';
+      } catch(e) {
+        msg.textContent = 'Save failed: ' + e.message;
+        msg.className = 'status-msg status-err';
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = 'Save';
+        setTimeout(() => { msg.textContent = ''; }, 4000);
+      }
+    }
+
+    async function loadSettings() {
+      try {
+        const res = await fetch('/api/v1/settings/sources', { headers: authHeaders() });
+        if (res.status === 401) { logout(); return; }
+        const sources = await res.json();
+        const order = ['crypto', 'stocks', 'weather'];
+        sources.sort((a, b) => {
+          const ia = order.indexOf(a.sourceId), ib = order.indexOf(b.sourceId);
+          return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+        });
+        document.getElementById('settingsContainer').innerHTML = sources.map(buildCard).join('');
+      } catch(e) {
+        document.getElementById('settingsContainer').innerHTML =
+          `<p style="color:#ef4444; padding:40px 0; text-align:center">Failed to load settings: ${escHtml(e.message)}</p>`;
+      }
+    }
+
+    loadSettings();
+  </script>
+</body>
+</html>

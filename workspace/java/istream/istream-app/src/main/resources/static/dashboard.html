@@ -35,6 +35,12 @@
     .logo span { color: #6366f1; }
 
     .user-info { display: flex; align-items: center; gap: 12px; font-size: 14px; color: #64748b; }
+    .nav-link {
+      color: #94a3b8; font-size: 14px; text-decoration: none; padding: 5px 10px;
+      border-radius: 6px; transition: color 0.2s, background 0.2s;
+    }
+    .nav-link:hover { color: #e2e8f0; background: #2d3148; }
+    .nav-link.active { color: #6366f1; }
     .btn-logout {
       background: none; border: 1px solid #2d3148; border-radius: 6px;
       color: #94a3b8; padding: 5px 12px; cursor: pointer; font-size: 13px;
@@ -129,6 +135,8 @@
       i<span>Stream+</span>
     </div>
     <div class="user-info">
+      <a href="/dashboard.html" class="nav-link active">Dashboard</a>
+      <a href="/settings.html" class="nav-link">Settings</a>
       <span id="usernameLabel"></span>
       <button class="btn-logout" onclick="logout()">Sign out</button>
     </div>
