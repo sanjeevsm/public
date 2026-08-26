@@ -13,7 +13,7 @@ Use the links below to open a project README and follow its Quick Start section 
 | iTrack+ — Personal Finance Tracker | Personal finance tracker with multi-user collaboration and reporting. | Frontend: React + TypeScript · Backend: FastAPI · Database: MongoDB | [workspace/python/itrack/README.md](workspace/python/itrack/README.md)
 | iTransit+ — Public Transport Viewer | Stateless frontend + FastAPI backend integrating TfL and other UK transport APIs with client-side favourites and mock fallback. | Frontend: React (Vite) · Backend: FastAPI · DB: None (mock providers) | [workspace/python/itransit/README.md](workspace/python/itransit/README.md)
 | iCare+ — Clinic Management System | Full-stack clinic management with appointment scheduling, patient records, invoicing, and financial reporting. Features token-based authentication, role-based access control, and billing dashboard. | Frontend: Flask (Jinja2) · Backend: Flask REST API · Database: PostgreSQL | [workspace/python/icare/README.md](workspace/python/icare/README.md)
-| streamsource — Universal Data Pipeline | Real-time data streaming pipeline with pluggable sources (crypto, stocks, weather), Kafka fan-out to independent consumers, WebSocket live dashboard, JWT-secured REST API, and Prometheus/Grafana monitoring. New data sources drop in as a single Java class. | Backend: Spring Boot 3 · Messaging: Apache Kafka · Database: PostgreSQL · Monitoring: Prometheus, Grafana | [workspace/java/streamsource/README.md](workspace/java/streamsource/README.md)
+| iStream+ — Universal Data Pipeline | Real-time data streaming pipeline with pluggable sources (crypto, stocks, weather), Kafka fan-out to independent consumers, WebSocket live dashboard, JWT-secured REST API, and Prometheus/Grafana monitoring. New data sources drop in as a single Java class. | Backend: Spring Boot 3 · Messaging: Apache Kafka · Database: PostgreSQL · Monitoring: Prometheus, Grafana | [workspace/java/istream/README.md](workspace/java/istream/README.md)
 
 **Default Ports**
 
@@ -24,7 +24,7 @@ Use the links below to open a project README and follow its Quick Start section 
 | iTrack+ | 8002 | 3000 | MongoDB 27017 |
 | iTransit+ | 8003 | 3001 | — |
 | iCare+ | 8004 | 3003 | Postgres 5432 |
-| streamsource | 8080 | — | Kafka 9092, Postgres 5433, Redis 6379, Prometheus 9090, Grafana 3002 |
+| iStream+ | 8080 | — | Kafka 9092, Postgres 5433, Redis 6379, Prometheus 9090, Grafana 3002 |
 | System services | Postgres 5432 | — | MongoDB 27017, Prometheus 9000, Grafana 9001 |
 
 ## Quick start — view any project

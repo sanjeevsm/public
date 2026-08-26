@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -e
+
+MAVEN_VERSION="3.9.9"
+MAVEN_DIST="apache-maven-${MAVEN_VERSION}"
+WRAPPER_HOME="${HOME}/.m2/wrapper/dists/${MAVEN_DIST}"
+MVN_CMD="${WRAPPER_HOME}/bin/mvn"
+
+if [ ! -f "${MVN_CMD}" ]; then
+    echo "[mvnw] Maven ${MAVEN_VERSION} not found. Downloading..."
+    ZIP="/tmp/${MAVEN_DIST}-bin.zip"
+    curl -fsSL -o "${ZIP}" "https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/${MAVEN_DIST}-bin.zip"
+    mkdir -p "${HOME}/.m2/wrapper/dists"
+    unzip -q "${ZIP}" -d "${HOME}/.m2/wrapper/dists/"
+    rm -f "${ZIP}"
+    chmod +x "${MVN_CMD}"
+    echo "[mvnw] Maven ${MAVEN_VERSION} installed."
+fi
+
+exec "${MVN_CMD}" "$@"
