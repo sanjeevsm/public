@@ -5,6 +5,13 @@ server:
 spring:
   application:
     name: istream
+  web:
+    resources:
+      cache:
+        period: 0
+        cachecontrol:
+          no-cache: true
+          must-revalidate: true
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/istream}
     username: ${DB_USER:istream}
