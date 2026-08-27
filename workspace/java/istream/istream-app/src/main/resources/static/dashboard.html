@@ -312,6 +312,9 @@
     .spin { display: inline-block; animation: spin .7s linear infinite; }
     @keyframes spin  { to { transform: rotate(360deg); } }
     @keyframes pulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.3; transform:scale(.65); } }
+    @keyframes rowFlash { from { background: rgba(var(--ac3),.16); } to { background: transparent; } }
+    .live-row { animation: rowFlash 2.5s ease-out forwards; }
+    .ws-off .live-badge { opacity: .4; }
   </style>
 </head>
 <body>
@@ -438,8 +441,9 @@ function push(src, asset, v, ts) {
   if (!BUF[src]) BUF[src] = {};
   if (!BUF[src][asset]) BUF[src][asset] = [];
   const b = BUF[src][asset];
+  if (b.length && b[b.length - 1].ts === ts) return;
   const label = new Date(ts).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  b.push({ t: label, v });
+  b.push({ t: label, v: parseFloat(v), ts });
   if (b.length > MAX) b.shift();
 }
 
@@ -552,23 +556,25 @@ async function loadEvents() {
       updateSparklines();
     }
 
-    const rows = (pg.content || []).slice(0, 20);
-    const tbody = document.getElementById('tbody');
-    if (!rows.length) {
-      tbody.innerHTML = '<tr><td colspan="6" class="empty">No events yet — data will appear as sources produce it</td></tr>';
-    } else {
-      tbody.innerHTML = rows.map(e => {
-        const m = sm(e.source);
-        const bs = `background:${m.bg};color:${m.color};border-color:${m.br}`;
-        return `<tr>
-          <td><span class="badge" style="${bs}">${e.source}</span></td>
-          <td style="color:var(--t1);font-weight:600">${e.asset}</td>
-          <td style="color:var(--t2)">${e.metric}</td>
-          <td><span class="val">${Number(e.value).toLocaleString(undefined,{maximumFractionDigits:4})}</span></td>
-          <td style="color:var(--t3)">${e.unit||'—'}</td>
-          <td style="color:var(--t3);font-size:12px">${new Date(e.occurredAt).toLocaleString()}</td>
-        </tr>`;
-      }).join('');
+    if (!wsReady) {
+      const rows = (pg.content || []).slice(0, 20);
+      const tbody = document.getElementById('tbody');
+      if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="empty">No events yet — data will appear as sources produce it</td></tr>';
+      } else {
+        tbody.innerHTML = rows.map(e => {
+          const m = sm(e.source);
+          const bs = `background:${m.bg};color:${m.color};border-color:${m.br}`;
+          return `<tr>
+            <td><span class="badge" style="${bs}">${e.source}</span></td>
+            <td style="color:var(--t1);font-weight:600">${e.asset}</td>
+            <td style="color:var(--t2)">${e.metric}</td>
+            <td><span class="val">${Number(e.value).toLocaleString(undefined,{maximumFractionDigits:4})}</span></td>
+            <td style="color:var(--t3)">${e.unit||'—'}</td>
+            <td style="color:var(--t3);font-size:12px">${new Date(e.occurredAt).toLocaleString()}</td>
+          </tr>`;
+        }).join('');
+      }
     }
   } catch(e) {
     document.getElementById('tbody').innerHTML =
@@ -589,9 +595,104 @@ async function loadAlerts() {
   } catch(e) { document.getElementById('alertRules').textContent = '—'; }
 }
 
+/* ── WebSocket / STOMP (inline SockJS raw) ─────────────────────── */
+let ws = null, wsReady = false, wsTimer = null;
+
+function wsConnect() {
+  clearTimeout(wsTimer); wsTimer = null;
+  const srv = String(100 + Math.floor(Math.random() * 900));
+  const sid = Array.from({length: 8}, () => '0123456789abcdefghijklmnopqrstuvwxyz'[Math.floor(Math.random() * 36)]).join('');
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  const url = `${proto}://${location.host}/ws/${srv}/${sid}/websocket`;
+  try { ws = new WebSocket(url); } catch(e) { wsSchedule(); return; }
+
+  ws.onopen  = () => {};
+  ws.onerror = () => {};
+  ws.onclose = () => { wsReady = false; document.body.classList.add('ws-off'); wsSchedule(); };
+  ws.onmessage = ({data}) => {
+    if (!data || data === 'h') return;
+    if (data[0] === 'o') {
+      wsSend('CONNECT', {'accept-version':'1.2','heart-beat':'0,0'}); return;
+    }
+    if (data[0] === 'c') { wsReady = false; document.body.classList.add('ws-off'); wsSchedule(); return; }
+    if (data[0] === 'a') {
+      try { JSON.parse(data.slice(1)).forEach(wsFrame); } catch(e) {}
+    }
+  };
+}
+
+function wsSend(cmd, hdrs, body) {
+  if (!ws || ws.readyState !== 1) return;
+  let f = cmd + '\n';
+  if (hdrs) Object.entries(hdrs).forEach(([k, v]) => { f += k + ':' + v + '\n'; });
+  ws.send(JSON.stringify([f + '\n' + (body || '') + '\0']));
+}
+
+function wsFrame(raw) {
+  const nul = raw.indexOf('\0');
+  const text = nul >= 0 ? raw.slice(0, nul) : raw;
+  const sep = text.indexOf('\n\n');
+  if (sep < 0) return;
+  const cmd  = text.slice(0, text.indexOf('\n'));
+  const body = text.slice(sep + 2);
+  if (cmd === 'CONNECTED') {
+    wsReady = true;
+    document.body.classList.remove('ws-off');
+    wsSend('SUBSCRIBE', {id:'sub-0', destination:'/topic/events/all'});
+    return;
+  }
+  if (cmd === 'MESSAGE' && body) {
+    try { wsEvent(JSON.parse(body)); } catch(e) {}
+  }
+}
+
+function wsEvent(e) {
+  const ts = e.timestamp || e.occurredAt || new Date().toISOString();
+  push(e.source, e.asset, e.value, ts);
+  const pa = PRIMARY[e.source];
+  if (pa && pa === e.asset) {
+    const m   = sm(e.source);
+    const buf = BUF[e.source]?.[e.asset];
+    if (buf && buf.length > 1) {
+      sparkline(document.getElementById('sp-' + e.source), buf, m.color);
+      const vEl = document.getElementById('tv-' + e.source);
+      if (vEl) vEl.textContent = Number(buf[buf.length - 1].v).toLocaleString(undefined, {maximumFractionDigits: 2});
+    }
+  }
+  wsRow(e, ts);
+}
+
+function wsRow(e, ts) {
+  const tbody = document.getElementById('tbody');
+  const empty = tbody.querySelector('.empty');
+  if (empty) empty.closest('tr').remove();
+  const m  = sm(e.source);
+  const bs = `background:${m.bg};color:${m.color};border-color:${m.br}`;
+  const tr = document.createElement('tr');
+  tr.className = 'live-row';
+  tr.innerHTML = `
+    <td><span class="badge" style="${bs}">${e.source}</span></td>
+    <td style="color:var(--t1);font-weight:600">${e.asset}</td>
+    <td style="color:var(--t2)">${e.metric}</td>
+    <td><span class="val">${Number(e.value).toLocaleString(undefined,{maximumFractionDigits:4})}</span></td>
+    <td style="color:var(--t3)">${e.unit||'—'}</td>
+    <td style="color:var(--t3);font-size:12px">${new Date(ts).toLocaleString()}</td>`;
+  tbody.insertBefore(tr, tbody.firstChild);
+  while (tbody.rows.length > 20) tbody.deleteRow(tbody.rows.length - 1);
+  const tEl = document.getElementById('totalEvents');
+  const n = parseInt(tEl.textContent);
+  if (!isNaN(n)) tEl.textContent = n + 1;
+}
+
+function wsSchedule() {
+  if (!wsTimer) wsTimer = setTimeout(wsConnect, 5000);
+}
+
+/* ── Init ──────────────────────────────────────────────────────── */
 loadSources();
 loadEvents();
 loadAlerts();
+wsConnect();
 setInterval(loadEvents,  15000);
 setInterval(loadSources, 30000);
 </script>
