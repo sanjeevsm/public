@@ -258,6 +258,28 @@
 
     .spinner { display: inline-block; animation: spin .7s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Purge section */
+    .purge-section {
+      margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--br);
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    }
+    .purge-lbl  { font-size: 12px; color: var(--t2); white-space: nowrap; }
+    .purge-sel  {
+      background: var(--ibg); border: 1px solid var(--br); border-radius: 8px;
+      color: var(--t1); padding: 6px 10px; font-size: 12px; font-family: inherit;
+      cursor: pointer; outline: none;
+      transition: border-color .2s;
+    }
+    .purge-sel:focus { border-color: rgba(var(--ac3),.5); }
+    .btn-purge {
+      background: rgba(239,68,68,.09); border: 1px solid rgba(239,68,68,.22); border-radius: 8px;
+      color: #f87171; padding: 6px 16px; font-size: 12px; font-weight: 600; font-family: inherit;
+      cursor: pointer; transition: background .15s, border-color .15s;
+    }
+    .btn-purge:hover:not(:disabled) { background: rgba(239,68,68,.18); border-color: rgba(239,68,68,.45); }
+    .btn-purge:disabled { opacity: .45; cursor: not-allowed; }
+    .purge-msg  { font-size: 11px; font-weight: 500; min-height: 16px; }
   </style>
 </head>
 <body>
@@ -376,6 +398,15 @@ function buildCard(src) {
         </div>
       </div>
       <div class="fields">${fields}</div>
+      <div class="purge-section">
+        <span class="purge-lbl">Purge events older than</span>
+        <select id="pdays_${src.sourceId}" class="purge-sel">
+          ${[{v:'0',l:'All records'},{v:'1',l:'1 day'},{v:'3',l:'3 days'},{v:'7',l:'7 days'},{v:'14',l:'14 days'},{v:'30',l:'30 days'},{v:'90',l:'90 days'}]
+            .map(({v,l}) => `<option value="${v}"${String(v) === String(src.settings.retentionDays ?? '7') ? ' selected' : ''}>${l}</option>`).join('')}
+        </select>
+        <button class="btn-purge" id="pbtn_${src.sourceId}" onclick="purge('${src.sourceId}')">Purge</button>
+        <span class="purge-msg status-ok" id="pmsg_${src.sourceId}"></span>
+      </div>
       <div class="card-footer">
         <span class="status-msg" id="msg_${src.sourceId}"></span>
         <button class="btn-save" onclick="save('${src.sourceId}')">Save</button>
@@ -401,6 +432,8 @@ async function save(id) {
     const el = document.getElementById(id + '_' + k);
     if (el) settings[k] = el.value.trim();
   });
+  const retEl = document.getElementById('pdays_' + id);
+  if (retEl) settings.retentionDays = retEl.value;
 
   try {
     const r = await fetch(`/api/v1/settings/sources/${id}`, {
@@ -411,6 +444,7 @@ async function save(id) {
     if (!r.ok) throw new Error(await r.text());
     msg.textContent = 'Saved';
     msg.className = 'status-msg status-ok';
+    if (retEl) await applyPurge(id, retEl.value, msg);
   } catch(e) {
     msg.textContent = 'Failed &#8212; ' + e.message;
     msg.className = 'status-msg status-err';
@@ -418,6 +452,46 @@ async function save(id) {
     btn.disabled = false;
     btn.innerHTML = 'Save';
     setTimeout(() => { msg.textContent = ''; }, 4000);
+  }
+}
+
+async function applyPurge(id, days, msgEl) {
+  try {
+    const r = await fetch(`/api/v1/events?source=${encodeURIComponent(id)}&olderThanDays=${days}`, {
+      method: 'DELETE', headers: ah()
+    });
+    if (!r.ok) return;
+    const d = await r.json();
+    if (d.deleted > 0) {
+      msgEl.textContent = `Saved — ${d.deleted} old record${d.deleted !== 1 ? 's' : ''} purged`;
+    }
+  } catch(_) { /* silent — save already succeeded */ }
+}
+
+async function purge(id) {
+  const btn  = document.getElementById('pbtn_' + id);
+  const msg  = document.getElementById('pmsg_' + id);
+  const days = document.getElementById('pdays_' + id).value;
+  if (!confirm(`Delete all "${id}" events older than ${days} day(s)? This cannot be undone.`)) return;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner">&#8635;</span>';
+  msg.textContent = '';
+  try {
+    const r = await fetch(`/api/v1/events?source=${encodeURIComponent(id)}&olderThanDays=${days}`, {
+      method: 'DELETE', headers: ah()
+    });
+    if (r.status === 401) { logout(); return; }
+    if (!r.ok) throw new Error(await r.text());
+    const d = await r.json();
+    msg.textContent = `${d.deleted} record${d.deleted !== 1 ? 's' : ''} deleted`;
+    msg.className = 'purge-msg status-ok';
+  } catch(e) {
+    msg.textContent = 'Failed — ' + e.message;
+    msg.className = 'purge-msg status-err';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = 'Purge';
+    setTimeout(() => { msg.textContent = ''; }, 6000);
   }
 }
 

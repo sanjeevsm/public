@@ -581,18 +581,13 @@ function movePopup(cx, cy) {
 }
 
 const tbody = document.getElementById('tbody');
-let   popTr = null;
 
-tbody.addEventListener('mouseover', e => {
-  const tr = e.target.closest('tr');
-  if (!tr || tr === popTr || tr.querySelector('.empty')) return;
-  popTr = tr;
-  showPopup(tr, e.clientX, e.clientY);
-});
-tbody.addEventListener('mousemove', e => {
-  if (popup.style.display !== 'none') movePopup(e.clientX, e.clientY);
-});
-tbody.addEventListener('mouseleave', () => { popup.style.display = 'none'; popTr = null; });
+function attachRowHover(tr) {
+  if (tr.querySelector('.empty')) return;
+  tr.addEventListener('mouseenter', e => showPopup(tr, e.clientX, e.clientY));
+  tr.addEventListener('mousemove',  e => movePopup(e.clientX, e.clientY));
+  tr.addEventListener('mouseleave', () => { popup.style.display = 'none'; });
+}
 
 /* ── Load sources ───────────────────────────────────────────────── */
 async function loadSources() {
@@ -644,6 +639,7 @@ async function loadEvents() {
             <td style="color:var(--t3);font-size:12px">${new Date(e.occurredAt).toLocaleString()}</td>
           </tr>`;
         }).join('');
+        tbody.querySelectorAll('tr').forEach(attachRowHover);
       }
     }
   } catch(e) {
@@ -729,6 +725,7 @@ function wsRow(e, ts) {
     <td><span class="val">${Number(e.value).toLocaleString(undefined,{maximumFractionDigits:4})}</span></td>
     <td style="color:var(--t3)">${e.unit||'—'}</td>
     <td style="color:var(--t3);font-size:12px">${new Date(ts).toLocaleString()}</td>`;
+  attachRowHover(tr);
   tbody.insertBefore(tr, tbody.firstChild);
   while (tbody.rows.length > 20) tbody.deleteRow(tbody.rows.length - 1);
   const tEl = document.getElementById('totalEvents');
