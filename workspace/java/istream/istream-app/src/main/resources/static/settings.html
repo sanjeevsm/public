@@ -1,38 +1,138 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="midnight">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>iStream+ — Settings</title>
   <style>
+    /* ── Themes ─────────────────────────────────────────────────── */
+    :root, [data-theme="midnight"] {
+      --bg-base:      #080b14;
+      --bg-card:      #0d1018;
+      --bg-header:    rgba(8,11,20,0.88);
+      --border:       #191d2e;
+      --border-hover: #23273c;
+      --text-primary: #eef0f8;
+      --text-muted:   #505878;
+      --text-dim:     #383e58;
+      --text-faint:   #252a3c;
+      --accent:       #818cf8;
+      --accent-rgb:   99,102,241;
+      --glow:         rgba(99,102,241,0.07);
+      --input-bg:     rgba(6,8,16,0.8);
+      --shadow:       rgba(0,0,0,0.4);
+      --toggle-bg:    #14182a;
+      --toggle-border: #1e2338;
+      --toggle-thumb: #383e58;
+      --hint-color:   #2c3050;
+    }
+    [data-theme="ocean"] {
+      --bg-base:      #050e16;
+      --bg-card:      #08131e;
+      --bg-header:    rgba(5,14,22,0.88);
+      --border:       #0e2030;
+      --border-hover: #163044;
+      --text-primary: #e0f4f8;
+      --text-muted:   #3a6070;
+      --text-dim:     #2a4858;
+      --text-faint:   #1a3040;
+      --accent:       #22d3ee;
+      --accent-rgb:   34,211,238;
+      --glow:         rgba(34,211,238,0.06);
+      --input-bg:     rgba(4,10,18,0.8);
+      --shadow:       rgba(0,0,0,0.45);
+      --toggle-bg:    #0a1e2c;
+      --toggle-border: #0e2838;
+      --toggle-thumb: #2a4858;
+      --hint-color:   #1a3040;
+    }
+    [data-theme="emerald"] {
+      --bg-base:      #040e07;
+      --bg-card:      #071408;
+      --bg-header:    rgba(4,14,7,0.88);
+      --border:       #0e2814;
+      --border-hover: #163c1e;
+      --text-primary: #e0f0e6;
+      --text-muted:   #3a6850;
+      --text-dim:     #2a4838;
+      --text-faint:   #1a3022;
+      --accent:       #34d399;
+      --accent-rgb:   52,211,153;
+      --glow:         rgba(52,211,153,0.06);
+      --input-bg:     rgba(3,9,4,0.8);
+      --shadow:       rgba(0,0,0,0.45);
+      --toggle-bg:    #0a1e10;
+      --toggle-border: #0e2816;
+      --toggle-thumb: #2a4838;
+      --hint-color:   #1a3020;
+    }
+    [data-theme="light"] {
+      --bg-base:      #f0f4f8;
+      --bg-card:      #ffffff;
+      --bg-header:    rgba(240,244,248,0.92);
+      --border:       #dde3ed;
+      --border-hover: #c4cede;
+      --text-primary: #0f172a;
+      --text-muted:   #64748b;
+      --text-dim:     #94a3b8;
+      --text-faint:   #cbd5e1;
+      --accent:       #6366f1;
+      --accent-rgb:   99,102,241;
+      --glow:         rgba(99,102,241,0.04);
+      --input-bg:     rgba(255,255,255,0.9);
+      --shadow:       rgba(0,0,0,0.10);
+      --toggle-bg:    #e8edf5;
+      --toggle-border: #d0d8e8;
+      --toggle-thumb: #94a3b8;
+      --hint-color:   #94a3b8;
+    }
+    [data-theme="warm"] {
+      --bg-base:      #fdf6ec;
+      --bg-card:      #fffcf5;
+      --bg-header:    rgba(253,246,236,0.92);
+      --border:       #f0e0c4;
+      --border-hover: #e0c89a;
+      --text-primary: #1c1208;
+      --text-muted:   #7c6010;
+      --text-dim:     #a07820;
+      --text-faint:   #c8a84a;
+      --accent:       #d97706;
+      --accent-rgb:   217,119,6;
+      --glow:         rgba(217,119,6,0.05);
+      --input-bg:     rgba(255,252,244,0.9);
+      --shadow:       rgba(0,0,0,0.08);
+      --toggle-bg:    #f4e8d0;
+      --toggle-border: #e8d0a8;
+      --toggle-thumb: #c8a060;
+      --hint-color:   #c8a050;
+    }
+
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       min-height: 100vh;
-      background: #080b14;
+      background: var(--bg-base);
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-      color: #eef0f8;
+      color: var(--text-primary);
+      transition: background 0.25s, color 0.25s;
     }
-
     body::before {
       content: '';
       position: fixed; bottom: -280px; left: -200px;
       width: 720px; height: 720px;
-      background: radial-gradient(circle, rgba(139,92,246,0.07) 0%, transparent 65%);
+      background: radial-gradient(circle, var(--glow) 0%, transparent 65%);
       pointer-events: none; z-index: 0;
     }
 
-    /* ── Header ────────────────────────────────────────────────── */
+    /* ── Header ─────────────────────────────────────────────────── */
     header {
       position: sticky; top: 0; z-index: 10;
-      background: rgba(8,11,20,0.88);
-      backdrop-filter: blur(18px);
-      -webkit-backdrop-filter: blur(18px);
-      border-bottom: 1px solid #191d2e;
+      background: var(--bg-header);
+      backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+      border-bottom: 1px solid var(--border);
       padding: 0 32px; height: 56px;
       display: flex; align-items: center; justify-content: space-between;
     }
-
     .logo {
       display: flex; align-items: center; gap: 10px;
       font-size: 17px; font-weight: 700;
@@ -40,134 +140,138 @@
     }
     .logo-icon {
       width: 32px; height: 32px;
-      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      background: linear-gradient(135deg, rgba(var(--accent-rgb),0.9), rgba(var(--accent-rgb),0.6));
       border-radius: 8px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 15px;
-      box-shadow: 0 0 16px rgba(99,102,241,0.32);
+      display: flex; align-items: center; justify-content: center; font-size: 15px;
+      box-shadow: 0 0 16px rgba(var(--accent-rgb),0.3);
     }
-    .logo span { color: #818cf8; }
-
+    .logo-name { color: var(--accent); }
     nav { display: flex; gap: 2px; }
     .nav-link {
-      color: #505878; font-size: 13px; font-weight: 500;
+      color: var(--text-muted); font-size: 13px; font-weight: 500;
       text-decoration: none; padding: 5px 11px; border-radius: 7px;
       transition: color 0.15s, background 0.15s;
     }
-    .nav-link:hover { color: #eef0f8; background: rgba(255,255,255,0.05); }
-    .nav-link.active { color: #818cf8; background: rgba(99,102,241,0.1); }
+    .nav-link:hover { color: var(--text-primary); background: rgba(var(--accent-rgb),0.07); }
+    .nav-link.active { color: var(--accent); background: rgba(var(--accent-rgb),0.1); }
 
-    .header-right { display: flex; align-items: center; gap: 8px; }
-    #usernameLabel { font-size: 13px; color: #383e58; }
+    .header-right { display: flex; align-items: center; gap: 10px; }
+    #usernameLabel { font-size: 13px; color: var(--text-dim); }
     .btn-logout {
-      background: none; border: 1px solid #191d2e; border-radius: 7px;
-      color: #505878; padding: 5px 12px; cursor: pointer;
+      background: none; border: 1px solid var(--border); border-radius: 7px;
+      color: var(--text-muted); padding: 5px 12px; cursor: pointer;
       font-size: 12px; font-family: inherit;
       transition: border-color 0.15s, color 0.15s;
     }
-    .btn-logout:hover { border-color: rgba(99,102,241,0.38); color: #eef0f8; }
+    .btn-logout:hover { border-color: rgba(var(--accent-rgb),0.38); color: var(--text-primary); }
 
-    /* ── Main ──────────────────────────────────────────────────── */
+    /* ── Theme Switcher ──────────────────────────────────────────── */
+    .theme-switcher { display: flex; gap: 5px; align-items: center; }
+    .theme-btn {
+      width: 20px; height: 20px; border-radius: 50%; border: 2px solid transparent;
+      cursor: pointer; transition: transform 0.15s, border-color 0.15s; padding: 0;
+    }
+    .theme-btn:hover { transform: scale(1.2); }
+    .theme-btn.active { border-color: var(--text-primary); }
+    .theme-btn[data-t="midnight"] { background: radial-gradient(circle at 40% 40%, #818cf8 0%, #080b14 100%); }
+    .theme-btn[data-t="ocean"]    { background: radial-gradient(circle at 40% 40%, #22d3ee 0%, #050e16 100%); }
+    .theme-btn[data-t="emerald"]  { background: radial-gradient(circle at 40% 40%, #34d399 0%, #040e07 100%); }
+    .theme-btn[data-t="light"]    { background: radial-gradient(circle at 40% 40%, #6366f1 0%, #f0f4f8 100%); }
+    .theme-btn[data-t="warm"]     { background: radial-gradient(circle at 40% 40%, #f59e0b 0%, #fdf6ec 100%); }
+
+    /* ── Main ────────────────────────────────────────────────────── */
     main { position: relative; z-index: 1; padding: 36px 32px; max-width: 860px; margin: 0 auto; }
-
     h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; margin-bottom: 3px; }
-    .tagline { font-size: 13px; color: #383e58; margin-bottom: 32px; }
+    .tagline { font-size: 13px; color: var(--text-dim); margin-bottom: 32px; }
 
-    /* ── Source cards ──────────────────────────────────────────── */
+    /* ── Source cards ────────────────────────────────────────────── */
     .source-card {
       position: relative; overflow: hidden;
-      background: #0d1018;
-      border: 1px solid #191d2e;
-      border-left: 3px solid #191d2e;
-      border-radius: 14px;
-      padding: 26px;
-      margin-bottom: 18px;
+      background: var(--bg-card); border: 1px solid var(--border); border-left: 3px solid var(--border);
+      border-radius: 14px; padding: 26px; margin-bottom: 18px;
       transition: border-color 0.2s, box-shadow 0.2s, opacity 0.2s, transform 0.15s;
     }
     .source-card:hover {
-      border-color: #23273c;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
-      transform: translateY(-1px);
+      border-color: var(--border-hover);
+      box-shadow: 0 10px 30px var(--shadow); transform: translateY(-1px);
     }
     .source-card.disabled { opacity: 0.5; }
 
-    .card-header {
-      display: flex; align-items: flex-start; justify-content: space-between;
-      margin-bottom: 22px;
-    }
+    .card-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 22px; }
     .card-title { display: flex; align-items: center; gap: 12px; }
     .card-title-text { font-size: 15px; font-weight: 700; letter-spacing: -0.2px; }
-    .card-title-sub { font-size: 11px; color: #404660; margin-top: 2px; }
+    .card-title-sub { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
 
     .source-icon {
       width: 40px; height: 40px; border-radius: 11px;
       display: flex; align-items: center; justify-content: center;
       font-size: 18px; flex-shrink: 0;
     }
-    .icon-crypto  { background: rgba(99,102,241,0.13);  color: #818cf8; }
-    .icon-stocks  { background: rgba(16,185,129,0.12); color: #34d399; }
-    .icon-weather { background: rgba(249,115,22,0.12); color: #fb923c; }
+    .icon-crypto      { background: rgba(99,102,241,0.13);  color: #818cf8; }
+    .icon-stocks      { background: rgba(16,185,129,0.12);  color: #34d399; }
+    .icon-weather     { background: rgba(249,115,22,0.12);  color: #fb923c; }
+    .icon-forex       { background: rgba(234,179,8,0.12);   color: #facc15; }
+    .icon-commodities { background: rgba(192,38,211,0.12);  color: #e879f9; }
 
     /* Toggle */
     .toggle-wrap { display: flex; align-items: center; gap: 10px; padding-top: 2px; }
-    .toggle-label { font-size: 11px; font-weight: 600; color: #505878; letter-spacing: 0.4px; }
+    .toggle-label { font-size: 11px; font-weight: 600; color: var(--text-muted); letter-spacing: 0.4px; }
     .toggle { position: relative; width: 46px; height: 26px; cursor: pointer; flex-shrink: 0; }
     .toggle input { opacity: 0; width: 0; height: 0; }
     .slider {
       position: absolute; inset: 0;
-      background: #14182a; border: 1px solid #1e2338; border-radius: 26px;
+      background: var(--toggle-bg); border: 1px solid var(--toggle-border); border-radius: 26px;
       transition: background 0.2s, border-color 0.2s;
     }
     .slider::before {
       content: ''; position: absolute;
       width: 20px; height: 20px; left: 2px; top: 2px;
-      background: #383e58; border-radius: 50%;
+      background: var(--toggle-thumb); border-radius: 50%;
       transition: transform 0.22s, background 0.2s;
       box-shadow: 0 1px 4px rgba(0,0,0,0.4);
     }
-    input:checked + .slider { background: rgba(99,102,241,0.18); border-color: rgba(99,102,241,0.45); }
-    input:checked + .slider::before { transform: translateX(20px); background: #818cf8; }
+    input:checked + .slider { background: rgba(var(--accent-rgb),0.18); border-color: rgba(var(--accent-rgb),0.45); }
+    input:checked + .slider::before { transform: translateX(20px); background: var(--accent); }
 
     /* Fields */
     .fields { display: grid; gap: 16px; }
     .field { display: flex; flex-direction: column; gap: 7px; }
     .field label {
-      font-size: 11px; font-weight: 600; color: #505878;
+      font-size: 11px; font-weight: 600; color: var(--text-muted);
       letter-spacing: 0.7px; text-transform: uppercase;
     }
     .field input {
-      background: rgba(6,8,16,0.8);
-      border: 1px solid #191d2e; border-radius: 9px;
-      color: #eef0f8; padding: 10px 13px;
+      background: var(--input-bg); border: 1px solid var(--border); border-radius: 9px;
+      color: var(--text-primary); padding: 10px 13px;
       font-size: 13px; font-family: inherit; width: 100%;
       transition: border-color 0.2s, box-shadow 0.2s;
     }
     .field input:focus {
       outline: none;
-      border-color: rgba(99,102,241,0.5);
-      box-shadow: 0 0 0 3px rgba(99,102,241,0.07);
+      border-color: rgba(var(--accent-rgb),0.5);
+      box-shadow: 0 0 0 3px rgba(var(--accent-rgb),0.07);
     }
-    .field .hint { font-size: 11px; color: #2c3050; line-height: 1.4; }
+    .field .hint { font-size: 11px; color: var(--hint-color); line-height: 1.4; }
 
     /* Footer */
     .card-footer {
       display: flex; align-items: center; justify-content: space-between;
-      margin-top: 22px; padding-top: 18px; border-top: 1px solid #191d2e;
+      margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--border);
     }
     .status-msg { font-size: 12px; min-height: 18px; font-weight: 500; }
     .status-ok  { color: #34d399; }
     .status-err { color: #f87171; }
 
     .btn-save {
-      background: #6366f1; color: #fff; border: none; border-radius: 9px;
+      background: var(--accent); color: #fff; border: none; border-radius: 9px;
       padding: 9px 24px; font-size: 13px; font-weight: 600; font-family: inherit;
       cursor: pointer;
-      box-shadow: 0 4px 16px rgba(99,102,241,0.22);
-      transition: background 0.15s, box-shadow 0.15s, transform 0.1s, opacity 0.2s;
+      box-shadow: 0 4px 16px rgba(var(--accent-rgb),0.22);
+      transition: opacity 0.15s, box-shadow 0.15s, transform 0.1s;
     }
     .btn-save:hover:not(:disabled) {
-      background: #5254cc;
-      box-shadow: 0 6px 22px rgba(99,102,241,0.38);
+      opacity: 0.88;
+      box-shadow: 0 6px 22px rgba(var(--accent-rgb),0.38);
       transform: translateY(-1px);
     }
     .btn-save:active:not(:disabled) { transform: translateY(0); }
@@ -178,172 +282,203 @@
   </style>
 </head>
 <body>
-  <header>
-    <a href="/dashboard.html" class="logo">
-      <div class="logo-icon">⚡</div>
-      i<span>Stream+</span>
-    </a>
+<header>
+  <a href="/dashboard.html" class="logo">
+    <div class="logo-icon">⚡</div>
+    i<span class="logo-name">Stream+</span>
+  </a>
 
-    <nav>
-      <a href="/dashboard.html" class="nav-link">Dashboard</a>
-      <a href="/settings.html" class="nav-link active">Settings</a>
-    </nav>
+  <nav>
+    <a href="/dashboard.html" class="nav-link">Dashboard</a>
+    <a href="/settings.html" class="nav-link active">Settings</a>
+  </nav>
 
-    <div class="header-right">
-      <span id="usernameLabel"></span>
-      <button class="btn-logout" onclick="logout()">Sign out</button>
+  <div class="header-right">
+    <div class="theme-switcher">
+      <button class="theme-btn" data-t="midnight" onclick="setTheme('midnight')" title="Midnight"></button>
+      <button class="theme-btn" data-t="ocean"    onclick="setTheme('ocean')"    title="Ocean"></button>
+      <button class="theme-btn" data-t="emerald"  onclick="setTheme('emerald')"  title="Emerald"></button>
+      <button class="theme-btn" data-t="light"    onclick="setTheme('light')"    title="Light"></button>
+      <button class="theme-btn" data-t="warm"     onclick="setTheme('warm')"     title="Warm"></button>
     </div>
-  </header>
+    <span id="usernameLabel"></span>
+    <button class="btn-logout" onclick="logout()">Sign out</button>
+  </div>
+</header>
 
-  <main>
-    <h1>Source Settings</h1>
-    <p class="tagline">Configure data sources at runtime — changes take effect on the next poll cycle.</p>
-    <div id="settingsContainer">
-      <p style="color:#252a3c;padding:52px 0;text-align:center;font-size:13px">Loading settings…</p>
-    </div>
-  </main>
+<main>
+  <h1>Source Settings</h1>
+  <p class="tagline">Configure data sources at runtime — changes take effect on the next poll cycle.</p>
+  <div id="settingsContainer">
+    <p style="color:var(--text-faint);padding:52px 0;text-align:center;font-size:13px">Loading settings…</p>
+  </div>
+</main>
 
-  <script>
-    const token = localStorage.getItem('is_token');
-    if (!token) { window.location.href = '/index.html'; }
+<script>
+  const token = localStorage.getItem('is_token');
+  if (!token) { window.location.href = '/index.html'; }
 
-    function authHeaders() {
-      return { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' };
-    }
-    function logout() {
-      localStorage.removeItem('is_token');
-      window.location.href = '/index.html';
-    }
+  function authHeaders() {
+    return { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' };
+  }
+  function logout() {
+    localStorage.removeItem('is_token');
+    window.location.href = '/index.html';
+  }
+  try {
+    const p = JSON.parse(atob(token.split('.')[1]));
+    document.getElementById('usernameLabel').textContent = p.sub || '';
+  } catch(e) {}
+
+  /* ── Theme ────────────────────────────────────────────────────── */
+  function setTheme(t) {
+    document.documentElement.setAttribute('data-theme', t);
+    localStorage.setItem('is_theme', t);
+    document.querySelectorAll('.theme-btn').forEach(b => b.classList.toggle('active', b.dataset.t === t));
+  }
+  setTheme(localStorage.getItem('is_theme') || 'midnight');
+
+  /* ── Source metadata ──────────────────────────────────────────── */
+  const LABELS = {
+    crypto: {
+      label: 'Crypto', sub: 'Binance public price feed', icon: '&#8383;',
+      cls: 'icon-crypto', accent: '#6366f1', fields: ['assets', 'currency', 'intervalMs']
+    },
+    stocks: {
+      label: 'Stocks', sub: 'Yahoo Finance price feed', icon: '$',
+      cls: 'icon-stocks', accent: '#10b981', fields: ['assets', 'intervalMs']
+    },
+    weather: {
+      label: 'Weather', sub: 'Open-Meteo (no API key)', icon: '&#9729;',
+      cls: 'icon-weather', accent: '#f97316', fields: ['cities', 'intervalMs']
+    },
+    forex: {
+      label: 'Forex', sub: 'Open Exchange Rates (free)', icon: '&#8652;',
+      cls: 'icon-forex', accent: '#ca8a04', fields: ['baseCurrency', 'pairs', 'intervalMs']
+    },
+    commodities: {
+      label: 'Commodities', sub: 'Yahoo Finance futures feed', icon: '&#9883;',
+      cls: 'icon-commodities', accent: '#c026d3', fields: ['assets', 'intervalMs']
+    },
+  };
+
+  const FIELD_META = {
+    assets:       { label: 'Assets',             hint: 'Comma-separated symbols, e.g. BTC-USD,ETH-USD',     type: 'text' },
+    currency:     { label: 'Quote Currency',     hint: 'e.g. usd',                                          type: 'text' },
+    intervalMs:   { label: 'Poll Interval (ms)', hint: 'Milliseconds between fetches, e.g. 30000',          type: 'text' },
+    cities:       { label: 'Cities',             hint: 'Comma-separated city names, e.g. London,New York',  type: 'text' },
+    baseCurrency: { label: 'Base Currency',      hint: 'Currency to convert from, e.g. USD',                type: 'text' },
+    pairs:        { label: 'Currency Pairs',     hint: 'Comma-separated pairs, e.g. USD/EUR,USD/GBP',       type: 'text' },
+  };
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function buildCard(src) {
+    const meta = LABELS[src.sourceId] || {
+      label: src.sourceId, sub: '', icon: '&#9881;', cls: '',
+      accent: '#8b5cf6', fields: Object.keys(src.settings)
+    };
+
+    const fields = meta.fields.map(key => {
+      const fm = FIELD_META[key] || { label: key, hint: '', type: 'text' };
+      const val = src.settings[key] || '';
+      return `<div class="field">
+        <label>${escHtml(fm.label)}</label>
+        <input type="${fm.type}" id="${src.sourceId}_${key}"
+               value="${escHtml(val)}" placeholder="${escHtml(fm.hint)}">
+        <span class="hint">${escHtml(fm.hint)}</span>
+      </div>`;
+    }).join('');
+
+    return `
+      <div class="source-card ${src.enabled ? '' : 'disabled'}" id="card_${src.sourceId}"
+           style="border-left-color:${meta.accent}">
+        <div class="card-header">
+          <div class="card-title">
+            <div class="source-icon ${meta.cls}">${meta.icon}</div>
+            <div>
+              <div class="card-title-text">${escHtml(meta.label)}</div>
+              <div class="card-title-sub">${escHtml(meta.sub)}</div>
+            </div>
+          </div>
+          <div class="toggle-wrap">
+            <span class="toggle-label">Enabled</span>
+            <label class="toggle">
+              <input type="checkbox" id="${src.sourceId}_enabled"
+                     ${src.enabled ? 'checked' : ''}
+                     onchange="onToggle('${src.sourceId}')">
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+        <div class="fields">${fields}</div>
+        <div class="card-footer">
+          <span class="status-msg" id="msg_${src.sourceId}"></span>
+          <button class="btn-save" onclick="save('${src.sourceId}')">Save</button>
+        </div>
+      </div>`;
+  }
+
+  function onToggle(sourceId) {
+    const enabled = document.getElementById(sourceId + '_enabled').checked;
+    document.getElementById('card_' + sourceId).classList.toggle('disabled', !enabled);
+  }
+
+  async function save(sourceId) {
+    const btn = document.querySelector(`#card_${sourceId} .btn-save`);
+    const msg = document.getElementById('msg_' + sourceId);
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner">&#8635;</span> Saving…';
+    msg.textContent = '';
+
+    const enabled = document.getElementById(sourceId + '_enabled').checked;
+    const meta = LABELS[sourceId] || {};
+    const settings = {};
+    (meta.fields || []).forEach(key => {
+      const el = document.getElementById(sourceId + '_' + key);
+      if (el) settings[key] = el.value.trim();
+    });
 
     try {
-      const p = JSON.parse(atob(token.split('.')[1]));
-      document.getElementById('usernameLabel').textContent = p.sub || '';
-    } catch(e) {}
-
-    const LABELS = {
-      crypto:  { label: 'Crypto',  sub: 'CoinGecko price feed',    icon: '₿', cls: 'icon-crypto',  accent: '#6366f1', fields: ['assets','currency','intervalMs'] },
-      stocks:  { label: 'Stocks',  sub: 'Yahoo Finance price feed', icon: '$', cls: 'icon-stocks',  accent: '#10b981', fields: ['assets','intervalMs'] },
-      weather: { label: 'Weather', sub: 'OpenWeather API',          icon: '°', cls: 'icon-weather', accent: '#f97316', fields: ['cities','apiKey','intervalMs'] },
-    };
-
-    const FIELD_META = {
-      assets:     { label: 'Assets',             hint: 'Comma-separated symbols, e.g. BTC-USD,ETH-USD,SOL-USD', type: 'text' },
-      currency:   { label: 'Quote Currency',     hint: 'e.g. usd',                                              type: 'text' },
-      intervalMs: { label: 'Poll Interval (ms)', hint: 'Milliseconds between fetches, e.g. 5000',               type: 'text' },
-      cities:     { label: 'Cities',             hint: 'Comma-separated city names, e.g. London,New York',      type: 'text' },
-      apiKey:     { label: 'API Key',            hint: 'OpenWeather API key — required when source is enabled', type: 'password' },
-    };
-
-    function escHtml(s) {
-      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-    }
-
-    function buildCard(src) {
-      const meta = LABELS[src.sourceId] || {
-        label: src.sourceId, sub: '', icon: '⚙', cls: '',
-        accent: '#8b5cf6', fields: Object.keys(src.settings)
-      };
-      const accent = meta.accent;
-
-      const fields = meta.fields.map(key => {
-        const fm = FIELD_META[key] || { label: key, hint: '', type: 'text' };
-        const val = src.settings[key] || '';
-        return `<div class="field">
-          <label>${escHtml(fm.label)}</label>
-          <input type="${fm.type}" id="${src.sourceId}_${key}"
-                 value="${escHtml(val)}" placeholder="${escHtml(fm.hint)}">
-          <span class="hint">${escHtml(fm.hint)}</span>
-        </div>`;
-      }).join('');
-
-      return `
-        <div class="source-card ${src.enabled ? '' : 'disabled'}" id="card_${src.sourceId}"
-             style="border-left-color:${accent}">
-          <div class="card-header">
-            <div class="card-title">
-              <div class="source-icon ${meta.cls}">${meta.icon}</div>
-              <div>
-                <div class="card-title-text">${escHtml(meta.label)}</div>
-                <div class="card-title-sub">${escHtml(meta.sub)}</div>
-              </div>
-            </div>
-            <div class="toggle-wrap">
-              <span class="toggle-label">Enabled</span>
-              <label class="toggle">
-                <input type="checkbox" id="${src.sourceId}_enabled"
-                       ${src.enabled ? 'checked' : ''}
-                       onchange="onToggle('${src.sourceId}')">
-                <span class="slider"></span>
-              </label>
-            </div>
-          </div>
-          <div class="fields">${fields}</div>
-          <div class="card-footer">
-            <span class="status-msg" id="msg_${src.sourceId}"></span>
-            <button class="btn-save" onclick="save('${src.sourceId}')">Save</button>
-          </div>
-        </div>`;
-    }
-
-    function onToggle(sourceId) {
-      const enabled = document.getElementById(sourceId + '_enabled').checked;
-      document.getElementById('card_' + sourceId).classList.toggle('disabled', !enabled);
-    }
-
-    async function save(sourceId) {
-      const btn = document.querySelector(`#card_${sourceId} .btn-save`);
-      const msg = document.getElementById('msg_' + sourceId);
-      btn.disabled = true;
-      btn.innerHTML = '<span class="spinner">↻</span> Saving…';
-      msg.textContent = '';
-
-      const enabled = document.getElementById(sourceId + '_enabled').checked;
-      const meta = LABELS[sourceId] || {};
-      const fields = meta.fields || [];
-      const settings = {};
-      fields.forEach(key => {
-        const el = document.getElementById(sourceId + '_' + key);
-        if (el) settings[key] = el.value.trim();
+      const res = await fetch(`/api/v1/settings/sources/${sourceId}`, {
+        method: 'PUT',
+        headers: authHeaders(),
+        body: JSON.stringify({ sourceId, enabled, settings })
       });
-
-      try {
-        const res = await fetch(`/api/v1/settings/sources/${sourceId}`, {
-          method: 'PUT',
-          headers: authHeaders(),
-          body: JSON.stringify({ sourceId, enabled, settings })
-        });
-        if (res.status === 401) { logout(); return; }
-        if (!res.ok) throw new Error(await res.text());
-        msg.textContent = 'Saved';
-        msg.className = 'status-msg status-ok';
-      } catch(e) {
-        msg.textContent = 'Failed — ' + e.message;
-        msg.className = 'status-msg status-err';
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = 'Save';
-        setTimeout(() => { msg.textContent = ''; }, 4000);
-      }
+      if (res.status === 401) { logout(); return; }
+      if (!res.ok) throw new Error(await res.text());
+      msg.textContent = 'Saved';
+      msg.className = 'status-msg status-ok';
+    } catch(e) {
+      msg.textContent = 'Failed — ' + e.message;
+      msg.className = 'status-msg status-err';
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = 'Save';
+      setTimeout(() => { msg.textContent = ''; }, 4000);
     }
+  }
 
-    async function loadSettings() {
-      try {
-        const res = await fetch('/api/v1/settings/sources', { headers: authHeaders() });
-        if (res.status === 401) { logout(); return; }
-        const sources = await res.json();
-        const order = ['crypto', 'stocks', 'weather'];
-        sources.sort((a, b) => {
-          const ia = order.indexOf(a.sourceId), ib = order.indexOf(b.sourceId);
-          return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
-        });
-        document.getElementById('settingsContainer').innerHTML = sources.map(buildCard).join('');
-      } catch(e) {
-        document.getElementById('settingsContainer').innerHTML =
-          `<p style="color:#f8717166;padding:52px 0;text-align:center;font-size:13px">Failed to load — ${escHtml(e.message)}</p>`;
-      }
+  async function loadSettings() {
+    try {
+      const res = await fetch('/api/v1/settings/sources', { headers: authHeaders() });
+      if (res.status === 401) { logout(); return; }
+      const sources = await res.json();
+      const order = ['crypto', 'stocks', 'forex', 'commodities', 'weather'];
+      sources.sort((a, b) => {
+        const ia = order.indexOf(a.sourceId), ib = order.indexOf(b.sourceId);
+        return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+      });
+      document.getElementById('settingsContainer').innerHTML = sources.map(buildCard).join('');
+    } catch(e) {
+      document.getElementById('settingsContainer').innerHTML =
+        `<p style="color:#f8717166;padding:52px 0;text-align:center;font-size:13px">Failed to load — ${escHtml(e.message)}</p>`;
     }
+  }
 
-    loadSettings();
-  </script>
+  loadSettings();
+</script>
 </body>
 </html>
