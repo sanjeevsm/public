@@ -256,12 +256,12 @@
     /* ═══════════════════════════════════════════════════════════
        SOURCE TILES
        ═══════════════════════════════════════════════════════════ */
-    .tiles  { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
+    .tiles  { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px; }
 
     .tile {
       background: var(--card);
       border: 1px solid var(--br);
-      border-top: 3px solid;  /* color set inline */
+      border-top: 3px solid;
       border-radius: 12px; overflow: hidden;
       transition: border-color .2s, transform .15s, box-shadow .2s;
     }
@@ -269,7 +269,7 @@
 
     .tile-head {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 13px 15px 8px;
+      padding: 14px 15px 8px;
     }
     .tile-label { display: flex; align-items: center; gap: 7px; }
     .tile-dot   { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
@@ -277,16 +277,29 @@
     .tile-name  { font-weight: 700; font-size: 13px; text-transform: capitalize; }
     .tile-st    { font-size: 10px; color: var(--t3); text-transform: uppercase; letter-spacing: .5px; }
 
-    .tile-chart { padding: 2px 10px 4px; }
-    .tile-chart svg { display: block; width: 100%; height: 70px; }
-
     .tile-foot  {
       display: flex; justify-content: space-between; align-items: baseline;
-      padding: 6px 15px 4px;
+      padding: 4px 15px 6px;
     }
-    .tile-asset { font-size: 10px; color: var(--t3); }
-    .tile-val   { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.2px; }
-    .tile-desc  { font-size: 10px; color: var(--t4); padding: 2px 15px 12px; }
+    .tile-asset { font-size: 10px; color: var(--t3); max-width: 130px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .tile-val   { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.2px; }
+    .tile-desc  { font-size: 10px; color: var(--t4); padding: 2px 15px 13px; }
+
+    /* ═══════════════════════════════════════════════════════════
+       HOVER CHART POPUP
+       ═══════════════════════════════════════════════════════════ */
+    #chartPopup {
+      display: none; position: fixed; z-index: 200; pointer-events: none;
+      background: var(--card); border: 1px solid var(--br2); border-radius: 13px;
+      padding: 13px 15px 11px; width: 280px;
+      box-shadow: 0 20px 56px var(--sh), 0 0 0 1px rgba(255,255,255,.03);
+    }
+    .pop-hdr   { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .pop-title { font-size: 12px; font-weight: 600; color: var(--t2); }
+    #popSvg    { display: block; width: 100%; height: 72px; }
+    .pop-foot  { display: flex; justify-content: space-between; align-items: baseline; margin-top: 7px; }
+    .pop-val   { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .pop-ts    { font-size: 10px; color: var(--t4); }
 
     /* ═══════════════════════════════════════════════════════════
        EVENTS TABLE
@@ -398,18 +411,30 @@
   </section>
 </main>
 
+<div id="chartPopup">
+  <div class="pop-hdr">
+    <span class="badge" id="popBadge"></span>
+    <span class="pop-title" id="popTitle"></span>
+  </div>
+  <svg id="popSvg" viewBox="0 0 252 72" preserveAspectRatio="none">
+    <text x="50%" y="50%" fill="var(--t4)" font-size="10" text-anchor="middle" dominant-baseline="middle">Hover a row to see chart</text>
+  </svg>
+  <div class="pop-foot">
+    <span class="pop-val" id="popVal">—</span>
+    <span class="pop-ts"  id="popTs"></span>
+  </div>
+</div>
+
 <script>
 /* ── Auth ──────────────────────────────────────────────────────── */
 const token = localStorage.getItem('is_token');
 if (!token) location.href = '/index.html';
-
 const ah = () => ({ 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' });
 function logout() { localStorage.removeItem('is_token'); location.href = '/index.html'; }
 try { document.getElementById('uname').textContent = JSON.parse(atob(token.split('.')[1])).sub; } catch(e){}
 
 /* ── Theme ─────────────────────────────────────────────────────── */
 const THEMES = ['midnight','ocean','emerald','violet','rose','light','warm','sky','sage'];
-
 function setTheme(t) {
   if (!THEMES.includes(t)) t = 'midnight';
   document.documentElement.setAttribute('data-theme', t);
@@ -421,30 +446,29 @@ setTheme(localStorage.getItem('is_theme') || 'midnight');
 
 /* ── Source meta ────────────────────────────────────────────────── */
 const SM = {
-  crypto:      { color:'#818cf8', bg:'rgba(99,102,241,.09)',  br:'rgba(99,102,241,.2)',  desc:'Binance public feed'        },
-  stocks:      { color:'#34d399', bg:'rgba(16,185,129,.09)',  br:'rgba(16,185,129,.2)',  desc:'Yahoo Finance chart'        },
-  weather:     { color:'#fb923c', bg:'rgba(249,115,22,.09)',  br:'rgba(249,115,22,.2)',  desc:'Open-Meteo API'             },
-  forex:       { color:'#facc15', bg:'rgba(234,179,8,.09)',   br:'rgba(234,179,8,.2)',   desc:'Open Exchange Rates'        },
-  commodities: { color:'#e879f9', bg:'rgba(192,38,211,.09)',  br:'rgba(192,38,211,.2)',  desc:'Yahoo Finance futures'      },
+  crypto:      { color:'#818cf8', bg:'rgba(99,102,241,.09)',  br:'rgba(99,102,241,.2)',  desc:'Binance public feed'   },
+  stocks:      { color:'#34d399', bg:'rgba(16,185,129,.09)',  br:'rgba(16,185,129,.2)',  desc:'Yahoo Finance chart'   },
+  weather:     { color:'#fb923c', bg:'rgba(249,115,22,.09)',  br:'rgba(249,115,22,.2)',  desc:'Open-Meteo API'        },
+  forex:       { color:'#facc15', bg:'rgba(234,179,8,.09)',   br:'rgba(234,179,8,.2)',   desc:'Open Exchange Rates'   },
+  commodities: { color:'#e879f9', bg:'rgba(192,38,211,.09)',  br:'rgba(192,38,211,.2)',  desc:'Yahoo Finance futures' },
 };
 const sm = id => SM[id] || { color:'#a78bfa', bg:'rgba(139,92,246,.09)', br:'rgba(139,92,246,.2)', desc:'' };
 
-const PRIMARY = {
-  crypto:'BTC-USD', stocks:'AAPL', forex:'USD/EUR', commodities:'GC=F', weather:null,
-};
+/* ── History buffer  BUF[src][asset][metric] = [{t,v,ts}] ──────── */
+const BUF    = {};
+const LATEST = {};   // LATEST[src] = {asset, metric, v, ts}
+const MAX    = 40;
 
-/* ── History buffer ─────────────────────────────────────────────── */
-const BUF = {};        // BUF[source][asset] = [{t,v}, ...]
-const MAX = 40;
-
-function push(src, asset, v, ts) {
+function push(src, asset, metric, v, ts) {
   if (!BUF[src]) BUF[src] = {};
-  if (!BUF[src][asset]) BUF[src][asset] = [];
-  const b = BUF[src][asset];
+  if (!BUF[src][asset]) BUF[src][asset] = {};
+  if (!BUF[src][asset][metric]) BUF[src][asset][metric] = [];
+  const b = BUF[src][asset][metric];
   if (b.length && b[b.length - 1].ts === ts) return;
   const label = new Date(ts).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
   b.push({ t: label, v: parseFloat(v), ts });
   if (b.length > MAX) b.shift();
+  LATEST[src] = { asset, metric, v: parseFloat(v), ts };
 }
 
 /* ── SVG Sparkline ──────────────────────────────────────────────── */
@@ -452,25 +476,20 @@ function sparkline(svgEl, data, color) {
   if (!svgEl) return;
   if (!data || data.length < 2) {
     svgEl.innerHTML = `<text x="50%" y="50%" fill="${color}" fill-opacity=".35" font-size="10"
-      text-anchor="middle" dominant-baseline="middle">No data</text>`;
+      text-anchor="middle" dominant-baseline="middle">No data yet</text>`;
     return;
   }
-  const W = 260, H = 70, P = 3;
+  const W = 252, H = 72, P = 3;
   const vals = data.map(p => p.v);
-  const lo = Math.min(...vals), hi = Math.max(...vals);
-  const rng = hi - lo || 1;
-
+  const lo = Math.min(...vals), hi = Math.max(...vals), rng = hi - lo || 1;
   const pts = vals.map((v, i) => {
     const x = P + (i / (vals.length - 1)) * (W - P * 2);
     const y = (H - P) - ((v - lo) / rng) * (H - P * 2);
     return [+x.toFixed(1), +y.toFixed(1)];
   });
-
-  const M = pts.map(([x, y]) => `${x},${y}`);
-  const line = 'M' + M.join('L');
-  const area = `${line}L${W - P},${H}L${P},${H}Z`;
+  const line = 'M' + pts.map(([x,y]) => `${x},${y}`).join('L');
+  const area = `${line}L${W-P},${H}L${P},${H}Z`;
   const gid  = 'sg' + color.replace('#','');
-
   svgEl.innerHTML = `<defs>
     <linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%"   stop-color="${color}" stop-opacity=".28"/>
@@ -482,23 +501,9 @@ function sparkline(svgEl, data, color) {
         stroke-linecap="round" stroke-linejoin="round"/>`;
 }
 
-function updateSparklines() {
-  Object.entries(BUF).forEach(([src, assets]) => {
-    const asset = PRIMARY[src];
-    if (!asset) return;
-    const buf = assets[asset];
-    if (!buf || !buf.length) return;
-    const m = sm(src);
-    sparkline(document.getElementById('sp-' + src), buf, m.color);
-    const el = document.getElementById('tv-' + src);
-    if (el) el.textContent = Number(buf[buf.length - 1].v).toLocaleString(undefined, { maximumFractionDigits: 2 });
-  });
-}
-
-/* ── Tile builder ───────────────────────────────────────────────── */
+/* ── Tile builder (compact — no always-on chart) ────────────────── */
 function buildTile(s) {
   const m  = sm(s.id);
-  const pa = PRIMARY[s.id];
   const on = s.status === 'active';
   const dotStyle = `background:${on ? m.color : 'var(--t4)'};${on ? `box-shadow:0 0 6px ${m.color}` : ''}`;
   return `<div class="tile" style="border-top-color:${m.color}">
@@ -509,19 +514,85 @@ function buildTile(s) {
       </div>
       <span class="tile-st">${s.status}</span>
     </div>
-    <div class="tile-chart">
-      <svg id="sp-${s.id}" viewBox="0 0 260 70" preserveAspectRatio="none">
-        <text x="50%" y="50%" fill="${m.color}" fill-opacity=".3" font-size="10"
-              text-anchor="middle" dominant-baseline="middle">No data</text>
-      </svg>
-    </div>
     <div class="tile-foot">
-      <span class="tile-asset">${pa || '—'}</span>
-      <span class="tile-val" id="tv-${s.id}" style="color:${m.color}">—</span>
+      <span class="tile-asset" id="ta-${s.id}">—</span>
+      <span class="tile-val"   id="tv-${s.id}" style="color:${m.color}">—</span>
     </div>
     <div class="tile-desc">${m.desc}</div>
   </div>`;
 }
+
+function updateTileValue(src) {
+  const lat = LATEST[src];
+  if (!lat) return;
+  const vEl = document.getElementById('tv-' + src);
+  const aEl = document.getElementById('ta-' + src);
+  if (vEl) vEl.textContent = Number(lat.v).toLocaleString(undefined, {maximumFractionDigits: 2});
+  if (aEl) aEl.textContent = lat.asset + ' · ' + lat.metric;
+}
+function updateAllTileValues() { Object.keys(LATEST).forEach(updateTileValue); }
+
+/* ── Hover popup chart ──────────────────────────────────────────── */
+const popup    = document.getElementById('chartPopup');
+const popBadge = document.getElementById('popBadge');
+const popTitle = document.getElementById('popTitle');
+const popSvg   = document.getElementById('popSvg');
+const popVal   = document.getElementById('popVal');
+const popTs    = document.getElementById('popTs');
+
+function showPopup(tr, cx, cy) {
+  const cells = tr.cells;
+  if (!cells || cells.length < 6) return;
+  const source = cells[0]?.querySelector('.badge')?.textContent?.trim();
+  const asset  = cells[1]?.textContent?.trim();
+  const metric = cells[2]?.textContent?.trim();
+  if (!source || !asset || !metric) return;
+
+  const m   = sm(source);
+  const buf = BUF[source]?.[asset]?.[metric];
+
+  popBadge.textContent = source;
+  popBadge.setAttribute('style', `background:${m.bg};color:${m.color};border-color:${m.br}`);
+  popTitle.textContent = asset + '  ·  ' + metric;
+
+  sparkline(popSvg, buf, m.color);
+
+  if (buf && buf.length) {
+    const last = buf[buf.length - 1];
+    popVal.textContent  = Number(last.v).toLocaleString(undefined, {maximumFractionDigits: 4});
+    popVal.style.color  = m.color;
+    popTs.textContent   = last.t;
+  } else {
+    popVal.textContent  = cells[3]?.querySelector('.val')?.textContent || '—';
+    popVal.style.color  = m.color;
+    popTs.textContent   = '';
+  }
+
+  popup.style.display = 'block';
+  movePopup(cx, cy);
+}
+
+function movePopup(cx, cy) {
+  const W = 280, H = popup.offsetHeight || 165;
+  const left = (cx + W + 20 > window.innerWidth) ? cx - W - 8 : cx + 16;
+  const top  = Math.min(cy - 10, window.innerHeight - H - 12);
+  popup.style.left = Math.max(8, left) + 'px';
+  popup.style.top  = Math.max(8, top)  + 'px';
+}
+
+const tbody = document.getElementById('tbody');
+let   popTr = null;
+
+tbody.addEventListener('mouseover', e => {
+  const tr = e.target.closest('tr');
+  if (!tr || tr === popTr || tr.querySelector('.empty')) return;
+  popTr = tr;
+  showPopup(tr, e.clientX, e.clientY);
+});
+tbody.addEventListener('mousemove', e => {
+  if (popup.style.display !== 'none') movePopup(e.clientX, e.clientY);
+});
+tbody.addEventListener('mouseleave', () => { popup.style.display = 'none'; popTr = null; });
 
 /* ── Load sources ───────────────────────────────────────────────── */
 async function loadSources() {
@@ -533,7 +604,7 @@ async function loadSources() {
     document.getElementById('tilesWrap').innerHTML =
       list.map(buildTile).join('') ||
       '<p style="color:var(--t4);font-size:13px">No sources registered</p>';
-    updateSparklines();
+    updateAllTileValues();
   } catch(e) {
     document.getElementById('tilesWrap').innerHTML =
       '<p style="color:#ef4444;font-size:13px">Failed to load sources</p>';
@@ -552,13 +623,12 @@ async function loadEvents() {
     document.getElementById('totalEvents').textContent = pg.totalElements ?? '—';
 
     if (pg.content && pg.content.length) {
-      [...pg.content].reverse().forEach(e => push(e.source, e.asset, e.value, e.occurredAt));
-      updateSparklines();
+      [...pg.content].reverse().forEach(e => push(e.source, e.asset, e.metric, e.value, e.occurredAt));
+      updateAllTileValues();
     }
 
     if (!wsReady) {
       const rows = (pg.content || []).slice(0, 20);
-      const tbody = document.getElementById('tbody');
       if (!rows.length) {
         tbody.innerHTML = '<tr><td colspan="6" class="empty">No events yet — data will appear as sources produce it</td></tr>';
       } else {
@@ -577,8 +647,7 @@ async function loadEvents() {
       }
     }
   } catch(e) {
-    document.getElementById('tbody').innerHTML =
-      '<tr><td colspan="6" class="empty" style="color:#ef444455">Failed to load events — ' + e.message + '</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="empty" style="color:#ef444455">Failed to load events — ' + e.message + '</td></tr>';
   } finally {
     btn.innerHTML = '&#8635; Refresh';
     btn.disabled = false;
@@ -605,19 +674,14 @@ function wsConnect() {
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
   const url = `${proto}://${location.host}/ws/${srv}/${sid}/websocket`;
   try { ws = new WebSocket(url); } catch(e) { wsSchedule(); return; }
-
   ws.onopen  = () => {};
   ws.onerror = () => {};
   ws.onclose = () => { wsReady = false; document.body.classList.add('ws-off'); wsSchedule(); };
   ws.onmessage = ({data}) => {
     if (!data || data === 'h') return;
-    if (data[0] === 'o') {
-      wsSend('CONNECT', {'accept-version':'1.2','heart-beat':'0,0'}); return;
-    }
+    if (data[0] === 'o') { wsSend('CONNECT', {'accept-version':'1.2','heart-beat':'0,0'}); return; }
     if (data[0] === 'c') { wsReady = false; document.body.classList.add('ws-off'); wsSchedule(); return; }
-    if (data[0] === 'a') {
-      try { JSON.parse(data.slice(1)).forEach(wsFrame); } catch(e) {}
-    }
+    if (data[0] === 'a') { try { JSON.parse(data.slice(1)).forEach(wsFrame); } catch(e) {} }
   };
 }
 
@@ -629,9 +693,9 @@ function wsSend(cmd, hdrs, body) {
 }
 
 function wsFrame(raw) {
-  const nul = raw.indexOf('\0');
+  const nul  = raw.indexOf('\0');
   const text = nul >= 0 ? raw.slice(0, nul) : raw;
-  const sep = text.indexOf('\n\n');
+  const sep  = text.indexOf('\n\n');
   if (sep < 0) return;
   const cmd  = text.slice(0, text.indexOf('\n'));
   const body = text.slice(sep + 2);
@@ -641,29 +705,17 @@ function wsFrame(raw) {
     wsSend('SUBSCRIBE', {id:'sub-0', destination:'/topic/events/all'});
     return;
   }
-  if (cmd === 'MESSAGE' && body) {
-    try { wsEvent(JSON.parse(body)); } catch(e) {}
-  }
+  if (cmd === 'MESSAGE' && body) { try { wsEvent(JSON.parse(body)); } catch(e) {} }
 }
 
 function wsEvent(e) {
   const ts = e.timestamp || e.occurredAt || new Date().toISOString();
-  push(e.source, e.asset, e.value, ts);
-  const pa = PRIMARY[e.source];
-  if (pa && pa === e.asset) {
-    const m   = sm(e.source);
-    const buf = BUF[e.source]?.[e.asset];
-    if (buf && buf.length > 1) {
-      sparkline(document.getElementById('sp-' + e.source), buf, m.color);
-      const vEl = document.getElementById('tv-' + e.source);
-      if (vEl) vEl.textContent = Number(buf[buf.length - 1].v).toLocaleString(undefined, {maximumFractionDigits: 2});
-    }
-  }
+  push(e.source, e.asset, e.metric, e.value, ts);
+  updateTileValue(e.source);
   wsRow(e, ts);
 }
 
 function wsRow(e, ts) {
-  const tbody = document.getElementById('tbody');
   const empty = tbody.querySelector('.empty');
   if (empty) empty.closest('tr').remove();
   const m  = sm(e.source);
