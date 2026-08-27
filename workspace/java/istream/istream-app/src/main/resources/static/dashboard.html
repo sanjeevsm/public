@@ -4,591 +4,596 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>iStream+ — Dashboard</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
   <style>
-    /* ── Themes ─────────────────────────────────────────────────── */
+    /* ═══════════════════════════════════════════════════════════
+       THEMES  (5 dark · 4 light)
+       ═══════════════════════════════════════════════════════════ */
+
+    /* dark: midnight ── indigo */
     :root, [data-theme="midnight"] {
-      --bg-base:      #080b14;
-      --bg-card:      #0d1018;
-      --bg-header:    rgba(8,11,20,0.88);
-      --border:       #191d2e;
-      --border-hover: #23273c;
-      --text-primary: #eef0f8;
-      --text-muted:   #505878;
-      --text-dim:     #383e58;
-      --text-faint:   #252a3c;
-      --accent:       #818cf8;
-      --accent-rgb:   99,102,241;
-      --glow:         rgba(99,102,241,0.07);
-      --row-hover:    rgba(255,255,255,0.02);
-      --row-border:   #10141e;
-      --input-bg:     rgba(6,8,16,0.8);
-      --shadow:       rgba(0,0,0,0.4);
+      --bg:        #080b14; --card:     #0d1018;
+      --hdr:       rgba(8,11,20,.88);
+      --br:        #191d2e; --br2:      #23273c;
+      --t1:        #eef0f8; --t2:       #505878; --t3: #383e58; --t4: #1e2438;
+      --ac:        #818cf8; --ac3:      99,102,241;
+      --glow:      rgba(99,102,241,.07);
+      --row:       rgba(255,255,255,.025); --rowbr: #10141e;
+      --ibg:       rgba(6,8,16,.8); --sh: rgba(0,0,0,.42);
+      --tog:       #14182a; --togbr: #1e2338; --togth: #383e58;
+      --hint:      #252a3c;
     }
+    /* dark: ocean ── cyan */
     [data-theme="ocean"] {
-      --bg-base:      #050e16;
-      --bg-card:      #08131e;
-      --bg-header:    rgba(5,14,22,0.88);
-      --border:       #0e2030;
-      --border-hover: #163044;
-      --text-primary: #e0f4f8;
-      --text-muted:   #3a6070;
-      --text-dim:     #2a4858;
-      --text-faint:   #1a3040;
-      --accent:       #22d3ee;
-      --accent-rgb:   34,211,238;
-      --glow:         rgba(34,211,238,0.06);
-      --row-hover:    rgba(255,255,255,0.02);
-      --row-border:   #081420;
-      --input-bg:     rgba(4,10,18,0.8);
-      --shadow:       rgba(0,0,0,0.45);
+      --bg:        #050e16; --card:     #08131e;
+      --hdr:       rgba(5,14,22,.88);
+      --br:        #0d2030; --br2:      #163044;
+      --t1:        #e0f4f8; --t2:       #3a6070; --t3: #2a4858; --t4: #1a3040;
+      --ac:        #22d3ee; --ac3:      34,211,238;
+      --glow:      rgba(34,211,238,.06);
+      --row:       rgba(255,255,255,.02); --rowbr: #081420;
+      --ibg:       rgba(4,10,18,.8); --sh: rgba(0,0,0,.45);
+      --tog:       #0a1e2c; --togbr: #0e2838; --togth: #2a4858;
+      --hint:      #1a3040;
     }
+    /* dark: emerald ── green */
     [data-theme="emerald"] {
-      --bg-base:      #040e07;
-      --bg-card:      #071408;
-      --bg-header:    rgba(4,14,7,0.88);
-      --border:       #0e2814;
-      --border-hover: #163c1e;
-      --text-primary: #e0f0e6;
-      --text-muted:   #3a6850;
-      --text-dim:     #2a4838;
-      --text-faint:   #1a3022;
-      --accent:       #34d399;
-      --accent-rgb:   52,211,153;
-      --glow:         rgba(52,211,153,0.06);
-      --row-hover:    rgba(255,255,255,0.02);
-      --row-border:   #081a0a;
-      --input-bg:     rgba(3,9,4,0.8);
-      --shadow:       rgba(0,0,0,0.45);
+      --bg:        #040e07; --card:     #071408;
+      --hdr:       rgba(4,14,7,.88);
+      --br:        #0d2814; --br2:      #163c1e;
+      --t1:        #e0f0e6; --t2:       #3a6850; --t3: #2a4838; --t4: #1a3022;
+      --ac:        #34d399; --ac3:      52,211,153;
+      --glow:      rgba(52,211,153,.06);
+      --row:       rgba(255,255,255,.02); --rowbr: #081a0a;
+      --ibg:       rgba(3,9,4,.8); --sh: rgba(0,0,0,.45);
+      --tog:       #0a1e10; --togbr: #0e2816; --togth: #2a4838;
+      --hint:      #1a3020;
     }
+    /* dark: violet ── purple */
+    [data-theme="violet"] {
+      --bg:        #07040e; --card:     #0c0716;
+      --hdr:       rgba(7,4,14,.88);
+      --br:        #1a1030; --br2:      #251848;
+      --t1:        #f0eaff; --t2:       #604880; --t3: #483860; --t4: #302448;
+      --ac:        #c084fc; --ac3:      192,132,252;
+      --glow:      rgba(192,132,252,.07);
+      --row:       rgba(255,255,255,.02); --rowbr: #100a1c;
+      --ibg:       rgba(5,3,10,.8); --sh: rgba(0,0,0,.5);
+      --tog:       #180e2c; --togbr: #201438; --togth: #483060;
+      --hint:      #301c48;
+    }
+    /* dark: rose ── pink */
+    [data-theme="rose"] {
+      --bg:        #0e0408; --card:     #160610;
+      --hdr:       rgba(14,4,8,.88);
+      --br:        #2e0e18; --br2:      #3e1828;
+      --t1:        #ffe4ee; --t2:       #804060; --t3: #603050; --t4: #3c1830;
+      --ac:        #fb7185; --ac3:      251,113,133;
+      --glow:      rgba(251,113,133,.07);
+      --row:       rgba(255,255,255,.02); --rowbr: #1a0810;
+      --ibg:       rgba(10,3,6,.8); --sh: rgba(0,0,0,.5);
+      --tog:       #2c0c18; --togbr: #3a1022; --togth: #602838;
+      --hint:      #3c1428;
+    }
+    /* light: clean ── indigo */
     [data-theme="light"] {
-      --bg-base:      #f0f4f8;
-      --bg-card:      #ffffff;
-      --bg-header:    rgba(240,244,248,0.92);
-      --border:       #dde3ed;
-      --border-hover: #c4cede;
-      --text-primary: #0f172a;
-      --text-muted:   #64748b;
-      --text-dim:     #94a3b8;
-      --text-faint:   #cbd5e1;
-      --accent:       #6366f1;
-      --accent-rgb:   99,102,241;
-      --glow:         rgba(99,102,241,0.04);
-      --row-hover:    rgba(0,0,0,0.02);
-      --row-border:   #edf0f6;
-      --input-bg:     rgba(255,255,255,0.9);
-      --shadow:       rgba(0,0,0,0.10);
+      --bg:        #f0f4f8; --card:     #ffffff;
+      --hdr:       rgba(240,244,248,.92);
+      --br:        #dde3ed; --br2:      #c4cedf;
+      --t1:        #0f172a; --t2:       #64748b; --t3: #94a3b8; --t4: #cbd5e1;
+      --ac:        #6366f1; --ac3:      99,102,241;
+      --glow:      rgba(99,102,241,.04);
+      --row:       rgba(0,0,0,.02); --rowbr: #edf1f7;
+      --ibg:       rgba(255,255,255,.9); --sh: rgba(0,0,0,.10);
+      --tog:       #e8edf5; --togbr: #d0d8e8; --togth: #94a3b8;
+      --hint:      #94a3b8;
     }
+    /* light: warm ── amber */
     [data-theme="warm"] {
-      --bg-base:      #fdf6ec;
-      --bg-card:      #fffcf5;
-      --bg-header:    rgba(253,246,236,0.92);
-      --border:       #f0e0c4;
-      --border-hover: #e0c89a;
-      --text-primary: #1c1208;
-      --text-muted:   #7c6010;
-      --text-dim:     #a07820;
-      --text-faint:   #c8a84a;
-      --accent:       #d97706;
-      --accent-rgb:   217,119,6;
-      --glow:         rgba(217,119,6,0.05);
-      --row-hover:    rgba(0,0,0,0.02);
-      --row-border:   #f4e8d4;
-      --input-bg:     rgba(255,252,244,0.9);
-      --shadow:       rgba(0,0,0,0.08);
+      --bg:        #fdf6ec; --card:     #fffcf5;
+      --hdr:       rgba(253,246,236,.92);
+      --br:        #f0e0c4; --br2:      #e0c89a;
+      --t1:        #1c1208; --t2:       #7c6010; --t3: #a07820; --t4: #c8a84a;
+      --ac:        #d97706; --ac3:      217,119,6;
+      --glow:      rgba(217,119,6,.05);
+      --row:       rgba(0,0,0,.02); --rowbr: #f4e8d4;
+      --ibg:       rgba(255,252,244,.9); --sh: rgba(0,0,0,.08);
+      --tog:       #f4e8d0; --togbr: #e8d0a8; --togth: #c8a060;
+      --hint:      #c8a050;
+    }
+    /* light: sky ── blue */
+    [data-theme="sky"] {
+      --bg:        #f0f7ff; --card:     #ffffff;
+      --hdr:       rgba(240,247,255,.92);
+      --br:        #d0e4f8; --br2:      #b0ccee;
+      --t1:        #0c1e3a; --t2:       #4a6e94; --t3: #7a9ec0; --t4: #b0cce0;
+      --ac:        #0ea5e9; --ac3:      14,165,233;
+      --glow:      rgba(14,165,233,.05);
+      --row:       rgba(0,0,0,.02); --rowbr: #e0eefc;
+      --ibg:       rgba(255,255,255,.9); --sh: rgba(0,0,0,.10);
+      --tog:       #dbeeff; --togbr: #c0dcf4; --togth: #7aaed0;
+      --hint:      #7aaed0;
+    }
+    /* light: sage ── teal */
+    [data-theme="sage"] {
+      --bg:        #f0f8f4; --card:     #ffffff;
+      --hdr:       rgba(240,248,244,.92);
+      --br:        #c8e8d8; --br2:      #a8d8c0;
+      --t1:        #0a2018; --t2:       #406858; --t3: #709880; --t4: #a8c8b8;
+      --ac:        #059669; --ac3:      5,150,105;
+      --glow:      rgba(5,150,105,.05);
+      --row:       rgba(0,0,0,.02); --rowbr: #dff0e8;
+      --ibg:       rgba(255,255,255,.9); --sh: rgba(0,0,0,.10);
+      --tog:       #d4eddf; --togbr: #b8dcc8; --togth: #70a888;
+      --hint:      #70a888;
     }
 
+    /* ═══════════════════════════════════════════════════════════
+       BASE
+       ═══════════════════════════════════════════════════════════ */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       min-height: 100vh;
-      background: var(--bg-base);
+      background: var(--bg);
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-      color: var(--text-primary);
-      transition: background 0.25s, color 0.25s;
+      color: var(--t1);
+      transition: background .25s, color .25s;
     }
     body::before {
-      content: '';
-      position: fixed; top: -260px; right: -200px;
-      width: 720px; height: 720px;
+      content: ''; position: fixed; top: -240px; right: -180px;
+      width: 680px; height: 680px;
       background: radial-gradient(circle, var(--glow) 0%, transparent 65%);
       pointer-events: none; z-index: 0;
     }
 
-    /* ── Header ─────────────────────────────────────────────────── */
+    /* ═══════════════════════════════════════════════════════════
+       HEADER
+       ═══════════════════════════════════════════════════════════ */
     header {
       position: sticky; top: 0; z-index: 10;
-      background: var(--bg-header);
+      background: var(--hdr);
       backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
-      border-bottom: 1px solid var(--border);
-      padding: 0 32px; height: 56px;
+      border-bottom: 1px solid var(--br);
+      padding: 0 28px; height: 54px;
       display: flex; align-items: center; justify-content: space-between;
+      gap: 12px;
     }
-    .header-left { display: flex; align-items: center; gap: 14px; }
-    .logo { display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 700; }
+    .hl { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+    .logo { display: flex; align-items: center; gap: 9px; font-size: 16px; font-weight: 700; }
     .logo-icon {
-      width: 32px; height: 32px;
-      background: linear-gradient(135deg, rgba(var(--accent-rgb),0.9), rgba(var(--accent-rgb),0.6));
-      border-radius: 8px;
-      display: flex; align-items: center; justify-content: center; font-size: 15px;
-      box-shadow: 0 0 16px rgba(var(--accent-rgb),0.3);
+      width: 30px; height: 30px;
+      background: linear-gradient(135deg, rgba(var(--ac3),.95), rgba(var(--ac3),.55));
+      border-radius: 8px; display: flex; align-items: center; justify-content: center;
+      font-size: 14px; box-shadow: 0 0 14px rgba(var(--ac3),.28);
     }
-    .logo-name { color: var(--accent); }
+    .logo-name { color: var(--ac); }
     .live-badge {
-      display: flex; align-items: center; gap: 6px;
-      background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.16);
-      color: #34d399; font-size: 10px; font-weight: 700; letter-spacing: 0.9px;
-      padding: 3px 9px; border-radius: 20px;
+      display: flex; align-items: center; gap: 5px;
+      background: rgba(16,185,129,.08); border: 1px solid rgba(16,185,129,.16);
+      color: #34d399; font-size: 9px; font-weight: 700; letter-spacing: .9px;
+      padding: 3px 8px; border-radius: 20px; flex-shrink: 0;
     }
-    .live-dot {
-      width: 6px; height: 6px; border-radius: 50%; background: #10b981;
-      animation: livePulse 2s ease-in-out infinite;
-    }
+    .live-dot { width: 5px; height: 5px; border-radius: 50%; background: #10b981; animation: pulse 2s ease-in-out infinite; }
+
     nav { display: flex; gap: 2px; }
-    .nav-link {
-      color: var(--text-muted); font-size: 13px; font-weight: 500;
-      text-decoration: none; padding: 5px 11px; border-radius: 7px;
-      transition: color 0.15s, background 0.15s;
+    .nl {
+      color: var(--t2); font-size: 13px; font-weight: 500;
+      text-decoration: none; padding: 5px 10px; border-radius: 7px;
+      transition: color .15s, background .15s;
     }
-    .nav-link:hover { color: var(--text-primary); background: rgba(var(--accent-rgb),0.07); }
-    .nav-link.active { color: var(--accent); background: rgba(var(--accent-rgb),0.1); }
+    .nl:hover  { color: var(--t1); background: rgba(var(--ac3),.07); }
+    .nl.active { color: var(--ac); background: rgba(var(--ac3),.1); }
 
-    .header-right { display: flex; align-items: center; gap: 10px; }
-    #usernameLabel { font-size: 13px; color: var(--text-dim); }
-    .btn-logout {
-      background: none; border: 1px solid var(--border); border-radius: 7px;
-      color: var(--text-muted); padding: 5px 12px; cursor: pointer;
+    .hr { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    #uname { font-size: 12px; color: var(--t3); }
+    .btn-out {
+      background: none; border: 1px solid var(--br); border-radius: 7px;
+      color: var(--t2); padding: 4px 11px; cursor: pointer;
       font-size: 12px; font-family: inherit;
-      transition: border-color 0.15s, color 0.15s;
+      transition: border-color .15s, color .15s;
     }
-    .btn-logout:hover { border-color: rgba(var(--accent-rgb),0.38); color: var(--text-primary); }
+    .btn-out:hover { border-color: rgba(var(--ac3),.38); color: var(--t1); }
 
-    /* ── Theme Switcher ──────────────────────────────────────────── */
-    .theme-switcher { display: flex; gap: 5px; align-items: center; }
-    .theme-btn {
-      width: 20px; height: 20px; border-radius: 50%; border: 2px solid transparent;
-      cursor: pointer; transition: transform 0.15s, border-color 0.15s; padding: 0;
+    /* ── Theme switcher ─────────────────── */
+    .themes { display: flex; gap: 4px; align-items: center; }
+    .tb {
+      width: 17px; height: 17px; border-radius: 50%;
+      border: 2px solid transparent; cursor: pointer;
+      transition: transform .15s, border-color .15s; padding: 0;
     }
-    .theme-btn:hover { transform: scale(1.2); }
-    .theme-btn.active { border-color: var(--text-primary); }
-    .theme-btn[data-t="midnight"] { background: radial-gradient(circle at 40% 40%, #818cf8 0%, #080b14 100%); }
-    .theme-btn[data-t="ocean"]    { background: radial-gradient(circle at 40% 40%, #22d3ee 0%, #050e16 100%); }
-    .theme-btn[data-t="emerald"]  { background: radial-gradient(circle at 40% 40%, #34d399 0%, #040e07 100%); }
-    .theme-btn[data-t="light"]    { background: radial-gradient(circle at 40% 40%, #6366f1 0%, #f0f4f8 100%); }
-    .theme-btn[data-t="warm"]     { background: radial-gradient(circle at 40% 40%, #f59e0b 0%, #fdf6ec 100%); }
+    .tb:hover { transform: scale(1.25); }
+    .tb.on    { border-color: var(--t1); transform: scale(1.1); }
+    .tb[data-t="midnight"] { background: radial-gradient(circle at 38% 38%, #818cf8, #080b14); }
+    .tb[data-t="ocean"]    { background: radial-gradient(circle at 38% 38%, #22d3ee, #050e16); }
+    .tb[data-t="emerald"]  { background: radial-gradient(circle at 38% 38%, #34d399, #040e07); }
+    .tb[data-t="violet"]   { background: radial-gradient(circle at 38% 38%, #c084fc, #07040e); }
+    .tb[data-t="rose"]     { background: radial-gradient(circle at 38% 38%, #fb7185, #0e0408); }
+    .tb[data-t="light"]    { background: radial-gradient(circle at 38% 38%, #6366f1, #f0f4f8); }
+    .tb[data-t="warm"]     { background: radial-gradient(circle at 38% 38%, #f59e0b, #fdf6ec); }
+    .tb[data-t="sky"]      { background: radial-gradient(circle at 38% 38%, #0ea5e9, #f0f7ff); }
+    .tb[data-t="sage"]     { background: radial-gradient(circle at 38% 38%, #059669, #f0f8f4); }
 
-    /* ── Main ────────────────────────────────────────────────────── */
-    main { position: relative; z-index: 1; padding: 36px 32px; max-width: 1120px; margin: 0 auto; }
-    h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; margin-bottom: 3px; }
-    .tagline { font-size: 13px; color: var(--text-dim); margin-bottom: 32px; }
+    /* ═══════════════════════════════════════════════════════════
+       MAIN
+       ═══════════════════════════════════════════════════════════ */
+    main { position: relative; z-index: 1; padding: 32px 28px; max-width: 1160px; margin: 0 auto; }
+    h1   { font-size: 21px; font-weight: 700; letter-spacing: -.3px; margin-bottom: 3px; }
+    .tag { font-size: 13px; color: var(--t3); margin-bottom: 30px; }
 
-    /* ── Stat cards ──────────────────────────────────────────────── */
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; margin-bottom: 36px; }
-    .stat-card {
+    /* ── Stat cards ─────────────────────── */
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 32px; }
+    .sc {
       position: relative; overflow: hidden;
-      background: var(--bg-card); border: 1px solid var(--border); border-radius: 13px;
-      padding: 20px 22px;
-      transition: border-color 0.2s, transform 0.15s, box-shadow 0.2s;
+      background: var(--card); border: 1px solid var(--br); border-radius: 12px;
+      padding: 18px 20px;
+      transition: border-color .2s, transform .15s, box-shadow .2s;
     }
-    .stat-card:hover {
-      border-color: var(--border-hover); transform: translateY(-2px);
-      box-shadow: 0 12px 32px var(--shadow);
-    }
-    .stat-card::before {
+    .sc:hover { border-color: var(--br2); transform: translateY(-2px); box-shadow: 0 10px 28px var(--sh); }
+    .sc::before {
       content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
-      background: linear-gradient(90deg, rgba(var(--accent-rgb),0.9), rgba(var(--accent-rgb),0.4));
+      background: linear-gradient(90deg, rgba(var(--ac3),.9), rgba(var(--ac3),.35));
     }
-    .stat-card-status::before { background: linear-gradient(90deg, #059669, #10b981); }
-    .stat-card-alerts::before { background: linear-gradient(90deg, #b45309, #f59e0b); }
-    .stat-label { font-size: 10px; color: var(--text-dim); font-weight: 600; text-transform: uppercase; letter-spacing: 0.9px; margin-bottom: 12px; }
-    .stat-value { font-size: 30px; font-weight: 700; letter-spacing: -0.5px; line-height: 1; }
-    .stat-sub { font-size: 11px; color: var(--text-dim); margin-top: 7px; }
-    .status-running { font-size: 16px; font-weight: 700; color: #10b981; display: flex; align-items: center; gap: 8px; }
-    .pulse-dot {
-      width: 8px; height: 8px; border-radius: 50%;
-      background: #10b981; box-shadow: 0 0 8px rgba(16,185,129,0.55);
-      animation: livePulse 2s ease-in-out infinite;
-    }
+    .sc-green::before { background: linear-gradient(90deg, #059669, #10b981); }
+    .sc-amber::before { background: linear-gradient(90deg, #b45309, #f59e0b); }
+    .sc-lbl  { font-size: 10px; color: var(--t3); font-weight: 600; text-transform: uppercase; letter-spacing: .9px; margin-bottom: 10px; }
+    .sc-val  { font-size: 28px; font-weight: 700; letter-spacing: -.5px; line-height: 1; }
+    .sc-sub  { font-size: 11px; color: var(--t3); margin-top: 6px; }
+    .running { font-size: 15px; font-weight: 700; color: #10b981; display: flex; align-items: center; gap: 7px; }
+    .pdot    { width: 8px; height: 8px; border-radius: 50%; background: #10b981; box-shadow: 0 0 8px rgba(16,185,129,.5); animation: pulse 2s ease-in-out infinite; }
 
-    /* ── Sections ────────────────────────────────────────────────── */
-    section { margin-bottom: 32px; }
-    .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-    .section-title { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.9px; }
-    .refresh-btn {
-      background: none; border: 1px solid var(--border); border-radius: 7px;
-      color: var(--text-muted); padding: 4px 10px; cursor: pointer;
+    /* ── Section shells ─────────────────── */
+    section  { margin-bottom: 30px; }
+    .sh      { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .st      { font-size: 11px; font-weight: 700; color: var(--t2); text-transform: uppercase; letter-spacing: .9px; }
+    .rbtn    {
+      background: none; border: 1px solid var(--br); border-radius: 7px;
+      color: var(--t2); padding: 4px 10px; cursor: pointer;
       font-size: 12px; font-family: inherit;
-      transition: color 0.15s, border-color 0.15s;
+      transition: color .15s, border-color .15s;
     }
-    .refresh-btn:hover { color: var(--text-primary); border-color: rgba(var(--accent-rgb),0.35); }
+    .rbtn:hover { color: var(--t1); border-color: rgba(var(--ac3),.35); }
 
-    /* ── Sources ─────────────────────────────────────────────────── */
-    .sources-list { display: flex; flex-wrap: wrap; gap: 10px; }
-    .source-chip {
-      border-radius: 10px; padding: 10px 16px; border: 1px solid;
-      display: flex; align-items: center; gap: 9px; font-size: 13px; cursor: default;
-      transition: transform 0.15s, box-shadow 0.15s;
+    /* ═══════════════════════════════════════════════════════════
+       SOURCE TILES
+       ═══════════════════════════════════════════════════════════ */
+    .tiles  { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
+
+    .tile {
+      background: var(--card);
+      border: 1px solid var(--br);
+      border-top: 3px solid;  /* color set inline */
+      border-radius: 12px; overflow: hidden;
+      transition: border-color .2s, transform .15s, box-shadow .2s;
     }
-    .source-chip:hover { transform: translateY(-2px); box-shadow: 0 6px 18px var(--shadow); }
-    .source-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-    .source-dot-active { animation: livePulse 2.5s ease-in-out infinite; }
-    .source-name { font-weight: 600; text-transform: capitalize; }
-    .source-status { font-size: 11px; opacity: 0.55; }
+    .tile:hover { transform: translateY(-2px); box-shadow: 0 10px 26px var(--sh); border-color: var(--br2); border-top-color: inherit; }
 
-    /* ── Charts ──────────────────────────────────────────────────── */
-    .charts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
-    .chart-card {
-      background: var(--bg-card); border: 1px solid var(--border); border-radius: 13px;
-      padding: 16px 18px;
-      transition: border-color 0.2s, box-shadow 0.2s;
+    .tile-head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 13px 15px 8px;
     }
-    .chart-card:hover { border-color: var(--border-hover); box-shadow: 0 8px 24px var(--shadow); }
-    .chart-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
-    .chart-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.7px; }
-    .chart-asset { font-size: 11px; color: var(--text-dim); }
-    .chart-wrap { position: relative; height: 110px; }
+    .tile-label { display: flex; align-items: center; gap: 7px; }
+    .tile-dot   { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .tile-dot.on { animation: pulse 2.5s ease-in-out infinite; }
+    .tile-name  { font-weight: 700; font-size: 13px; text-transform: capitalize; }
+    .tile-st    { font-size: 10px; color: var(--t3); text-transform: uppercase; letter-spacing: .5px; }
 
-    /* ── Table ───────────────────────────────────────────────────── */
-    .table-wrap { background: var(--bg-card); border: 1px solid var(--border); border-radius: 13px; overflow: hidden; }
+    .tile-chart { padding: 2px 10px 4px; }
+    .tile-chart svg { display: block; width: 100%; height: 70px; }
+
+    .tile-foot  {
+      display: flex; justify-content: space-between; align-items: baseline;
+      padding: 6px 15px 4px;
+    }
+    .tile-asset { font-size: 10px; color: var(--t3); }
+    .tile-val   { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.2px; }
+    .tile-desc  { font-size: 10px; color: var(--t4); padding: 2px 15px 12px; }
+
+    /* ═══════════════════════════════════════════════════════════
+       EVENTS TABLE
+       ═══════════════════════════════════════════════════════════ */
+    .tw { background: var(--card); border: 1px solid var(--br); border-radius: 12px; overflow: hidden; }
     table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    thead tr { border-bottom: 1px solid var(--border); }
-    th { text-align: left; padding: 12px 14px; color: var(--text-dim); font-weight: 600; text-transform: uppercase; font-size: 10px; letter-spacing: 0.9px; }
-    tbody tr { border-bottom: 1px solid var(--row-border); transition: background 0.12s; }
+    thead tr { border-bottom: 1px solid var(--br); }
+    th { text-align: left; padding: 11px 14px; color: var(--t3); font-weight: 600; text-transform: uppercase; font-size: 10px; letter-spacing: .9px; }
+    tbody tr { border-bottom: 1px solid var(--rowbr); transition: background .12s; }
     tbody tr:last-child { border-bottom: none; }
-    tbody tr:hover { background: var(--row-hover); }
-    td { padding: 11px 14px; color: var(--text-muted); vertical-align: middle; }
-    .empty { text-align: center; padding: 52px; color: var(--text-faint); font-size: 13px; }
+    tbody tr:hover { background: var(--row); }
+    td { padding: 10px 14px; color: var(--t2); vertical-align: middle; }
+    .empty { text-align: center; padding: 48px; color: var(--t4); font-size: 13px; }
     .badge {
-      display: inline-block; padding: 3px 8px; border-radius: 5px;
-      font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; border: 1px solid;
+      display: inline-block; padding: 2px 7px; border-radius: 5px;
+      font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; border: 1px solid;
     }
-    .val { font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+    .val { font-weight: 700; color: var(--t1); font-variant-numeric: tabular-nums; }
 
-    .spinning { display: inline-block; animation: spin 0.7s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    @keyframes livePulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50%       { opacity: 0.35; transform: scale(0.7); }
-    }
+    /* ═══════════════════════════════════════════════════════════
+       MISC
+       ═══════════════════════════════════════════════════════════ */
+    .spin { display: inline-block; animation: spin .7s linear infinite; }
+    @keyframes spin  { to { transform: rotate(360deg); } }
+    @keyframes pulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.3; transform:scale(.65); } }
   </style>
 </head>
 <body>
+
 <header>
-  <div class="header-left">
-    <div class="logo">
-      <div class="logo-icon">⚡</div>
-      i<span class="logo-name">Stream+</span>
-    </div>
+  <div class="hl">
+    <div class="logo"><div class="logo-icon">&#9889;</div>i<span class="logo-name">Stream+</span></div>
     <div class="live-badge"><span class="live-dot"></span>LIVE</div>
   </div>
 
   <nav>
-    <a href="/dashboard.html" class="nav-link active">Dashboard</a>
-    <a href="/settings.html" class="nav-link">Settings</a>
+    <a href="/dashboard.html" class="nl active">Dashboard</a>
+    <a href="/settings.html"  class="nl">Settings</a>
   </nav>
 
-  <div class="header-right">
-    <div class="theme-switcher">
-      <button class="theme-btn" data-t="midnight" onclick="setTheme('midnight')" title="Midnight"></button>
-      <button class="theme-btn" data-t="ocean"    onclick="setTheme('ocean')"    title="Ocean"></button>
-      <button class="theme-btn" data-t="emerald"  onclick="setTheme('emerald')"  title="Emerald"></button>
-      <button class="theme-btn" data-t="light"    onclick="setTheme('light')"    title="Light"></button>
-      <button class="theme-btn" data-t="warm"     onclick="setTheme('warm')"     title="Warm"></button>
+  <div class="hr">
+    <div class="themes">
+      <button class="tb" data-t="midnight" title="Midnight"></button>
+      <button class="tb" data-t="ocean"    title="Ocean"></button>
+      <button class="tb" data-t="emerald"  title="Emerald"></button>
+      <button class="tb" data-t="violet"   title="Violet"></button>
+      <button class="tb" data-t="rose"     title="Rose"></button>
+      <button class="tb" data-t="light"    title="Light"></button>
+      <button class="tb" data-t="warm"     title="Warm"></button>
+      <button class="tb" data-t="sky"      title="Sky"></button>
+      <button class="tb" data-t="sage"     title="Sage"></button>
     </div>
-    <span id="usernameLabel"></span>
-    <button class="btn-logout" onclick="logout()">Sign out</button>
+    <span id="uname"></span>
+    <button class="btn-out" onclick="logout()">Sign out</button>
   </div>
 </header>
 
 <main>
   <h1>Dashboard</h1>
-  <p class="tagline">Real-time market data streaming pipeline</p>
+  <p class="tag">Real-time market data streaming pipeline</p>
 
-  <div class="grid">
-    <div class="stat-card stat-card-status">
-      <div class="stat-label">Pipeline</div>
-      <div class="status-running"><span class="pulse-dot"></span>Running</div>
-      <div class="stat-sub">All systems operational</div>
+  <!-- Stat cards -->
+  <div class="stats">
+    <div class="sc sc-green">
+      <div class="sc-lbl">Pipeline</div>
+      <div class="running"><span class="pdot"></span>Running</div>
+      <div class="sc-sub">All systems operational</div>
     </div>
-    <div class="stat-card">
-      <div class="stat-label">Total Events</div>
-      <div class="stat-value" id="totalEvents">—</div>
-      <div class="stat-sub">Stored in database</div>
+    <div class="sc">
+      <div class="sc-lbl">Total Events</div>
+      <div class="sc-val" id="totalEvents">&#8212;</div>
+      <div class="sc-sub">Stored in database</div>
     </div>
-    <div class="stat-card">
-      <div class="stat-label">Active Sources</div>
-      <div class="stat-value" id="activeSources">—</div>
-      <div class="stat-sub">Data producers</div>
+    <div class="sc">
+      <div class="sc-lbl">Active Sources</div>
+      <div class="sc-val" id="activeSources">&#8212;</div>
+      <div class="sc-sub">Data producers</div>
     </div>
-    <div class="stat-card stat-card-alerts">
-      <div class="stat-label">Alert Rules</div>
-      <div class="stat-value" id="alertRules">—</div>
-      <div class="stat-sub">Configured alerts</div>
+    <div class="sc sc-amber">
+      <div class="sc-lbl">Alert Rules</div>
+      <div class="sc-val" id="alertRules">&#8212;</div>
+      <div class="sc-sub">Configured alerts</div>
     </div>
   </div>
 
+  <!-- Source tiles -->
   <section>
-    <div class="section-header"><span class="section-title">Data Sources</span></div>
-    <div class="sources-list" id="sourcesList">
-      <span style="color:var(--text-faint);font-size:13px">Loading…</span>
+    <div class="sh"><span class="st">Data Sources</span></div>
+    <div class="tiles" id="tilesWrap">
+      <p style="color:var(--t4);font-size:13px">Loading&#8230;</p>
     </div>
   </section>
 
-  <section id="chartsSection" style="display:none">
-    <div class="section-header"><span class="section-title">Live Charts</span></div>
-    <div class="charts-grid" id="chartsGrid"></div>
-  </section>
-
+  <!-- Events table -->
   <section>
-    <div class="section-header">
-      <span class="section-title">Recent Events</span>
-      <button class="refresh-btn" onclick="loadEvents()" id="refreshBtn">↻ Refresh</button>
+    <div class="sh">
+      <span class="st">Recent Events</span>
+      <button class="rbtn" onclick="loadEvents()" id="rbtn">&#8635; Refresh</button>
     </div>
-    <div class="table-wrap">
+    <div class="tw">
       <table>
-        <thead>
-          <tr><th>Source</th><th>Asset</th><th>Metric</th><th>Value</th><th>Unit</th><th>Occurred At</th></tr>
-        </thead>
-        <tbody id="eventsBody">
-          <tr><td colspan="6" class="empty">Loading…</td></tr>
-        </tbody>
+        <thead><tr><th>Source</th><th>Asset</th><th>Metric</th><th>Value</th><th>Unit</th><th>Occurred At</th></tr></thead>
+        <tbody id="tbody"><tr><td colspan="6" class="empty">Loading&#8230;</td></tr></tbody>
       </table>
     </div>
   </section>
 </main>
 
 <script>
-  /* ── Auth ─────────────────────────────────────────────────────── */
-  const token = localStorage.getItem('is_token');
-  if (!token) { window.location.href = '/index.html'; }
+/* ── Auth ──────────────────────────────────────────────────────── */
+const token = localStorage.getItem('is_token');
+if (!token) location.href = '/index.html';
 
-  function authHeaders() {
-    return { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' };
+const ah = () => ({ 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' });
+function logout() { localStorage.removeItem('is_token'); location.href = '/index.html'; }
+try { document.getElementById('uname').textContent = JSON.parse(atob(token.split('.')[1])).sub; } catch(e){}
+
+/* ── Theme ─────────────────────────────────────────────────────── */
+const THEMES = ['midnight','ocean','emerald','violet','rose','light','warm','sky','sage'];
+
+function setTheme(t) {
+  if (!THEMES.includes(t)) t = 'midnight';
+  document.documentElement.setAttribute('data-theme', t);
+  localStorage.setItem('is_theme', t);
+  document.querySelectorAll('.tb').forEach(b => b.classList.toggle('on', b.dataset.t === t));
+}
+document.querySelectorAll('.tb').forEach(b => b.addEventListener('click', () => setTheme(b.dataset.t)));
+setTheme(localStorage.getItem('is_theme') || 'midnight');
+
+/* ── Source meta ────────────────────────────────────────────────── */
+const SM = {
+  crypto:      { color:'#818cf8', bg:'rgba(99,102,241,.09)',  br:'rgba(99,102,241,.2)',  desc:'Binance public feed'        },
+  stocks:      { color:'#34d399', bg:'rgba(16,185,129,.09)',  br:'rgba(16,185,129,.2)',  desc:'Yahoo Finance chart'        },
+  weather:     { color:'#fb923c', bg:'rgba(249,115,22,.09)',  br:'rgba(249,115,22,.2)',  desc:'Open-Meteo API'             },
+  forex:       { color:'#facc15', bg:'rgba(234,179,8,.09)',   br:'rgba(234,179,8,.2)',   desc:'Open Exchange Rates'        },
+  commodities: { color:'#e879f9', bg:'rgba(192,38,211,.09)',  br:'rgba(192,38,211,.2)',  desc:'Yahoo Finance futures'      },
+};
+const sm = id => SM[id] || { color:'#a78bfa', bg:'rgba(139,92,246,.09)', br:'rgba(139,92,246,.2)', desc:'' };
+
+const PRIMARY = {
+  crypto:'BTC-USD', stocks:'AAPL', forex:'USD/EUR', commodities:'GC=F', weather:null,
+};
+
+/* ── History buffer ─────────────────────────────────────────────── */
+const BUF = {};        // BUF[source][asset] = [{t,v}, ...]
+const MAX = 40;
+
+function push(src, asset, v, ts) {
+  if (!BUF[src]) BUF[src] = {};
+  if (!BUF[src][asset]) BUF[src][asset] = [];
+  const b = BUF[src][asset];
+  const label = new Date(ts).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  b.push({ t: label, v });
+  if (b.length > MAX) b.shift();
+}
+
+/* ── SVG Sparkline ──────────────────────────────────────────────── */
+function sparkline(svgEl, data, color) {
+  if (!svgEl) return;
+  if (!data || data.length < 2) {
+    svgEl.innerHTML = `<text x="50%" y="50%" fill="${color}" fill-opacity=".35" font-size="10"
+      text-anchor="middle" dominant-baseline="middle">No data</text>`;
+    return;
   }
-  function logout() {
-    localStorage.removeItem('is_token');
-    window.location.href = '/index.html';
-  }
+  const W = 260, H = 70, P = 3;
+  const vals = data.map(p => p.v);
+  const lo = Math.min(...vals), hi = Math.max(...vals);
+  const rng = hi - lo || 1;
+
+  const pts = vals.map((v, i) => {
+    const x = P + (i / (vals.length - 1)) * (W - P * 2);
+    const y = (H - P) - ((v - lo) / rng) * (H - P * 2);
+    return [+x.toFixed(1), +y.toFixed(1)];
+  });
+
+  const M = pts.map(([x, y]) => `${x},${y}`);
+  const line = 'M' + M.join('L');
+  const area = `${line}L${W - P},${H}L${P},${H}Z`;
+  const gid  = 'sg' + color.replace('#','');
+
+  svgEl.innerHTML = `<defs>
+    <linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="${color}" stop-opacity=".28"/>
+      <stop offset="100%" stop-color="${color}" stop-opacity=".02"/>
+    </linearGradient>
+  </defs>
+  <path d="${area}" fill="url(#${gid})"/>
+  <path d="${line}" fill="none" stroke="${color}" stroke-width="1.5"
+        stroke-linecap="round" stroke-linejoin="round"/>`;
+}
+
+function updateSparklines() {
+  Object.entries(BUF).forEach(([src, assets]) => {
+    const asset = PRIMARY[src];
+    if (!asset) return;
+    const buf = assets[asset];
+    if (!buf || !buf.length) return;
+    const m = sm(src);
+    sparkline(document.getElementById('sp-' + src), buf, m.color);
+    const el = document.getElementById('tv-' + src);
+    if (el) el.textContent = Number(buf[buf.length - 1].v).toLocaleString(undefined, { maximumFractionDigits: 2 });
+  });
+}
+
+/* ── Tile builder ───────────────────────────────────────────────── */
+function buildTile(s) {
+  const m  = sm(s.id);
+  const pa = PRIMARY[s.id];
+  const on = s.status === 'active';
+  const dotStyle = `background:${on ? m.color : 'var(--t4)'};${on ? `box-shadow:0 0 6px ${m.color}` : ''}`;
+  return `<div class="tile" style="border-top-color:${m.color}">
+    <div class="tile-head">
+      <div class="tile-label">
+        <span class="tile-dot ${on ? 'on' : ''}" style="${dotStyle}"></span>
+        <span class="tile-name" style="color:${on ? m.color : 'var(--t2)'}">${s.id}</span>
+      </div>
+      <span class="tile-st">${s.status}</span>
+    </div>
+    <div class="tile-chart">
+      <svg id="sp-${s.id}" viewBox="0 0 260 70" preserveAspectRatio="none">
+        <text x="50%" y="50%" fill="${m.color}" fill-opacity=".3" font-size="10"
+              text-anchor="middle" dominant-baseline="middle">No data</text>
+      </svg>
+    </div>
+    <div class="tile-foot">
+      <span class="tile-asset">${pa || '—'}</span>
+      <span class="tile-val" id="tv-${s.id}" style="color:${m.color}">—</span>
+    </div>
+    <div class="tile-desc">${m.desc}</div>
+  </div>`;
+}
+
+/* ── Load sources ───────────────────────────────────────────────── */
+async function loadSources() {
   try {
-    const p = JSON.parse(atob(token.split('.')[1]));
-    document.getElementById('usernameLabel').textContent = p.sub || '';
-  } catch(e) {}
-
-  /* ── Theme ────────────────────────────────────────────────────── */
-  function setTheme(t) {
-    document.documentElement.setAttribute('data-theme', t);
-    localStorage.setItem('is_theme', t);
-    document.querySelectorAll('.theme-btn').forEach(b => b.classList.toggle('active', b.dataset.t === t));
-    refreshChartColors();
+    const r = await fetch('/api/v1/sources', { headers: ah() });
+    if (r.status === 401) { logout(); return; }
+    const list = await r.json();
+    document.getElementById('activeSources').textContent = list.filter(s => s.status === 'active').length;
+    document.getElementById('tilesWrap').innerHTML =
+      list.map(buildTile).join('') ||
+      '<p style="color:var(--t4);font-size:13px">No sources registered</p>';
+    updateSparklines();
+  } catch(e) {
+    document.getElementById('tilesWrap').innerHTML =
+      '<p style="color:#ef4444;font-size:13px">Failed to load sources</p>';
   }
-  setTheme(localStorage.getItem('is_theme') || 'midnight');
+}
 
-  /* ── Source meta ──────────────────────────────────────────────── */
-  const SOURCE_META = {
-    crypto:      { color: '#818cf8', bg: 'rgba(99,102,241,0.09)',  border: 'rgba(99,102,241,0.2)',  rgb: '99,102,241'  },
-    stocks:      { color: '#34d399', bg: 'rgba(16,185,129,0.09)',  border: 'rgba(16,185,129,0.2)',  rgb: '16,185,129'  },
-    weather:     { color: '#fb923c', bg: 'rgba(249,115,22,0.09)',  border: 'rgba(249,115,22,0.2)',  rgb: '249,115,22'  },
-    forex:       { color: '#facc15', bg: 'rgba(234,179,8,0.09)',   border: 'rgba(234,179,8,0.2)',   rgb: '234,179,8'   },
-    commodities: { color: '#e879f9', bg: 'rgba(192,38,211,0.09)',  border: 'rgba(192,38,211,0.2)',  rgb: '192,38,211'  },
-  };
-  function sourceMeta(id) {
-    return SOURCE_META[id] || { color: '#a78bfa', bg: 'rgba(139,92,246,0.09)', border: 'rgba(139,92,246,0.2)', rgb: '139,92,246' };
-  }
+/* ── Load events ────────────────────────────────────────────────── */
+async function loadEvents() {
+  const btn = document.getElementById('rbtn');
+  btn.innerHTML = '<span class="spin">&#8635;</span> Refresh';
+  btn.disabled = true;
+  try {
+    const r = await fetch('/api/v1/events?size=50&sort=occurredAt,desc', { headers: ah() });
+    if (r.status === 401) { logout(); return; }
+    const pg = await r.json();
+    document.getElementById('totalEvents').textContent = pg.totalElements ?? '—';
 
-  /* ── Charts ───────────────────────────────────────────────────── */
-  const historyBuffer = {};  // [source][asset] = [{t, v}, ...]
-  const MAX_PTS = 30;
-  const chartInstances = {};
-  const PRIMARY_ASSET = {
-    crypto:      'BTC-USD',
-    stocks:      'AAPL',
-    forex:       'USD/EUR',
-    commodities: 'GC=F',
-    weather:     null,
-  };
-
-  function addToBuffer(source, asset, value, time) {
-    if (!historyBuffer[source]) historyBuffer[source] = {};
-    if (!historyBuffer[source][asset]) historyBuffer[source][asset] = [];
-    const buf = historyBuffer[source][asset];
-    const label = new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    buf.push({ t: label, v: value });
-    if (buf.length > MAX_PTS) buf.shift();
-  }
-
-  function cssVar(name) {
-    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-  }
-
-  function buildChartConfig(m) {
-    return {
-      type: 'line',
-      data: { labels: [], datasets: [{
-        data: [],
-        borderColor: m.color,
-        backgroundColor: `rgba(${m.rgb},0.07)`,
-        borderWidth: 1.5,
-        pointRadius: 0,
-        tension: 0.4,
-        fill: true,
-      }]},
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: { duration: 250 },
-        plugins: {
-          legend: { display: false },
-          tooltip: { callbacks: { label: ctx => ' ' + Number(ctx.parsed.y).toLocaleString(undefined, { maximumFractionDigits: 4 }) }}
-        },
-        scales: {
-          x: { display: false, grid: { display: false } },
-          y: {
-            position: 'right',
-            ticks: { color: cssVar('--text-dim'), font: { size: 10 }, maxTicksLimit: 4,
-              callback: v => Number(v).toLocaleString(undefined, { maximumFractionDigits: 2, notation: 'compact' })
-            },
-            grid: { color: cssVar('--border') }
-          }
-        }
-      }
-    };
-  }
-
-  function initCharts(sourceIds) {
-    const grid = document.getElementById('chartsGrid');
-    grid.innerHTML = '';
-    const chartable = sourceIds.filter(s => PRIMARY_ASSET[s] !== null && PRIMARY_ASSET[s] !== undefined);
-    if (!chartable.length) return;
-
-    document.getElementById('chartsSection').style.display = '';
-    chartable.forEach(srcId => {
-      const m = sourceMeta(srcId);
-      const asset = PRIMARY_ASSET[srcId];
-      const div = document.createElement('div');
-      div.className = 'chart-card';
-      div.innerHTML = `
-        <div class="chart-header">
-          <span class="chart-title" style="color:${m.color}">${srcId}</span>
-          <span class="chart-asset">${asset}</span>
-        </div>
-        <div class="chart-wrap"><canvas id="ch-${srcId}"></canvas></div>`;
-      grid.appendChild(div);
-      const ctx = document.getElementById('ch-' + srcId).getContext('2d');
-      chartInstances[srcId] = new Chart(ctx, buildChartConfig(m));
-    });
-  }
-
-  function updateCharts() {
-    Object.entries(chartInstances).forEach(([srcId, chart]) => {
-      const asset = PRIMARY_ASSET[srcId];
-      if (!asset) return;
-      const buf = (historyBuffer[srcId] || {})[asset];
-      if (!buf || !buf.length) return;
-      chart.data.labels = buf.map(p => p.t);
-      chart.data.datasets[0].data = buf.map(p => p.v);
-      chart.update('none');
-    });
-  }
-
-  function refreshChartColors() {
-    const dimColor = cssVar('--text-dim');
-    const borderColor = cssVar('--border');
-    Object.values(chartInstances).forEach(chart => {
-      chart.options.scales.y.ticks.color = dimColor;
-      chart.options.scales.y.grid.color = borderColor;
-      chart.update('none');
-    });
-  }
-
-  /* ── Load sources ─────────────────────────────────────────────── */
-  let chartsInited = false;
-  async function loadSources() {
-    try {
-      const res = await fetch('/api/v1/sources', { headers: authHeaders() });
-      if (res.status === 401) { logout(); return; }
-      const sources = await res.json();
-      document.getElementById('activeSources').textContent = sources.filter(s => s.status === 'active').length;
-
-      if (!chartsInited) {
-        chartsInited = true;
-        initCharts(sources.filter(s => s.status === 'active').map(s => s.id));
-      }
-
-      document.getElementById('sourcesList').innerHTML = sources.map(s => {
-        const m = sourceMeta(s.id);
-        const active = s.status === 'active';
-        return `<div class="source-chip" style="background:${m.bg};border-color:${m.border}">
-          <span class="source-dot ${active ? 'source-dot-active' : ''}"
-                style="background:${active ? m.color : 'var(--text-faint)'};${active ? 'box-shadow:0 0 7px ' + m.color : ''}"></span>
-          <span class="source-name" style="color:${active ? m.color : 'var(--text-muted)'}">${s.id}</span>
-          <span class="source-status">${s.status}</span>
-        </div>`;
-      }).join('') || '<span style="color:var(--text-faint);font-size:13px">No sources registered</span>';
-    } catch(e) {
-      document.getElementById('sourcesList').innerHTML =
-        '<span style="color:#ef4444;font-size:13px">Failed to load sources</span>';
+    if (pg.content && pg.content.length) {
+      [...pg.content].reverse().forEach(e => push(e.source, e.asset, e.value, e.occurredAt));
+      updateSparklines();
     }
-  }
 
-  /* ── Load events ──────────────────────────────────────────────── */
-  async function loadEvents() {
-    const btn = document.getElementById('refreshBtn');
-    btn.innerHTML = '<span class="spinning">↻</span> Refresh';
-    btn.disabled = true;
-    try {
-      const res = await fetch('/api/v1/events?size=50&sort=occurredAt,desc', { headers: authHeaders() });
-      if (res.status === 401) { logout(); return; }
-      const page = await res.json();
-      document.getElementById('totalEvents').textContent = page.totalElements ?? '—';
-
-      if (page.content && page.content.length > 0) {
-        [...page.content].reverse().forEach(e => addToBuffer(e.source, e.asset, e.value, e.occurredAt));
-        updateCharts();
-      }
-
-      const display = (page.content || []).slice(0, 20);
-      const tbody = document.getElementById('eventsBody');
-      if (!display.length) {
-        tbody.innerHTML = '<tr><td colspan="6" class="empty">No events yet — data will appear as sources produce it</td></tr>';
-      } else {
-        tbody.innerHTML = display.map(e => {
-          const m = sourceMeta(e.source);
-          const bs = `background:${m.bg};color:${m.color};border-color:${m.border}`;
-          return `<tr>
-            <td><span class="badge" style="${bs}">${e.source}</span></td>
-            <td style="color:var(--text-primary);font-weight:600">${e.asset}</td>
-            <td style="color:var(--text-muted)">${e.metric}</td>
-            <td><span class="val">${Number(e.value).toLocaleString(undefined, {maximumFractionDigits:4})}</span></td>
-            <td style="color:var(--text-dim)">${e.unit || '—'}</td>
-            <td style="color:var(--text-dim);font-size:12px">${new Date(e.occurredAt).toLocaleString()}</td>
-          </tr>`;
-        }).join('');
-      }
-    } catch(e) {
-      document.getElementById('eventsBody').innerHTML =
-        '<tr><td colspan="6" class="empty" style="color:#ef444466">Failed to load events</td></tr>';
-    } finally {
-      btn.innerHTML = '↻ Refresh';
-      btn.disabled = false;
+    const rows = (pg.content || []).slice(0, 20);
+    const tbody = document.getElementById('tbody');
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="empty">No events yet — data will appear as sources produce it</td></tr>';
+    } else {
+      tbody.innerHTML = rows.map(e => {
+        const m = sm(e.source);
+        const bs = `background:${m.bg};color:${m.color};border-color:${m.br}`;
+        return `<tr>
+          <td><span class="badge" style="${bs}">${e.source}</span></td>
+          <td style="color:var(--t1);font-weight:600">${e.asset}</td>
+          <td style="color:var(--t2)">${e.metric}</td>
+          <td><span class="val">${Number(e.value).toLocaleString(undefined,{maximumFractionDigits:4})}</span></td>
+          <td style="color:var(--t3)">${e.unit||'—'}</td>
+          <td style="color:var(--t3);font-size:12px">${new Date(e.occurredAt).toLocaleString()}</td>
+        </tr>`;
+      }).join('');
     }
+  } catch(e) {
+    document.getElementById('tbody').innerHTML =
+      '<tr><td colspan="6" class="empty" style="color:#ef444455">Failed to load events — ' + e.message + '</td></tr>';
+  } finally {
+    btn.innerHTML = '&#8635; Refresh';
+    btn.disabled = false;
   }
+}
 
-  /* ── Load alert rules ─────────────────────────────────────────── */
-  async function loadAlertRules() {
-    try {
-      const res = await fetch('/api/v1/alerts', { headers: authHeaders() });
-      if (!res.ok) return;
-      const rules = await res.json();
-      document.getElementById('alertRules').textContent =
-        Array.isArray(rules) ? rules.length : (rules.totalElements ?? '—');
-    } catch(e) { document.getElementById('alertRules').textContent = '—'; }
-  }
+/* ── Alert rules ────────────────────────────────────────────────── */
+async function loadAlerts() {
+  try {
+    const r = await fetch('/api/v1/alerts', { headers: ah() });
+    if (!r.ok) return;
+    const d = await r.json();
+    document.getElementById('alertRules').textContent = Array.isArray(d) ? d.length : (d.totalElements ?? '—');
+  } catch(e) { document.getElementById('alertRules').textContent = '—'; }
+}
 
-  loadSources();
-  loadEvents();
-  loadAlertRules();
-  setInterval(loadEvents, 15000);
-  setInterval(loadSources, 30000);
+loadSources();
+loadEvents();
+loadAlerts();
+setInterval(loadEvents,  15000);
+setInterval(loadSources, 30000);
 </script>
 </body>
 </html>
