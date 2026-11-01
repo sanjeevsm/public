@@ -1,43 +1,100 @@
+# ── Secrets & tooling ──────────────────────────────────────
 .claude/
 .codemie/
-.vscode/settings.json
-
-# Local environment files
+.env
 *.env
 .env.*
 !.env.example
+vault-pass*
+*.vault
+*.pem
+*.key
+*.p12
+*.jks
+id_rsa*
+id_ed25519*
 
-# Node / frontend
-node_modules/
-dist/
-build/
-.vite/
+# ── Ansible ──────────────────────────────────────────────────
+*.retry
 
-# Python
-__pycache__/
+# ── Operating system ────────────────────────────────────────
+.DS_Store
+Thumbs.db
+~$*
+
+# ── Python ──────────────────────────────────────────────────
 *.py[cod]
 *.pyc
 *.pyo
 *.pyd
+__pycache__/
+.pytest_cache/
+.coverage
 .venv/
 .venv*/
 venv/
 env/
 
-# IDEs
-.vscode/
-.idea/
-.DS_Store
+# ── Java / Maven ─────────────────────────────────────────────
+target/
+!**/.mvn/wrapper/maven-wrapper.jar
+*.class
+.apt_generated
+.classpath
+.factorypath
+.springBeans
+.sts4-cache
 
-# Logs
+# ── NetBeans ─────────────────────────────────────────────────
+nbproject/private/
+nbbuild/
+nbdist/
+.nb-actions.xml
+
+# ── Node.js ──────────────────────────────────────────────────
+node_modules/
+package-lock.json
+npm-debug.log
+yarn-error.log
+
+# ── Frontend build ───────────────────────────────────────────
+dist/
+build/
+out-tsc/
+bazel-out/
+.vite/
+connect.lock
+coverage/
+libpeerconnection.log
+testem.log
+typings/
+.sass-cache/
+.history/
+
+# ── IDE — IntelliJ ───────────────────────────────────────────
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# ── IDE — Eclipse ────────────────────────────────────────────
+.project
+.settings/
+
+# ── IDE — VS Code ────────────────────────────────────────────
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# ── Logs & temp ──────────────────────────────────────────────
 *.log
 *_log.txt
-
-# Temporary
 *.tmp
 tmp/
 
-# Test / coverage
-.pytest_cache/
-.coverage
-
+# ── Misc ─────────────────────────────────────────────────────
+*.launch
+*.sublime-workspace
+.c9/
