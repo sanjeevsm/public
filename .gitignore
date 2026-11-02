@@ -14,6 +14,11 @@ vault-pass*
 id_rsa*
 id_ed25519*
 
+# ── CodeMie Analytics scratch output ─────────────────────────
+# Cached usage/cost reports the codemie-analytics skill writes relative to
+# whatever directory it was run from (hence turning up under docs/*/docs/).
+codemie-analytics-*.json
+
 # ── Ansible ──────────────────────────────────────────────────
 *.retry
 
